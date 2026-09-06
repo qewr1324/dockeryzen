@@ -2,8 +2,8 @@
 	"name": "dockeryzen",
 	"type": "module",
 	"displayName": "Dockeryzen",
-	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for Java projects for 💠 VSCode. ",
-	"version": "0.5.17",
+	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for Java projects for 💠 VSCode.",
+	"version": "0.47.19",
 	"private": false,
 	"publisher": "GhurbeSABZI",
 	"packageManager": "bun@1.3.14",
@@ -23,11 +23,14 @@
 	},
 	"keywords": [
 		"dockeryzen",
-		"docker file",
-		"docker compose",
-		"file",
-		"vscode extension",
-		"developer tools"
+		"docker",
+		"dockerfile",
+		"docker-compose",
+		"java",
+		"spring-boot",
+		"maven",
+		"gradle",
+		"vscode-extension"
 	],
 	"categories": [
 		"Programming Languages",
@@ -40,39 +43,228 @@
 	"preview": false,
 	"qna": "marketplace",
 	"activationEvents": [
-		"onStartupFinished"
+		"onStartupFinished",
+		"onCommand:dockeryzen.analyze",
+		"onCommand:dockeryzen.generate",
+		"onCommand:dockeryzen.generate-all",
+		"onCommand:dockeryzen.quick-generate",
+		"onCommand:dockeryzen.update",
+		"onCommand:dockeryzen.add-database",
+		"onCommand:dockeryzen.show-logs",
+		"onCommand:dockeryzen.health-check",
+		"onCommand:dockeryzen.generate-dev-container",
+		"onView:dockeryzen.dockerExplorer"
 	],
 	"main": "./dist/extension.cjs",
 	"contributes": {
 		"commands": [
 			{
-				"command": "facetGenerator.generateFromStatusBar",
-				"title": "Code Facet: Generate from Status Bar"
+				"command": "dockeryzen.analyze",
+				"title": "Analyze Java Project",
+				"category": "Dockeryzen",
+				"icon": "$(search)"
+			},
+			{
+				"command": "dockeryzen.generate",
+				"title": "Generate Docker Files",
+				"category": "Dockeryzen",
+				"icon": "$(file-code)"
+			},
+			{
+				"command": "dockeryzen.generate-all",
+				"title": "Generate All Docker Files (Auto)",
+				"category": "Dockeryzen",
+				"icon": "$(zap)"
+			},
+			{
+				"command": "dockeryzen.quick-generate",
+				"title": "Quick Generate (Default Settings)",
+				"category": "Dockeryzen",
+				"icon": "$(rocket)"
+			},
+			{
+				"command": "dockeryzen.update",
+				"title": "Update Existing Docker Files",
+				"category": "Dockeryzen",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "dockeryzen.add-database",
+				"title": "Add Database Service",
+				"category": "Dockeryzen",
+				"icon": "$(database)"
+			},
+			{
+				"command": "dockeryzen.show-logs",
+				"title": "Show Dockeryzen Logs",
+				"category": "Dockeryzen",
+				"icon": "$(output)"
+			},
+			{
+				"command": "dockeryzen.health-check",
+				"title": "Check Container Health",
+				"category": "Dockeryzen",
+				"icon": "$(pulse)"
+			},
+			{
+				"command": "dockeryzen.generate-dev-container",
+				"title": "Generate Dev Container",
+				"category": "Dockeryzen",
+				"icon": "$(container)"
+			}
+		],
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "dockeryzen.generate",
+					"when": "resourceFilename =~ /pom\\.xml|build\\.gradle|build\\.gradle\\.kts/",
+					"group": "dockeryzen@1"
+				},
+				{
+					"command": "dockeryzen.analyze",
+					"when": "explorerResourceIsFolder",
+					"group": "dockeryzen@2"
+				},
+				{
+					"command": "dockeryzen.add-database",
+					"when": "resourceFilename =~ /docker-compose\\.ya?ml/",
+					"group": "dockeryzen@3"
+				}
+			],
+			"editor/title/context": [
+				{
+					"command": "dockeryzen.generate",
+					"when": "resourceFilename =~ /pom\\.xml|build\\.gradle|build\\.gradle\\.kts/",
+					"group": "dockeryzen@1"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "dockeryzen.generate",
+				"key": "ctrl+shift+d",
+				"mac": "cmd+shift+d",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "dockeryzen.analyze",
+				"key": "ctrl+shift+a",
+				"mac": "cmd+shift+a",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "dockeryzen.quick-generate",
+				"key": "ctrl+shift+q",
+				"mac": "cmd+shift+q",
+				"when": "editorTextFocus"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "dockeryzen",
+					"title": "Dockeryzen",
+					"icon": "res/dockeryzen-icon.svg"
+				}
+			]
+		},
+		"views": {
+			"dockeryzen": [
+				{
+					"id": "dockeryzen.dockerExplorer",
+					"name": "Docker Explorer",
+					"icon": "res/dockeryzen-icon.svg",
+					"contextualTitle": "Dockeryzen"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "dockeryzen.dockerExplorer",
+				"contents": "No Docker containers found.\n[Generate Docker Files](command:dockeryzen.generate)\n[Analyze Project](command:dockeryzen.analyze)",
+				"when": "!dockeryzen.hasContainers"
 			}
 		],
 		"configuration": {
-			"title": "Code Facet Generator",
+			"title": "Dockeryzen",
 			"properties": {
-				"facetGenerator.enable": {
+				"dockeryzen.enable": {
 					"type": "boolean",
 					"default": true,
-					"description": "Enable/disable Code Facet Generator"
+					"description": "Enable/disable Dockeryzen extension"
 				},
-				"facetGenerator.outputPath": {
+				"dockeryzen.defaultJdkImage": {
 					"type": "string",
-					"default": "src/facets",
-					"description": "Default output path for generated facets"
-				},
-				"facetGenerator.language": {
-					"type": "string",
-					"default": "typescript",
+					"default": "eclipse-temurin",
 					"enum": [
-						"typescript",
-						"javascript",
-						"python",
-						"go"
+						"eclipse-temurin",
+						"amazon-corretto",
+						"openjdk",
+						"oracle-jdk",
+						"graalvm",
+						"liberica",
+						"redhat-openjdk"
 					],
-					"description": "Default language for generated facets"
+					"description": "Default JDK base image for Docker"
+				},
+				"dockeryzen.defaultPort": {
+					"type": "number",
+					"default": 8080,
+					"description": "Default application port"
+				},
+				"dockeryzen.enableHealthCheck": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable health check in Dockerfile"
+				},
+				"dockeryzen.enableDebug": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable debug mode (port 5005)"
+				},
+				"dockeryzen.jvmOptions": {
+					"type": "string",
+					"default": "-Xmx512m -Xms256m",
+					"description": "Default JVM options"
+				},
+				"dockeryzen.databaseType": {
+					"type": "string",
+					"default": "auto",
+					"enum": [
+						"auto",
+						"postgresql",
+						"mysql",
+						"mariadb",
+						"mongodb",
+						"redis",
+						"none"
+					],
+					"description": "Database type for docker-compose"
+				},
+				"dockeryzen.outputPath": {
+					"type": "string",
+					"default": "",
+					"description": "Output path for generated files (empty = project root)"
+				},
+				"dockeryzen.cacheAnalysis": {
+					"type": "boolean",
+					"default": true,
+					"description": "Cache project analysis results"
+				},
+				"dockeryzen.cacheTimeout": {
+					"type": "number",
+					"default": 300,
+					"description": "Cache timeout in seconds"
+				},
+				"dockeryzen.imageOptimization": {
+					"type": "string",
+					"default": "alpine",
+					"enum": [
+						"alpine",
+						"full",
+						"slim"
+					],
+					"description": "Docker image size optimization"
 				}
 			}
 		}
@@ -95,13 +287,13 @@
 	"dependencies": {
 		"fs-extra": "^11.2.0",
 		"xml2js": "^0.6.2",
-		"cheerio": "^1.0.0",
 		"handlebars": "^4.7.8",
 		"dockerode": "^4.0.2"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.85.0",
 		"@types/node": "^20.0.0",
+		"@types/fs-extra": "^11.0.4",
 		"typescript": "^5.3.0",
 		"@antfu/eslint-config": "^6.7.3",
 		"@antfu/ni": "^28.0.0",
