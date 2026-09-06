@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig, UserPreferences, DatabaseType } from "../types/interfaces";
-import { ConfigManager } from "../core/config/ConfigManager";
+import type { ProjectAnalysis, DockerConfig, UserPreferences, DatabaseType } from "../../types/interfaces.js";
+import { ConfigManager } from "../config/ConfigManager.js";
 
 /**
  * Interactive wizard for Docker configuration

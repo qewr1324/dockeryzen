@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { ProjectAnalysis, ProjectType, BuildTool, Framework } from "../../types/interfaces";
-import { MavenAnalyzer } from "./MavenAnalyzer";
-import { GradleAnalyzer } from "./GradleAnalyzer";
-import { FrameworkDetector } from "./FrameworkDetector";
-import { ConfigManager } from "../config/ConfigManager";
+import type { ProjectAnalysis, ProjectType, BuildTool, Framework } from "../../types/interfaces.js";
+import { MavenAnalyzer } from "./MavenAnalyzer.js";
+import { GradleAnalyzer } from "./GradleAnalyzer.js";
+import { FrameworkDetector } from "./FrameworkDetector.js";
+import { ConfigManager } from "../config/ConfigManager.js";
 
 /**
  * Abstract base class for project analyzers

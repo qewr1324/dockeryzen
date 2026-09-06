@@ -1,13 +1,13 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { DockerConfig } from "../types/interfaces";
-import { ProjectAnalyzer } from "../core/analyzer/ProjectAnalyzer";
-import { DockerfileGenerator } from "../core/generator/DockerfileGenerator";
-import { ComposeGenerator } from "../core/generator/ComposeGenerator";
-import { IgnoreGenerator } from "../core/generator/IgnoreGenerator";
-import { ConfigManager } from "../core/config/ConfigManager";
-import { ProgressReporter } from "../ui/ProgressReporter";
+import type { DockerConfig } from "../../types/interfaces.js";
+import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+import { DockerfileGenerator } from "../generator/DockerfileGenerator.js";
+import { ComposeGenerator } from "../generator/ComposeGenerator.js";
+import { IgnoreGenerator } from "../generator/IgnoreGenerator.js";
+import { ConfigManager } from "../config/ConfigManager.js";
+import { ProgressReporter } from "../ui/ProgressReporter.js";
 
 /**
  * Quick generate command - uses default settings

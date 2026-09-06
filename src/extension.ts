@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
-import { AnalyzeCommand } from "./commands/AnalyzeCommand";
-import { GenerateCommand } from "./commands/GenerateCommand";
-import { QuickGenerateCommand } from "./commands/QuickGenerateCommand";
-import { ConfigManager } from "./core/config/ConfigManager";
-import { ProgressReporter } from "./ui/ProgressReporter";
+import { AnalyzeCommand } from "./core/commands/AnalyzeCommand.js";
+import { GenerateCommand } from "./core/commands/GenerateCommand.js";
+import { QuickGenerateCommand } from "./core/commands/QuickGenerateCommand.js";
+import { ConfigManager } from "./core/config/ConfigManager.js";
+import { ProgressReporter } from "./core/ui/ProgressReporter.js";
 
 /**
  * Extension activation

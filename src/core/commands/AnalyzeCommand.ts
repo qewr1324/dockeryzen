@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { ProjectAnalyzer } from "../core/analyzer/ProjectAnalyzer";
-import { ProgressReporter } from "../ui/ProgressReporter";
+import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+import { ProgressReporter } from "../ui/ProgressReporter.js";
 
 /**
  * Analyze Java project command

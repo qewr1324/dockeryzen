@@ -1,4 +1,4 @@
-import type { ProjectAnalysis, DockerConfig, OutputType } from "../../types/interfaces";
+import type { ProjectAnalysis, DockerConfig, OutputType } from "../../../types/interfaces.js";
 
 /**
  * Dockerfile templates

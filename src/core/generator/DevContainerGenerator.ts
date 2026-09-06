@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig } from "../../types/interfaces";
+import type { ProjectAnalysis, DockerConfig } from "../../types/interfaces.js";
 
 /**
  * Dev Container generator

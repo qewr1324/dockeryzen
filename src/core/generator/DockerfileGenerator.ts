@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig, JdkVendor, OutputType, Framework } from "../../types/interfaces";
-import { DockerfileTemplates } from "../templates/DockerfileTemplates";
+import type { ProjectAnalysis, DockerConfig, JdkVendor, OutputType, Framework } from "../../types/interfaces.js";
+import { DockerfileTemplates } from "../generator/templates/DockerfileTemplates.js";
 
 /**
  * Dockerfile generator

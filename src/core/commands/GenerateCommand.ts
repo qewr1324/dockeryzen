@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { ProjectAnalysis, DockerConfig, GenerationResult } from "../types/interfaces";
-import { ProjectAnalyzer } from "../core/analyzer/ProjectAnalyzer";
-import { DockerfileGenerator } from "../core/generator/DockerfileGenerator";
-import { ComposeGenerator } from "../core/generator/ComposeGenerator";
-import { IgnoreGenerator } from "../core/generator/IgnoreGenerator";
-import { DevContainerGenerator } from "../core/generator/DevContainerGenerator";
-import { Wizard } from "../ui/Wizard";
-import { ProgressReporter } from "../ui/ProgressReporter";
+import type { ProjectAnalysis, DockerConfig, GenerationResult } from "../../types/interfaces.js";
+import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+import { DockerfileGenerator } from "../generator/DockerfileGenerator.js";
+import { ComposeGenerator } from "../generator/ComposeGenerator.js";
+import { IgnoreGenerator } from "../generator/IgnoreGenerator.js";
+import { DevContainerGenerator } from "../generator/DevContainerGenerator.js";
+import { Wizard } from "../ui/Wizard.js";
+import { ProgressReporter } from "../ui/ProgressReporter.js";
 
 /**
  * Generate Docker files command

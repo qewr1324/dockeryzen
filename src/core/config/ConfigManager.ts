@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { UserPreferences, JdkVendor, DatabaseType } from "../../types/interfaces";
+import type { UserPreferences, JdkVendor, DatabaseType } from "../../types/interfaces.js";
 
 /**
  * Singleton configuration manager
