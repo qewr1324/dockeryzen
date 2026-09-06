@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig, JdkVendor, OutputType, Framework } from "../../types/interfaces.js";
+import type { ProjectAnalysis, DockerConfig, OutputType, Framework } from "../../types/interfaces.js";
+import { JdkVendor} from "../../types/interfaces.js";
 import { DockerfileTemplates } from "../generator/templates/DockerfileTemplates.js";
 
 /**

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig, UserPreferences, DatabaseType } from "../../types/interfaces.js";
+import type { ProjectAnalysis, DockerConfig, UserPreferences } from "../../types/interfaces.js";
+import { DatabaseType } from "../../types/interfaces.js";
 import { ConfigManager } from "../config/ConfigManager.js";
 
 /**

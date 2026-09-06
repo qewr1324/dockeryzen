@@ -1,4 +1,5 @@
-import type { ProjectAnalysis, DockerConfig, OutputType } from "../../../types/interfaces.js";
+import type { ProjectAnalysis, DockerConfig } from "../../../types/interfaces.js";
+import { OutputType } from "../../../types/interfaces.js";
 
 /**
  * Dockerfile templates
@@ -93,7 +94,7 @@ USER appuser
 VOLUME /app/data
 
 # Start the application
-ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} ${debugOptions}${profiles}-jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java \${JAVA_OPTS} ${debugOptions}${profiles}-jar app.jar"]
 
 # Add metadata labels
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Application"}"

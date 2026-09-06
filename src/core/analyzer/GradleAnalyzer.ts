@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { ProjectAnalysis, Dependency, Framework } from "../../types/interfaces";
-import { JavaProjectAnalyzer } from "./JavaProjectAnalyzer";
+import type { ProjectAnalysis, Dependency } from "../../types/interfaces.js";
+import { Framework } from "../../types/interfaces.js";
+import { JavaProjectAnalyzer } from "./JavaProjectAnalyzer.js";
 
 /**
  * Gradle project analyzer

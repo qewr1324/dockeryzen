@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import { Framework } from "../../types/interfaces";
+import { Framework } from "../../types/interfaces.js";
 
 /**
  * Framework detector

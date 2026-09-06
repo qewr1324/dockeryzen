@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig, DatabaseType, ComposeService, Volume, Network } from "../../types/interfaces.js";
+import type { ProjectAnalysis, DockerConfig, ComposeService, Volume, Network } from "../../types/interfaces.js";
+import { DatabaseType } from "../../types/interfaces.js";
 
 /**
  * Docker Compose generator
