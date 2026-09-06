@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
 import type { ProjectAnalysis, DockerConfig, GenerationResult } from "../../types/interfaces.js";
-import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+// import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+import { AnalyzerFactory } from "../analyzer/AnalyzerFactory.js";
 import { DockerfileGenerator } from "../generator/DockerfileGenerator.js";
 import { ComposeGenerator } from "../generator/ComposeGenerator.js";
 import { IgnoreGenerator } from "../generator/IgnoreGenerator.js";
@@ -31,7 +32,8 @@ export class GenerateCommand {
 			await progress.run("Analyzing project...", async (reporter) => {
 				reporter.report({ message: "Detecting build tool...", increment: 10 });
 
-				const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
+				// const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
+				const analyzer = await AnalyzerFactory.createAnalyzer(workspaceFolder);
 
 				reporter.report({ message: "Analyzing project structure...", increment: 30 });
 				const analysis = await analyzer.analyze();

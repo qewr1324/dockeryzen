@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
 import type { DockerConfig } from "../../types/interfaces.js";
-import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+// import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+import { AnalyzerFactory } from "../analyzer/AnalyzerFactory.js";
 import { DockerfileGenerator } from "../generator/DockerfileGenerator.js";
 import { ComposeGenerator } from "../generator/ComposeGenerator.js";
 import { IgnoreGenerator } from "../generator/IgnoreGenerator.js";
@@ -31,7 +32,8 @@ export class QuickGenerateCommand {
 			await progress.run("Quick generating Docker files...", async (reporter) => {
 				reporter.report({ message: "Analyzing project...", increment: 30 });
 
-				const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
+				// const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
+				const analyzer = await AnalyzerFactory.createAnalyzer(workspaceFolder);
 				const analysis = await analyzer.analyze();
 
 				reporter.report({ message: "Generating files...", increment: 50 });

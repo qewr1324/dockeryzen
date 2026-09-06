@@ -1,11 +1,8 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { ProjectAnalysis, ProjectType, Framework } from "../../types/interfaces.js";
+import type { ProjectAnalysis } from "../../types/interfaces.js";
 import { BuildTool } from "../../types/interfaces.js";
-import { MavenAnalyzer } from "./MavenAnalyzer.js";
-import { GradleAnalyzer } from "./GradleAnalyzer.js";
-import { FrameworkDetector } from "./FrameworkDetector.js";
 import { ConfigManager } from "../config/ConfigManager.js";
 
 /**
@@ -125,7 +122,6 @@ export abstract class ProjectAnalyzer {
 		const allFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/*.{properties,yml,yaml,java}"), "**/node_modules/**");
 
 		for (const file of allFiles.slice(0, 50)) {
-			// Limit files to check
 			const content = await fs.readFile(file.fsPath, "utf8");
 			const portPatterns = [/@Value\("\$\{server\.port:(\d+)\}"\)/, /@Value\("\$\{port:(\d+)\}"\)/, /PORT\s*=\s*(\d+)/, /port\s*=\s*(\d{4,5})/];
 
@@ -204,19 +200,21 @@ export abstract class ProjectAnalyzer {
 
 	/**
 	 * Create analyzer based on build tool
-	 * This method uses dynamic imports to avoid circular dependencies
+	 * Uses dynamic import to avoid circular dependencies
 	 */
 	public static async createAnalyzer(workspaceFolder: vscode.WorkspaceFolder): Promise<ProjectAnalyzer> {
-		// Use dynamic import to avoid circular dependency
+		// Dynamic import to avoid circular dependency
 		const { JavaProjectAnalyzer } = await import("./JavaProjectAnalyzer.js");
 		const analyzer = new JavaProjectAnalyzer(workspaceFolder);
 
-		// Access protected method using type assertion
+		// Access protected method
 		const buildTool = await (analyzer as any).detectBuildTool();
 
 		if (buildTool === BuildTool.MAVEN) {
+			const { MavenAnalyzer } = await import("./MavenAnalyzer.js");
 			return new MavenAnalyzer(workspaceFolder);
 		} else if (buildTool === BuildTool.GRADLE) {
+			const { GradleAnalyzer } = await import("./GradleAnalyzer.js");
 			return new GradleAnalyzer(workspaceFolder);
 		}
 

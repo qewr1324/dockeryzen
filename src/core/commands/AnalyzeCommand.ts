@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+// import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
+import { AnalyzerFactory } from "../analyzer/AnalyzerFactory.js";
 import { ProgressReporter } from "../ui/ProgressReporter.js";
 
 /**
@@ -22,7 +23,8 @@ export class AnalyzeCommand {
 			await progress.run("Analyzing project...", async (reporter) => {
 				reporter.report({ message: "Detecting build tool...", increment: 20 });
 
-				const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
+				// const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
+				const analyzer = await AnalyzerFactory.createAnalyzer(workspaceFolder);
 
 				reporter.report({ message: "Analyzing project structure...", increment: 40 });
 				const analysis = await analyzer.analyze();
