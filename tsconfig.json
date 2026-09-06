@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"resolveJsonModule": true,
+		"strict": true,
+		"strictNullChecks": true,
+		"esModuleInterop": true,
+		"skipDefaultLibCheck": true,
+		"skipLibCheck": true,
+		"outDir": "./out",
+		"sourceMap": true,
+		"types": ["node", "vscode"],
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts"],
+	"exclude": ["node_modules", "out", "dist"]
+}

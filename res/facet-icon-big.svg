@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#6C5CE7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B68EE;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Main rounded rectangle with shadow -->
+  <rect x="10" y="10" width="108" height="108" rx="16" fill="url(#gradient)" stroke="#2c3e50" stroke-width="3" filter="url(#shadow)"/>
+  
+  <!-- Inner subtle border -->
+  <rect x="18" y="18" width="92" height="92" rx="12" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.2"/>
+  
+  <!-- Left chevron/arrow (multi-line code indicator) -->
+  <path d="M28 36L54 56L28 76" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M36 36L62 56L36 76" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  
+  <!-- Right line (text/code indicator) -->
+  <path d="M66 52H100" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M66 60H90" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M66 68H95" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+  
+  <!-- Decorative circles (gems/nodes) -->
+  <circle cx="30" cy="36" r="5" fill="url(#goldGradient)" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="30" cy="56" r="5" fill="url(#goldGradient)" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="30" cy="76" r="5" fill="url(#goldGradient)" opacity="0.9" filter="url(#glow)"/>
+  
+  <!-- Small decorative dots -->
+  <circle cx="100" cy="52" r="2.5" fill="white" opacity="0.6"/>
+  <circle cx="100" cy="68" r="2" fill="white" opacity="0.4"/>
+  
+  <!-- Corner accents -->
+  <path d="M26 26L34 26L34 34" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+  <path d="M102 26L94 26L94 34" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+  <path d="M102 102L94 102L94 94" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+  <path d="M26 102L34 102L34 94" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+</svg>

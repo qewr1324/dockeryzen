@@ -1,0 +1,120 @@
+{
+	"name": "dockeryzen",
+	"type": "module",
+	"displayName": "Dockeryzen",
+	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for Java projects for 💠 VSCode. ",
+	"version": "0.5.17",
+	"private": false,
+	"publisher": "GhurbeSABZI",
+	"packageManager": "bun@1.3.14",
+	"author": "GhurbeSABZI <naiad.arts.studio@gmail.com>",
+	"icon": "res/dockeryzen-icon-big.png",
+	"license": "MIT",
+	"homepage": "https://github.com/qewr1324/dockeryzen#readme",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/qewr1324/dockeryzen"
+	},
+	"bugs": {
+		"url": "https://github.com/qewr1324/dockeryzen/issues"
+	},
+	"engines": {
+		"vscode": "^1.85.0"
+	},
+	"keywords": [
+		"dockeryzen",
+		"docker file",
+		"docker compose",
+		"file",
+		"vscode extension",
+		"developer tools"
+	],
+	"categories": [
+		"Programming Languages",
+		"Other"
+	],
+	"galleryBanner": {
+		"color": "#0D1117",
+		"theme": "dark"
+	},
+	"preview": false,
+	"qna": "marketplace",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./dist/extension.cjs",
+	"contributes": {
+		"commands": [
+			{
+				"command": "facetGenerator.generateFromStatusBar",
+				"title": "Code Facet: Generate from Status Bar"
+			}
+		],
+		"configuration": {
+			"title": "Code Facet Generator",
+			"properties": {
+				"facetGenerator.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable/disable Code Facet Generator"
+				},
+				"facetGenerator.outputPath": {
+					"type": "string",
+					"default": "src/facets",
+					"description": "Default output path for generated facets"
+				},
+				"facetGenerator.language": {
+					"type": "string",
+					"default": "typescript",
+					"enum": [
+						"typescript",
+						"javascript",
+						"python",
+						"go"
+					],
+					"description": "Default language for generated facets"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "bun run build",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"build": "tsdown src/extension.ts --external vscode",
+		"dev": "bun run build --watch --sourcemap",
+		"prepare": "echo 'Skipping update'",
+		"update": "echo 'Skipping vscode-ext-gen'",
+		"lint": "eslint .",
+		"test": "vitest",
+		"typecheck": "tsc --noEmit",
+		"release": "bumpp",
+		"ext:package": "vsce package --no-dependencies",
+		"ext:publish": "vsce publish --no-dependencies"
+	},
+	"dependencies": {
+		"fs-extra": "^11.2.0",
+		"xml2js": "^0.6.2",
+		"cheerio": "^1.0.0",
+		"handlebars": "^4.7.8",
+		"dockerode": "^4.0.2"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.85.0",
+		"@types/node": "^20.0.0",
+		"typescript": "^5.3.0",
+		"@antfu/eslint-config": "^6.7.3",
+		"@antfu/ni": "^28.0.0",
+		"@vscode/vsce": "^3.7.1",
+		"bumpp": "^10.3.2",
+		"eslint": "^9.39.2",
+		"ovsx": "^0.10.7",
+		"reactive-vscode": "^1.0.0-beta.2",
+		"taze": "^19.9.2",
+		"tsdown": "^0.19.0-beta.3",
+		"vite": "^7.3.0",
+		"vitest": "^4.0.16",
+		"vscode-ext-gen": "^1.5.1",
+		"vsxpub": "^0.1.2"
+	}
+}
