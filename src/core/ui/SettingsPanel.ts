@@ -213,19 +213,21 @@ export class SettingsPanel {
   <title>Dockeryzen Settings</title>
   <style>
     :root {
-      --bg: #1e1e2e;
-      --surface: #2a2a3e;
-      --surface-hover: #3a3a50;
-      --text: #cdd6f4;
-      --text-muted: #a6adc8;
-      --accent: #89b4fa;
-      --accent-hover: #b4befe;
-      --border: #45475a;
-      --danger: #f38ba8;
-      --success: #a6e3a1;
-      --warning: #f9e2af;
-      --radius: 8px;
+      --bg: #1a1b26;
+      --surface: #24283b;
+      --surface-light: #2f3542;
+      --text: #c0caf5;
+      --text-muted: #a9b1d6;
+      --accent: #7aa2f7;
+      --accent-hover: #89b4fa;
+      --border: #3b4261;
+      --danger: #f7768e;
+      --success: #9ece6a;
+      --warning: #e0af68;
+      --radius: 10px;
+      --radius-sm: 6px;
       --transition: 0.2s ease;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     * {
@@ -244,10 +246,10 @@ export class SettingsPanel {
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1000px;
       margin: 0 auto;
       display: grid;
-      gap: 20px;
+      gap: 16px;
     }
 
     .floating-header {
@@ -255,28 +257,26 @@ export class SettingsPanel {
       top: 0;
       left: 0;
       right: 0;
-      background: var(--surface);
-      border-bottom: 2px solid var(--border);
-      padding: 12px 20px;
+      background: rgba(26, 27, 38, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
       z-index: 100;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow);
     }
 
     .floating-header h1 {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
-      background: linear-gradient(135deg, var(--accent), var(--success));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--accent);
     }
 
     .header-actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
     }
 
     .section {
@@ -292,50 +292,53 @@ export class SettingsPanel {
     }
 
     .section-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 8px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .section-title::before {
       content: '';
-      width: 4px;
-      height: 20px;
+      width: 3px;
+      height: 16px;
       background: var(--accent);
       border-radius: 2px;
     }
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
 
     .form-group label {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 500;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
     }
 
     .form-group input,
     .form-group select {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
       color: var(--text);
-      font-size: 14px;
+      font-size: 13px;
       transition: var(--transition);
       outline: none;
       width: 100%;
@@ -344,40 +347,67 @@ export class SettingsPanel {
     .form-group input:focus,
     .form-group select:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.2);
+      box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.2);
     }
 
-    .checkbox-group {
+    .toggle-group {
       display: flex;
       align-items: center;
       gap: 8px;
+      padding: 8px 0;
     }
 
-    .checkbox-group input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--accent);
+    .toggle-group input[type="checkbox"] {
+      width: 36px;
+      height: 20px;
+      appearance: none;
+      background: var(--border);
+      border-radius: 20px;
+      position: relative;
+      cursor: pointer;
+      transition: var(--transition);
+      flex-shrink: 0;
     }
 
-    .checkbox-group label {
-      font-size: 14px;
+    .toggle-group input[type="checkbox"]::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      top: 2px;
+      left: 2px;
+      transition: var(--transition);
+    }
+
+    .toggle-group input[type="checkbox"]:checked {
+      background: var(--accent);
+    }
+
+    .toggle-group input[type="checkbox"]:checked::before {
+      left: 18px;
+    }
+
+    .toggle-group label {
+      font-size: 13px;
       color: var(--text);
+      cursor: pointer;
       text-transform: none;
       letter-spacing: 0;
-      cursor: pointer;
     }
 
     .btn {
       padding: 8px 16px;
       border: none;
-      border-radius: var(--radius);
-      font-size: 13px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       transition: var(--transition);
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
 
     .btn-primary {
@@ -412,8 +442,8 @@ export class SettingsPanel {
     }
 
     .btn-sm {
-      padding: 6px 12px;
-      font-size: 12px;
+      padding: 4px 10px;
+      font-size: 11px;
     }
 
     .config-item {
@@ -429,38 +459,41 @@ export class SettingsPanel {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
     }
 
     .config-item-title {
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
+      color: var(--accent);
     }
 
     .config-item-actions {
       display: flex;
-      gap: 6px;
+      gap: 4px;
     }
 
     .config-item-details {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
 
     .add-buttons {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
+      gap: 6px;
+      margin-top: 10px;
     }
 
     .add-btn {
-      background: var(--surface-hover);
+      background: var(--surface-light);
       color: var(--text);
       border: 1px dashed var(--border);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 16px;
+      font-size: 11px;
       cursor: pointer;
       transition: var(--transition);
     }
@@ -473,9 +506,21 @@ export class SettingsPanel {
 
     .empty-state {
       text-align: center;
-      padding: 30px;
+      padding: 20px;
       color: var(--text-muted);
-      font-size: 14px;
+      font-size: 12px;
+    }
+
+    .url-mode-group {
+      grid-column: 1 / -1;
+      background: var(--surface-light);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+    }
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
@@ -546,16 +591,18 @@ export class SettingsPanel {
           <label>Debug Port</label>
           <input type="number" id="debugPort" value="${config?.docker?.debugPort || 5005}" onchange="markDirty()">
         </div>
-        <div class="form-group checkbox-group">
+      </div>
+      <div class="form-grid" style="margin-top: 10px;">
+        <div class="toggle-group">
           <input type="checkbox" id="useAlpine" ${config?.docker?.useAlpine ? "checked" : ""} onchange="markDirty()">
           <label for="useAlpine">Use Alpine (Smaller Image)</label>
         </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="enableDebug" ${config?.docker?.enableDebug ? "checked" : ""} onchange="markDirty()">
+        <div class="toggle-group">
+          <input type="checkbox" id="enableDebug" ${config?.docker?.enableDebug ? "checked" : ""} onchange="toggleDebugPort(); markDirty()">
           <label for="enableDebug">Enable Debug</label>
         </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="enableHealthCheck" ${config?.docker?.enableHealthCheck !== false ? "checked" : ""} onchange="markDirty()">
+        <div class="toggle-group">
+          <input type="checkbox" id="enableHealthCheck" ${config?.docker?.enableHealthCheck !== false ? "checked" : ""} onchange="toggleHealthEndpoint(); markDirty()">
           <label for="enableHealthCheck">Enable Health Check</label>
         </div>
       </div>
@@ -594,11 +641,11 @@ export class SettingsPanel {
     <div class="section">
       <div class="section-title">Advanced</div>
       <div class="form-grid">
-        <div class="form-group checkbox-group">
+        <div class="toggle-group">
           <input type="checkbox" id="envFile" ${config?.envFile !== false ? "checked" : ""} onchange="markDirty()">
           <label for="envFile">Generate .env file</label>
         </div>
-        <div class="form-group checkbox-group">
+        <div class="toggle-group">
           <input type="checkbox" id="devContainer" ${config?.devContainer?.enabled ? "checked" : ""} onchange="markDirty()">
           <label for="devContainer">Generate Dev Container</label>
         </div>
@@ -623,14 +670,39 @@ export class SettingsPanel {
       markDirty();
     }
 
+    function toggleDebugPort() {
+      const enableDebug = document.getElementById('enableDebug').checked;
+      const debugPortGroup = document.getElementById('debugPort').closest('.form-group');
+      
+      if (enableDebug) {
+        debugPortGroup.style.display = '';
+      } else {
+        debugPortGroup.style.display = 'none';
+      }
+    }
+
+    function toggleHealthEndpoint() {
+      const enableHealthCheck = document.getElementById('enableHealthCheck').checked;
+      const healthEndpointGroup = document.getElementById('healthEndpoint').closest('.form-group');
+      
+      if (enableHealthCheck) {
+        healthEndpointGroup.style.display = '';
+      } else {
+        healthEndpointGroup.style.display = 'none';
+      }
+    }
+
     function toggleDbUrlMode(index) {
       const mode = document.getElementById('db-connection-mode-' + index).value;
       const urlGroup = document.getElementById('db-custom-url-group-' + index);
+      const standardFields = document.getElementById('db-standard-fields-' + index);
       
       if (mode === 'custom') {
-        urlGroup.style.display = '';
+        urlGroup.classList.remove('hidden');
+        standardFields.classList.add('hidden');
       } else {
-        urlGroup.style.display = 'none';
+        urlGroup.classList.add('hidden');
+        standardFields.classList.remove('hidden');
       }
     }
 
@@ -643,18 +715,24 @@ export class SettingsPanel {
         const connectionMode = document.getElementById('db-connection-mode-' + index).value;
         const customUrl = document.getElementById('db-url-' + index).value;
         
-        databases.push({
+        const dbConfig = {
           type: dbType,
           version: document.getElementById('db-version-' + index).value || 'latest',
           port: parseInt(document.getElementById('db-internal-port-' + index).value) || 5432,
           externalPort: parseInt(document.getElementById('db-external-port-' + index).value) || undefined,
-          name: document.getElementById('db-name-' + index).value || 'appdb',
-          username: document.getElementById('db-username-' + index).value || 'admin',
-          password: document.getElementById('db-password-' + index).value || 'password',
           useAlpine: document.getElementById('db-alpine-' + index).checked,
-          connectionMode: connectionMode,
-          customUrl: connectionMode === 'custom' ? customUrl : undefined
-        });
+          connectionMode: connectionMode
+        };
+        
+        if (connectionMode === 'custom') {
+          dbConfig.customUrl = customUrl;
+        } else {
+          dbConfig.name = document.getElementById('db-name-' + index).value || 'appdb';
+          dbConfig.username = document.getElementById('db-username-' + index).value || 'admin';
+          dbConfig.password = document.getElementById('db-password-' + index).value || 'password';
+        }
+        
+        databases.push(dbConfig);
       });
 
       const messageQueues = [];
@@ -860,6 +938,7 @@ export class SettingsPanel {
     });
 
     function generateDatabaseHtml(db, index) {
+      const isCustomMode = db.connectionMode === 'custom' || db.customUrl;
       return \`
       <div class="config-item" data-index="\${index}">
         <div class="config-item-header">
@@ -882,6 +961,15 @@ export class SettingsPanel {
             <input type="number" id="db-external-port-\${index}" value="\${db.externalPort || db.port || getDefaultPort(db.type)}" onchange="markDirty()">
           </div>
           <div class="form-group">
+            <label>Connection Mode</label>
+            <select id="db-connection-mode-\${index}" onchange="toggleDbUrlMode(\${index}); markDirty()">
+              <option value="standard" \${!isCustomMode ? 'selected' : ''}>Standard (Local Docker)</option>
+              <option value="custom" \${isCustomMode ? 'selected' : ''}>Custom URL (External)</option>
+            </select>
+          </div>
+        </div>
+        <div id="db-standard-fields-\${index}" class="config-item-details \${isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
+          <div class="form-group">
             <label>Database Name</label>
             <input type="text" id="db-name-\${index}" value="\${db.name || 'appdb'}" onchange="markDirty()">
           </div>
@@ -893,21 +981,16 @@ export class SettingsPanel {
             <label>Password</label>
             <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
           </div>
+        </div>
+        <div id="db-custom-url-group-\${index}" class="url-mode-group \${!isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
           <div class="form-group">
-            <label>Connection Mode</label>
-            <select id="db-connection-mode-\${index}" onchange="toggleDbUrlMode(\${index}); markDirty()">
-              <option value="standard" \${!db.customUrl ? 'selected' : ''}>Standard (Local Docker)</option>
-              <option value="custom" \${db.customUrl ? 'selected' : ''}>Custom URL (External Server)</option>
-            </select>
-          </div>
-          <div class="form-group" id="db-custom-url-group-\${index}" style="\${db.customUrl ? '' : 'display: none;'}">
             <label>Custom URL</label>
             <input type="text" id="db-url-\${index}" value="\${db.customUrl || ''}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
           </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="db-alpine-\${index}" \${db.useAlpine ? 'checked' : ''} onchange="markDirty()">
-            <label for="db-alpine-\${index}">Use Alpine</label>
-          </div>
+        </div>
+        <div class="toggle-group" style="margin-top: 10px;">
+          <input type="checkbox" id="db-alpine-\${index}" \${db.useAlpine ? 'checked' : ''} onchange="markDirty()">
+          <label for="db-alpine-\${index}">Use Alpine (Smaller Image)</label>
         </div>
       </div>\`;
     }
@@ -934,10 +1017,6 @@ export class SettingsPanel {
             <label>External Port</label>
             <input type="number" id="mq-external-port-\${index}" value="\${mq.externalPort || mq.port || ''}" onchange="markDirty()">
           </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="mq-alpine-\${index}" \${mq.useAlpine ? 'checked' : ''} onchange="markDirty()">
-            <label for="mq-alpine-\${index}">Use Alpine</label>
-          </div>
           \${mq.type === 'rabbitmq' ? \`
           <div class="form-group">
             <label>Username</label>
@@ -947,6 +1026,10 @@ export class SettingsPanel {
             <label>Password</label>
             <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
           </div>\` : ''}
+        </div>
+        <div class="toggle-group" style="margin-top: 10px;">
+          <input type="checkbox" id="mq-alpine-\${index}" \${mq.useAlpine ? 'checked' : ''} onchange="markDirty()">
+          <label for="mq-alpine-\${index}">Use Alpine (Smaller Image)</label>
         </div>
       </div>\`;
     }
@@ -973,10 +1056,10 @@ export class SettingsPanel {
             <label>External Port</label>
             <input type="number" id="svc-external-port-\${index}" value="\${svc.externalPort || svc.port || ''}" onchange="markDirty()">
           </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="svc-alpine-\${index}" \${svc.useAlpine ? 'checked' : ''} onchange="markDirty()">
-            <label for="svc-alpine-\${index}">Use Alpine</label>
-          </div>
+        </div>
+        <div class="toggle-group" style="margin-top: 10px;">
+          <input type="checkbox" id="svc-alpine-\${index}" \${svc.useAlpine ? 'checked' : ''} onchange="markDirty()">
+          <label for="svc-alpine-\${index}">Use Alpine (Smaller Image)</label>
         </div>
       </div>\`;
     }
@@ -1013,12 +1096,26 @@ export class SettingsPanel {
       };
       return versions[type] || "latest";
     }
+
+    // Initialize UI state
+    document.addEventListener('DOMContentLoaded', function() {
+      toggleDebugPort();
+      toggleHealthEndpoint();
+      
+      // Initialize database URL modes
+      const dbModes = document.querySelectorAll('[id^="db-connection-mode-"]');
+      dbModes.forEach((select) => {
+        const index = select.id.split('-').pop();
+        toggleDbUrlMode(parseInt(index));
+      });
+    });
   </script>
 </body>
 </html>`;
 	}
 
 	private generateDatabaseHtml(db: any, index: number): string {
+		const isCustomMode = db.connectionMode === "custom" || db.customUrl;
 		return `
       <div class="config-item" data-index="${index}">
         <div class="config-item-header">
@@ -1041,6 +1138,15 @@ export class SettingsPanel {
             <input type="number" id="db-external-port-${index}" value="${db.externalPort || db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
           </div>
           <div class="form-group">
+            <label>Connection Mode</label>
+            <select id="db-connection-mode-${index}" onchange="toggleDbUrlMode(${index}); markDirty()">
+              <option value="standard" ${!isCustomMode ? "selected" : ""}>Standard (Local Docker)</option>
+              <option value="custom" ${isCustomMode ? "selected" : ""}>Custom URL (External)</option>
+            </select>
+          </div>
+        </div>
+        <div id="db-standard-fields-${index}" class="config-item-details ${isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
+          <div class="form-group">
             <label>Database Name</label>
             <input type="text" id="db-name-${index}" value="${db.name || "appdb"}" onchange="markDirty()">
           </div>
@@ -1052,21 +1158,16 @@ export class SettingsPanel {
             <label>Password</label>
             <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
           </div>
+        </div>
+        <div id="db-custom-url-group-${index}" class="url-mode-group ${!isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
           <div class="form-group">
-            <label>Connection Mode</label>
-            <select id="db-connection-mode-${index}" onchange="toggleDbUrlMode(${index}); markDirty()">
-              <option value="standard" ${!db.customUrl ? "selected" : ""}>Standard (Local Docker)</option>
-              <option value="custom" ${db.customUrl ? "selected" : ""}>Custom URL (External Server)</option>
-            </select>
-          </div>
-          <div class="form-group" id="db-custom-url-group-${index}" style="${db.customUrl ? "" : "display: none;"}">
             <label>Custom URL</label>
             <input type="text" id="db-url-${index}" value="${db.customUrl || ""}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
           </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="db-alpine-${index}" ${db.useAlpine ? "checked" : ""} onchange="markDirty()">
-            <label for="db-alpine-${index}">Use Alpine</label>
-          </div>
+        </div>
+        <div class="toggle-group" style="margin-top: 10px;">
+          <input type="checkbox" id="db-alpine-${index}" ${db.useAlpine ? "checked" : ""} onchange="markDirty()">
+          <label for="db-alpine-${index}">Use Alpine (Smaller Image)</label>
         </div>
       </div>`;
 	}
@@ -1093,10 +1194,6 @@ export class SettingsPanel {
             <label>External Port</label>
             <input type="number" id="mq-external-port-${index}" value="${mq.externalPort || mq.port || ""}" onchange="markDirty()">
           </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="mq-alpine-${index}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty()">
-            <label for="mq-alpine-${index}">Use Alpine</label>
-          </div>
           ${
 				mq.type === "rabbitmq"
 					? `
@@ -1110,6 +1207,10 @@ export class SettingsPanel {
           </div>`
 					: ""
 			}
+        </div>
+        <div class="toggle-group" style="margin-top: 10px;">
+          <input type="checkbox" id="mq-alpine-${index}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty()">
+          <label for="mq-alpine-${index}">Use Alpine (Smaller Image)</label>
         </div>
       </div>`;
 	}
@@ -1136,10 +1237,10 @@ export class SettingsPanel {
             <label>External Port</label>
             <input type="number" id="svc-external-port-${index}" value="${svc.externalPort || svc.port || ""}" onchange="markDirty()">
           </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="svc-alpine-${index}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty()">
-            <label for="svc-alpine-${index}">Use Alpine</label>
-          </div>
+        </div>
+        <div class="toggle-group" style="margin-top: 10px;">
+          <input type="checkbox" id="svc-alpine-${index}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty()">
+          <label for="svc-alpine-${index}">Use Alpine (Smaller Image)</label>
         </div>
       </div>`;
 	}

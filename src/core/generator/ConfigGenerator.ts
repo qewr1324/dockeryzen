@@ -33,13 +33,17 @@ export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder
 			});
 		}
 
+		// 🔧 اصلاح: اول از config خوندن outputType، بعد fallback به JAR
 		let outputType = (config.project?.outputType as OutputType) || OutputType.JAR;
 
-		const pomPath = path.join(workspaceFolder.uri.fsPath, "pom.xml");
-		if (await fs.pathExists(pomPath)) {
-			const pomContent = await fs.readFile(pomPath, "utf8");
-			if (/<packaging>\s*war\s*<\/packaging>/.test(pomContent)) {
-				outputType = OutputType.WAR;
+		// 🔧 اصلاح: فقط وقتی outputType در config مشخص نشده، از pom.xml تشخیص بده
+		if (!config.project?.outputType) {
+			const pomPath = path.join(workspaceFolder.uri.fsPath, "pom.xml");
+			if (await fs.pathExists(pomPath)) {
+				const pomContent = await fs.readFile(pomPath, "utf8");
+				if (/<packaging>\s*war\s*<\/packaging>/.test(pomContent)) {
+					outputType = OutputType.WAR;
+				}
 			}
 		}
 
@@ -100,7 +104,10 @@ export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder
 
 		if (config.project?.port) analysis.port = config.project.port;
 		if (config.project?.jdkVersion) analysis.jdkVersion = config.project.jdkVersion;
+
+		// 🔧 اصلاح: outputType از config استفاده کنه
 		analysis.outputType = outputType;
+
 		if (databaseConfigs.length > 0) analysis.database = databaseConfigs[0];
 
 		const outputPath = workspaceFolder.uri.fsPath;
