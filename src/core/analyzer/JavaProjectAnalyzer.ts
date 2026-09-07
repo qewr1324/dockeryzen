@@ -374,7 +374,7 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 	 * Detect output type
 	 */
 	protected detectOutputType(framework: Framework, dependencies: Dependency[]): OutputType {
-		// Check pom.xml for packaging type
+		// Check pom.xml for packaging type FIRST
 		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 		if (fs.existsSync(pomPath)) {
 			const pomContent = fs.readFileSync(pomPath, "utf8");
@@ -416,7 +416,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 
 		return OutputType.JAR;
 	}
-
 	/**
 	 * Find configuration files
 	 */

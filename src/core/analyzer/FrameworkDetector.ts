@@ -99,6 +99,11 @@ export class FrameworkDetector {
 			return Framework.JAX_RS;
 		}
 
+		// Check for Servlet (simple web app)
+		if (buildContent.includes("servlet") || buildContent.includes("web.xml")) {
+			return Framework.JAKARTA_EE;
+		}
+
 		return Framework.NONE;
 	}
 }
