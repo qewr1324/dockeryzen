@@ -3,138 +3,99 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import type { ProjectAnalysis } from "../../types/interfaces.js";
 import { BuildTool } from "../../types/interfaces.js";
-import { ConfigManager } from "../config/ConfigManager.js";
 
 /**
- * Abstract base class for project analyzers
- * Uses Strategy Pattern for different build tools
+ * Base project analyzer
  */
 export abstract class ProjectAnalyzer {
 	protected workspaceFolder: vscode.WorkspaceFolder;
-	protected configManager: ConfigManager;
 
 	constructor(workspaceFolder: vscode.WorkspaceFolder) {
 		this.workspaceFolder = workspaceFolder;
-		this.configManager = ConfigManager.getInstance();
 	}
 
 	/**
-	 * Analyze the project
+	 * Analyze project
 	 */
 	public abstract analyze(): Promise<ProjectAnalysis>;
 
 	/**
 	 * Detect build tool
 	 */
-	protected async detectBuildTool(): Promise<BuildTool> {
-		const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/{pom.xml,build.gradle,build.gradle.kts}"), "**/node_modules/**");
+	public async detectBuildTool(): Promise<BuildTool> {
+		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
+		const gradlePath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle");
+		const gradleKtsPath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle.kts");
 
-		if (files.length === 0) {
-			return BuildTool.NONE;
-		}
-
-		for (const file of files) {
-			if (file.fsPath.endsWith("pom.xml")) {
-				return BuildTool.MAVEN;
-			}
-			if (file.fsPath.endsWith("build.gradle") || file.fsPath.endsWith("build.gradle.kts")) {
-				return BuildTool.GRADLE;
-			}
+		if (await fs.pathExists(pomPath)) {
+			return BuildTool.MAVEN;
+		} else if ((await fs.pathExists(gradlePath)) || (await fs.pathExists(gradleKtsPath))) {
+			return BuildTool.GRADLE;
 		}
 
 		return BuildTool.NONE;
 	}
 
 	/**
-	 * Detect JDK version
+	 * Detect JDK version from build file
 	 */
 	protected async detectJdkVersion(buildTool: BuildTool): Promise<string> {
-		const cacheKey = `${this.workspaceFolder.uri.fsPath}-jdk-version`;
-		const cached = this.configManager.getCachedData(cacheKey);
-		if (cached) {
-			return cached;
-		}
-
-		let version = "17"; // Default
+		// Default JDK version
+		let jdkVersion = "17";
 
 		if (buildTool === BuildTool.MAVEN) {
 			const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 			if (await fs.pathExists(pomPath)) {
 				const content = await fs.readFile(pomPath, "utf8");
-				const versionMatch = content.match(/<java\.version>(\d+)<\/java\.version>|<maven\.compiler\.source>(\d+)<\/maven\.compiler\.source>|<source>(\d+)<\/source>/);
+				const versionMatch = content.match(/<java.version>([^<]+)<\/java.version>|<maven.compiler.source>([^<]+)<\/maven.compiler.source>/);
 				if (versionMatch) {
-					version = versionMatch[1] || versionMatch[2] || versionMatch[3] || version;
+					jdkVersion = versionMatch[1] || versionMatch[2];
 				}
 			}
 		} else if (buildTool === BuildTool.GRADLE) {
 			const gradlePath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle");
-			const gradleKtsPath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle.kts");
-
-			let content = "";
 			if (await fs.pathExists(gradlePath)) {
-				content = await fs.readFile(gradlePath, "utf8");
-			} else if (await fs.pathExists(gradleKtsPath)) {
-				content = await fs.readFile(gradleKtsPath, "utf8");
-			}
-
-			const versionMatch = content.match(/sourceCompatibility\s*=\s*['"]?(\d+)['"]?|JavaLanguageVersion\.of\((\d+)\)|toolchain\s*\{[\s\S]*?languageVersion\s*=\s*JavaLanguageVersion\.of\((\d+)\)/);
-			if (versionMatch) {
-				version = versionMatch[1] || versionMatch[2] || versionMatch[3] || version;
+				const content = await fs.readFile(gradlePath, "utf8");
+				const versionMatch = content.match(/sourceCompatibility\s*=\s*['"]?(\d+)['"]?|JavaVersion\.VERSION_(\d+)/);
+				if (versionMatch) {
+					jdkVersion = versionMatch[1] || versionMatch[2];
+				}
 			}
 		}
 
-		this.configManager.cacheData(cacheKey, version);
-		return version;
+		return jdkVersion;
 	}
 
 	/**
 	 * Detect application port
 	 */
 	protected async detectPort(): Promise<number> {
-		const cacheKey = `${this.workspaceFolder.uri.fsPath}-port`;
-		const cached = this.configManager.getCachedData(cacheKey);
-		if (cached) {
-			return cached;
-		}
-
-		let port = 8080; // Default
+		let port = 8080;
 
 		// Check application.properties
-		const propFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/src/main/resources/application.{properties,yml,yaml}"), "**/node_modules/**");
+		const propertiesFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/application.properties"), "**/node_modules/**");
 
-		for (const file of propFiles) {
+		for (const file of propertiesFiles) {
 			const content = await fs.readFile(file.fsPath, "utf8");
-
-			if (file.fsPath.endsWith(".properties")) {
-				const portMatch = content.match(/server\.port\s*=\s*(\d+)/);
-				if (portMatch) {
-					port = parseInt(portMatch[1], 10);
-				}
-			} else {
-				const portMatch = content.match(/server:\s*\n\s*port:\s*(\d+)/) || content.match(/port:\s*(\d+)/);
-				if (portMatch) {
-					port = parseInt(portMatch[1], 10);
-				}
+			const portMatch = content.match(/server\.port\s*=\s*(\d+)/);
+			if (portMatch) {
+				port = parseInt(portMatch[1]);
+				break;
 			}
 		}
 
-		// Check for common port patterns
-		const allFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/*.{properties,yml,yaml,java}"), "**/node_modules/**");
+		// Check application.yml
+		const yamlFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/application.{yml,yaml}"), "**/node_modules/**");
 
-		for (const file of allFiles.slice(0, 50)) {
+		for (const file of yamlFiles) {
 			const content = await fs.readFile(file.fsPath, "utf8");
-			const portPatterns = [/@Value\("\$\{server\.port:(\d+)\}"\)/, /@Value\("\$\{port:(\d+)\}"\)/, /PORT\s*=\s*(\d+)/, /port\s*=\s*(\d{4,5})/];
-
-			for (const pattern of portPatterns) {
-				const match = content.match(pattern);
-				if (match) {
-					port = parseInt(match[1], 10);
-					break;
-				}
+			const portMatch = content.match(/port:\s*(\d+)/);
+			if (portMatch) {
+				port = parseInt(portMatch[1]);
+				break;
 			}
 		}
 
-		this.configManager.cacheData(cacheKey, port);
 		return port;
 	}
 
@@ -142,21 +103,13 @@ export abstract class ProjectAnalyzer {
 	 * Detect main class
 	 */
 	protected async detectMainClass(): Promise<string | undefined> {
-		const javaFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/src/main/java/**/*.java"), "**/node_modules/**");
+		const javaFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/*.java"), "**/node_modules/**");
 
 		for (const file of javaFiles) {
 			const content = await fs.readFile(file.fsPath, "utf8");
 
-			// Check for @SpringBootApplication
-			if (content.includes("@SpringBootApplication") || content.includes("@QuarkusMain") || content.includes("@Micronaut")) {
-				const classMatch = content.match(/public\s+class\s+(\w+)/);
-				if (classMatch) {
-					return classMatch[1];
-				}
-			}
-
-			// Check for main method
-			if (content.includes("public static void main")) {
+			// Check for Spring Boot main class
+			if (content.includes("@SpringBootApplication") && content.includes("public static void main")) {
 				const classMatch = content.match(/public\s+class\s+(\w+)/);
 				if (classMatch) {
 					return classMatch[1];
@@ -170,54 +123,27 @@ export abstract class ProjectAnalyzer {
 	/**
 	 * Analyze project structure
 	 */
-	protected async analyzeStructure(): Promise<{
-		hasSrcMainJava: boolean;
-		hasSrcMainResources: boolean;
-		hasSrcTestJava: boolean;
-		hasApplicationConfig: boolean;
-	}> {
-		const structure = {
-			hasSrcMainJava: false,
-			hasSrcMainResources: false,
-			hasSrcTestJava: false,
-			hasApplicationConfig: false,
+	protected async analyzeStructure(): Promise<any> {
+		const structure: any = {
+			hasSrcFolder: false,
+			hasResourcesFolder: false,
+			hasTestFolder: false,
+			hasDockerfile: false,
+			hasDockerCompose: false,
 		};
 
-		const checkPath = async (relativePath: string): Promise<boolean> => {
-			const fullPath = path.join(this.workspaceFolder.uri.fsPath, relativePath);
-			return fs.pathExists(fullPath);
-		};
+		const srcPath = path.join(this.workspaceFolder.uri.fsPath, "src");
+		const resourcesPath = path.join(this.workspaceFolder.uri.fsPath, "src", "main", "resources");
+		const testPath = path.join(this.workspaceFolder.uri.fsPath, "src", "test");
+		const dockerfilePath = path.join(this.workspaceFolder.uri.fsPath, "Dockerfile");
+		const dockerComposePath = path.join(this.workspaceFolder.uri.fsPath, "docker-compose.yml");
 
-		structure.hasSrcMainJava = await checkPath("src/main/java");
-		structure.hasSrcMainResources = await checkPath("src/main/resources");
-		structure.hasSrcTestJava = await checkPath("src/test/java");
-
-		const configFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/src/main/resources/application.{properties,yml,yaml}"), "**/node_modules/**");
-		structure.hasApplicationConfig = configFiles.length > 0;
+		structure.hasSrcFolder = await fs.pathExists(srcPath);
+		structure.hasResourcesFolder = await fs.pathExists(resourcesPath);
+		structure.hasTestFolder = await fs.pathExists(testPath);
+		structure.hasDockerfile = await fs.pathExists(dockerfilePath);
+		structure.hasDockerCompose = await fs.pathExists(dockerComposePath);
 
 		return structure;
-	}
-
-	/**
-	 * Create analyzer based on build tool
-	 * Uses dynamic import to avoid circular dependencies
-	 */
-	public static async createAnalyzer(workspaceFolder: vscode.WorkspaceFolder): Promise<ProjectAnalyzer> {
-		// Dynamic import to avoid circular dependency
-		const { JavaProjectAnalyzer } = await import("./JavaProjectAnalyzer.js");
-		const analyzer = new JavaProjectAnalyzer(workspaceFolder);
-
-		// Access protected method
-		const buildTool = await (analyzer as any).detectBuildTool();
-
-		if (buildTool === BuildTool.MAVEN) {
-			const { MavenAnalyzer } = await import("./MavenAnalyzer.js");
-			return new MavenAnalyzer(workspaceFolder);
-		} else if (buildTool === BuildTool.GRADLE) {
-			const { GradleAnalyzer } = await import("./GradleAnalyzer.js");
-			return new GradleAnalyzer(workspaceFolder);
-		}
-
-		return analyzer;
 	}
 }

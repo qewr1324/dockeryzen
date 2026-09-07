@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { ProjectAnalysis, DockerConfig, ComposeService, Volume, Network } from "../../types/interfaces.js";
+import type { ProjectAnalysis, DockerConfig, ComposeService, Volume, Network, MessageQueueConfig, AdditionalServiceConfig } from "../../types/interfaces.js";
 import { DatabaseType } from "../../types/interfaces.js";
 
 export class ComposeGenerator {
@@ -10,11 +10,11 @@ export class ComposeGenerator {
 		const volumes: Volume[] = [];
 		const networks: Network[] = [];
 
-		// Check if .env exists
-		const hasEnvFile = this.checkEnvFileExists();
+		// Check if .env should be used
+		const useEnvFile = config.generateEnvFile !== false;
 
 		// Add application service
-		services.push(this.generateAppService(analysis, config, hasEnvFile));
+		services.push(this.generateAppService(analysis, config, useEnvFile));
 
 		// Add database service if needed
 		if (config.database && config.database.type !== DatabaseType.NONE) {
@@ -22,6 +22,26 @@ export class ComposeGenerator {
 			volumes.push({
 				name: `${config.database.type}-data`,
 			});
+		}
+
+		// Add message queue services
+		if (config.messageQueues && config.messageQueues.length > 0) {
+			for (const mq of config.messageQueues) {
+				services.push(this.generateMessageQueueService(mq));
+				volumes.push({
+					name: `${mq.type}-data`,
+				});
+			}
+		}
+
+		// Add additional services
+		if (config.additionalServices && config.additionalServices.length > 0) {
+			for (const svc of config.additionalServices) {
+				services.push(this.generateAdditionalService(svc));
+				volumes.push({
+					name: `${svc.type}-data`,
+				});
+			}
 		}
 
 		// Add network
@@ -34,22 +54,9 @@ export class ComposeGenerator {
 	}
 
 	/**
-	 * Check if .env file exists
-	 */
-	private checkEnvFileExists(): boolean {
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-		if (!workspaceFolder) {
-			return false;
-		}
-
-		const envPath = path.join(workspaceFolder.uri.fsPath, ".env");
-		return fs.existsSync(envPath);
-	}
-
-	/**
 	 * Generate application service
 	 */
-	private generateAppService(analysis: ProjectAnalysis, config: DockerConfig, hasEnvFile: boolean): ComposeService {
+	private generateAppService(analysis: ProjectAnalysis, config: DockerConfig, useEnvFile: boolean): ComposeService {
 		const service: ComposeService = {
 			name: "app",
 			build: {
@@ -70,7 +77,7 @@ export class ComposeGenerator {
 		}
 
 		// Add environment variables
-		if (!hasEnvFile) {
+		if (!useEnvFile) {
 			// If no .env file, put env vars directly in compose
 			if (config.envVariables) {
 				service.environment = { ...config.envVariables };
@@ -84,13 +91,19 @@ export class ComposeGenerator {
 				service.environment[`SPRING_DATASOURCE_PASSWORD`] = config.database.password;
 			}
 		} else {
-			// If .env exists, use env_file
+			// If .env should be used, use env_file
 			service.env_file = [".env"];
 		}
 
-		// Add database dependencies
+		// Add dependencies
 		if (config.database && config.database.type !== DatabaseType.NONE) {
 			service.depends_on.push(config.database.type);
+		}
+
+		if (config.messageQueues) {
+			for (const mq of config.messageQueues) {
+				service.depends_on.push(mq.type);
+			}
 		}
 
 		// Add health check
@@ -185,6 +198,50 @@ export class ComposeGenerator {
 	}
 
 	/**
+	 * Generate message queue service
+	 */
+	private generateMessageQueueService(mqConfig: MessageQueueConfig): ComposeService {
+		const service: ComposeService = {
+			name: mqConfig.type,
+			image: this.getMessageQueueImage(mqConfig),
+			ports: [`${mqConfig.port}:${mqConfig.port}`],
+			environment: {},
+			volumes: [`${mqConfig.type}-data:/var/lib/${mqConfig.type}`],
+			depends_on: [],
+			restart: "unless-stopped",
+			networks: ["dockeryzen-network"],
+		};
+
+		// Add health check
+		service.healthcheck = {
+			test: this.getMessageQueueHealthCheck(mqConfig.type),
+			interval: "30s",
+			timeout: "3s",
+			retries: 5,
+		};
+
+		return service;
+	}
+
+	/**
+	 * Generate additional service
+	 */
+	private generateAdditionalService(svcConfig: AdditionalServiceConfig): ComposeService {
+		const service: ComposeService = {
+			name: svcConfig.type,
+			image: this.getAdditionalServiceImage(svcConfig),
+			ports: [`${svcConfig.port}:${svcConfig.port}`],
+			environment: {},
+			volumes: [`${svcConfig.type}-data:/data`],
+			depends_on: [],
+			restart: "unless-stopped",
+			networks: ["dockeryzen-network"],
+		};
+
+		return service;
+	}
+
+	/**
 	 * Get database image
 	 */
 	private getDatabaseImage(dbConfig: any): string {
@@ -213,6 +270,46 @@ export class ComposeGenerator {
 	}
 
 	/**
+	 * Get message queue image
+	 */
+	private getMessageQueueImage(mqConfig: MessageQueueConfig): string {
+		const version = mqConfig.version || "latest";
+
+		switch (mqConfig.type) {
+			case "kafka":
+				return `confluentinc/cp-kafka:${version}`;
+			case "rabbitmq":
+				return `rabbitmq:${version}`;
+			case "activemq":
+				return `apache/activemq-classic:${version}`;
+			default:
+				return `rabbitmq:latest`;
+		}
+	}
+
+	/**
+	 * Get additional service image
+	 */
+	private getAdditionalServiceImage(svcConfig: AdditionalServiceConfig): string {
+		const version = svcConfig.version || "latest";
+
+		switch (svcConfig.type) {
+			case "nginx":
+				return `nginx:${version}`;
+			case "grafana":
+				return `grafana/grafana:${version}`;
+			case "prometheus":
+				return `prom/prometheus:${version}`;
+			case "keycloak":
+				return `quay.io/keycloak/keycloak:${version}`;
+			case "minio":
+				return `minio/minio:${version}`;
+			default:
+				return `nginx:latest`;
+		}
+	}
+
+	/**
 	 * Get database health check command
 	 */
 	private getDatabaseHealthCheck(dbType: DatabaseType): string[] {
@@ -234,6 +331,22 @@ export class ComposeGenerator {
 				return ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j 'RETURN 1'"];
 			case DatabaseType.H2:
 				return ["CMD-SHELL", 'echo "healthy"'];
+			default:
+				return ["CMD-SHELL", 'echo "healthy"'];
+		}
+	}
+
+	/**
+	 * Get message queue health check command
+	 */
+	private getMessageQueueHealthCheck(mqType: string): string[] {
+		switch (mqType) {
+			case "kafka":
+				return ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"];
+			case "rabbitmq":
+				return ["CMD", "rabbitmq-diagnostics", "ping"];
+			case "activemq":
+				return ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"];
 			default:
 				return ["CMD-SHELL", 'echo "healthy"'];
 		}

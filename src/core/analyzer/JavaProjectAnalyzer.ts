@@ -527,4 +527,8 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 
 		return false;
 	}
+
+	public async detectBuildToolPublic(): Promise<BuildTool> {
+		return this.detectBuildTool();
+	}
 }

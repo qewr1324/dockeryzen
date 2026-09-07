@@ -170,6 +170,26 @@ export interface DockerConfig {
 	networks: Network[];
 	/** Resource limits */
 	resourceLimits?: ResourceLimits;
+	/** Generate .env file */
+	generateEnvFile?: boolean;
+	/** Message queues */
+	messageQueues?: MessageQueueConfig[];
+	/** Additional services */
+	additionalServices?: AdditionalServiceConfig[];
+}
+
+/** Message queue configuration */
+export interface MessageQueueConfig {
+	type: "kafka" | "rabbitmq" | "activemq";
+	version: string;
+	port: number;
+}
+
+/** Additional service configuration */
+export interface AdditionalServiceConfig {
+	type: "nginx" | "grafana" | "prometheus" | "keycloak" | "minio";
+	version: string;
+	port: number;
 }
 
 /** Docker Compose service */
@@ -182,6 +202,7 @@ export interface ComposeService {
 	};
 	ports: string[];
 	environment: Record<string, string>;
+	env_file?: string[];
 	volumes: string[];
 	depends_on: string[];
 	healthcheck?: {
@@ -256,38 +277,4 @@ export interface UserPreferences {
 	enableDevContainer: boolean;
 	enableCiCd: boolean;
 	enableKubernetes: boolean;
-}
-
-export interface ComposeService {
-	name: string;
-	image?: string;
-	build?: {
-		context: string;
-		dockerfile: string;
-	};
-	ports: string[];
-	environment: Record<string, string>;
-	env_file?: string[];
-	volumes: string[];
-	depends_on: string[];
-	healthcheck?: {
-		test: string[];
-		interval: string;
-		timeout: string;
-		retries: number;
-	};
-	restart?: string;
-	networks: string[];
-	deploy?: {
-		resources?: {
-			limits?: {
-				cpus?: string;
-				memory?: string;
-			};
-			reservations?: {
-				cpus?: string;
-				memory?: string;
-			};
-		};
-	};
 }

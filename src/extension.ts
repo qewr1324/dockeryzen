@@ -16,7 +16,8 @@ import { DevContainerGenerator } from "./core/generator/DevContainerGenerator.js
 import { AnalyzerFactory } from "./core/analyzer/AnalyzerFactory.js";
 import * as fs from "fs-extra";
 import * as path from "path";
-import type { DockerConfig, ProjectAnalysis } from "./types/interfaces.js";
+import type { DockerConfig, ProjectAnalysis, DatabaseConfig, MessageQueueConfig, AdditionalServiceConfig } from "./types/interfaces.js";
+import { DatabaseType, OutputType } from "./types/interfaces.js";
 
 export function activate(context: vscode.ExtensionContext): void {
 	console.log("Dockeryzen extension is now active!");
@@ -168,7 +169,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				}
 			}
 
-			SettingsPanel.show(config, workspaceFolder);
+			SettingsPanel.show(config);
 		}),
 
 		// Generate from config file
@@ -202,7 +203,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			const config = await configLoader.load(workspaceFolder);
 			if (config) {
-				SettingsPanel.show(config, workspaceFolder);
+				SettingsPanel.show(config);
 			}
 		}),
 	);
@@ -272,22 +273,45 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 	await progress.run("Generating from config...", async (reporter) => {
 		reporter.report({ message: "Reading config...", increment: 20 });
 
+		// Get databases from config
+		const databases = config.databases || [];
+		const messageQueues = config.messageQueues || [];
+		const services = config.services || [];
+
+		// Convert database config to DatabaseConfig format
+		let databaseConfig: DatabaseConfig | undefined;
+		if (databases.length > 0) {
+			const db = databases[0];
+			databaseConfig = {
+				type: db.type as DatabaseType,
+				version: db.version || "latest",
+				port: db.port || getDefaultPort(db.type),
+				name: db.name || "appdb",
+				username: db.username || "admin",
+				password: db.password || "password",
+				host: db.host || db.type,
+			};
+		}
+
 		// Map config to DockerConfig
 		const dockerConfig: DockerConfig = {
 			baseImage: config.docker?.baseImage || config.project?.jdkVendor || "eclipse-temurin",
 			jdkVersion: config.project?.jdkVersion || "17",
 			port: config.project?.port || 8080,
-			jvmOptions: config.docker?.useAlpine ? `${config.docker?.jvmOptions || "-Xmx512m -Xms256m"} alpine` : config.docker?.jvmOptions || "-Xmx512m -Xms256m",
+			jvmOptions: config.docker?.jvmOptions || "-Xmx512m -Xms256m",
 			enableDebug: config.docker?.enableDebug || false,
 			debugPort: config.docker?.debugPort || 5005,
 			enableHealthCheck: config.docker?.enableHealthCheck ?? true,
 			healthCheckEndpoint: config.docker?.healthCheckEndpoint || "/actuator/health",
-			outputType: config.project?.outputType || "jar",
-			database: config.databases?.[0],
+			outputType: (config.project?.outputType as OutputType) || OutputType.JAR,
+			database: databaseConfig,
 			envVariables: {},
-			composeServices: config.services || [],
+			composeServices: [],
 			volumes: [],
 			networks: [],
+			generateEnvFile: config.envFile !== false,
+			messageQueues: messageQueues as MessageQueueConfig[],
+			additionalServices: services as AdditionalServiceConfig[],
 		};
 
 		reporter.report({ message: "Analyzing project...", increment: 30 });
@@ -303,36 +327,41 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 			analysis.jdkVersion = config.project.jdkVersion;
 		}
 		if (config.project?.outputType) {
-			analysis.outputType = config.project.outputType;
+			analysis.outputType = config.project.outputType as any;
 		}
-		if (config.databases?.length > 0) {
-			analysis.database = config.databases[0];
+		if (databaseConfig) {
+			analysis.database = databaseConfig;
 		}
 
 		reporter.report({ message: "Generating Docker files...", increment: 40 });
 
 		const outputPath = workspaceFolder.uri.fsPath;
+		const generatedFiles: string[] = [];
 
-		// Generate Dockerfile
+		// Generate Dockerfile - بر اساس outputType
 		const dockerfileGenerator = new DockerfileGenerator();
 		const dockerfile = dockerfileGenerator.generate(analysis, dockerConfig);
 		await fs.writeFile(path.join(outputPath, "Dockerfile"), dockerfile, "utf8");
+		generatedFiles.push("Dockerfile");
 
 		// Generate .dockerignore
 		const ignoreGenerator = new IgnoreGenerator();
 		const dockerignore = ignoreGenerator.generate();
 		await fs.writeFile(path.join(outputPath, ".dockerignore"), dockerignore, "utf8");
+		generatedFiles.push(".dockerignore");
 
 		// Generate docker-compose.yml
 		const composeGenerator = new ComposeGenerator();
 		const compose = composeGenerator.generate(analysis, dockerConfig);
 		await fs.writeFile(path.join(outputPath, "docker-compose.yml"), compose, "utf8");
+		generatedFiles.push("docker-compose.yml");
 
 		// Generate .env if enabled
-		if (config.envFile !== false) {
+		if (config.envFile !== false && (databases.length > 0 || messageQueues.length > 0)) {
 			const envGenerator = new EnvGenerator();
 			const envContent = envGenerator.generate(analysis, dockerConfig);
 			await fs.writeFile(path.join(outputPath, ".env"), envContent, "utf8");
+			generatedFiles.push(".env");
 		}
 
 		// Generate dev container if enabled
@@ -340,25 +369,36 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 			const devContainerGenerator = new DevContainerGenerator();
 			const devContainerPath = path.join(outputPath, ".devcontainer", "devcontainer.json");
 			await fs.ensureDir(path.dirname(devContainerPath));
-			const devContent = devContainerGenerator.generate(analysis, dockerConfig);
-			await fs.writeFile(devContainerPath, devContent, "utf8");
+			const devContainerContent = devContainerGenerator.generate(analysis, dockerConfig);
+			await fs.writeFile(devContainerPath, devContainerContent, "utf8");
+			generatedFiles.push(".devcontainer/devcontainer.json");
 		}
 
 		reporter.report({ message: "Files generated from config!", increment: 10 });
 
 		outputChannel.appendLine("Generated from config:");
-		outputChannel.appendLine("  - Dockerfile");
-		outputChannel.appendLine("  - .dockerignore");
-		outputChannel.appendLine("  - docker-compose.yml");
-		if (config.envFile !== false) {
-			outputChannel.appendLine("  - .env");
-		}
-		if (config.devContainer?.enabled) {
-			outputChannel.appendLine("  - .devcontainer/devcontainer.json");
-		}
+		generatedFiles.forEach((f) => outputChannel.appendLine(`  - ${f}`));
 
-		vscode.window.showInformationMessage("Dockeryzen: Generated from config file!");
+		vscode.window.showInformationMessage(`Dockeryzen: Generated ${generatedFiles.length} files!`);
 	});
+}
+
+/**
+ * Get default port for database type
+ */
+function getDefaultPort(dbType: string): number {
+	const ports: Record<string, number> = {
+		postgresql: 5432,
+		mysql: 3306,
+		mariadb: 3306,
+		mongodb: 27017,
+		redis: 6379,
+		cassandra: 9042,
+		elasticsearch: 9200,
+		neo4j: 7687,
+		h2: 9092,
+	};
+	return ports[dbType] || 5432;
 }
 
 export function deactivate(): void {

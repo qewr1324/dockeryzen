@@ -8,7 +8,7 @@ import { GradleAnalyzer } from "./GradleAnalyzer.js";
 export class AnalyzerFactory {
 	public static async createAnalyzer(workspaceFolder: vscode.WorkspaceFolder): Promise<ProjectAnalyzer> {
 		const tempAnalyzer = new JavaProjectAnalyzer(workspaceFolder);
-		const buildTool = await tempAnalyzer["detectBuildTool"]();
+		const buildTool = await tempAnalyzer.detectBuildToolPublic();
 
 		switch (buildTool) {
 			case BuildTool.MAVEN:
