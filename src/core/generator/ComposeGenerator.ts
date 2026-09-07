@@ -26,7 +26,6 @@ export class ComposeGenerator {
 				if (db.type !== DatabaseType.NONE) {
 					const serviceName = i === 0 ? db.type : `${db.type}-${i + 1}`;
 					if (!usedServiceNames.has(serviceName)) {
-						// اصلاح پورت تکراری
 						let externalPort = db.externalPort || db.port;
 						if (usedPorts.has(externalPort)) {
 							externalPort = this.findAvailablePort(externalPort, usedPorts);
@@ -35,7 +34,7 @@ export class ComposeGenerator {
 
 						const dbService = this.generateDatabaseService(db, serviceName, externalPort);
 						services.push(dbService);
-						volumes.push({ name: `${serviceName}-data` });
+						volumes.push({ name: `${serviceName}-data`, driver: "local" });
 						usedServiceNames.add(serviceName);
 					}
 				}
@@ -51,7 +50,7 @@ export class ComposeGenerator {
 
 				const dbService = this.generateDatabaseService(config.database, serviceName, externalPort);
 				services.push(dbService);
-				volumes.push({ name: `${serviceName}-data` });
+				volumes.push({ name: `${serviceName}-data`, driver: "local" });
 				usedServiceNames.add(serviceName);
 			}
 		}
@@ -69,7 +68,7 @@ export class ComposeGenerator {
 
 					const mqService = this.generateMessageQueueService(mq, serviceName, externalPort);
 					services.push(mqService);
-					volumes.push({ name: `${serviceName}-data` });
+					volumes.push({ name: `${serviceName}-data`, driver: "local" });
 					usedServiceNames.add(serviceName);
 				}
 			}
@@ -90,7 +89,9 @@ export class ComposeGenerator {
 
 						const addService = this.generateAdditionalService(svc, serviceName, externalPort);
 						services.push(addService);
-						volumes.push({ name: `${serviceName}-data` });
+						if (svc.type !== "nginx") {
+							volumes.push({ name: `${serviceName}-data`, driver: "local" });
+						}
 						usedServiceNames.add(serviceName);
 					}
 				}
@@ -121,11 +122,22 @@ export class ComposeGenerator {
 			depends_on: [],
 			restart: "unless-stopped",
 			networks: ["dockeryzen-network"],
+			logging: {
+				driver: "json-file",
+				options: {
+					"max-size": "10m",
+					"max-file": "3",
+				},
+			},
 		};
 
 		if (config.enableDebug) {
 			service.ports.push(`${config.debugPort || 5005}:${config.debugPort || 5005}`);
 		}
+
+		// Spring Boot Actuator
+		service.environment["MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE"] = "health,info,metrics";
+		service.environment["MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS"] = "always";
 
 		if (config.databases && config.databases.length > 0) {
 			for (let i = 0; i < config.databases.length; i++) {
@@ -135,9 +147,7 @@ export class ComposeGenerator {
 					service.depends_on.push(serviceName);
 
 					if (!useEnvFile) {
-						service.environment[`SPRING_DATASOURCE_URL`] = this.getJdbcUrl(db, serviceName);
-						service.environment[`SPRING_DATASOURCE_USERNAME`] = db.username;
-						service.environment[`SPRING_DATASOURCE_PASSWORD`] = db.password;
+						this.addDatabaseEnvVars(service, db, serviceName);
 					}
 				}
 			}
@@ -147,9 +157,7 @@ export class ComposeGenerator {
 			service.depends_on.push(serviceName);
 
 			if (!useEnvFile) {
-				service.environment[`SPRING_DATASOURCE_URL`] = this.getJdbcUrl(db, serviceName);
-				service.environment[`SPRING_DATASOURCE_USERNAME`] = db.username;
-				service.environment[`SPRING_DATASOURCE_PASSWORD`] = db.password;
+				this.addDatabaseEnvVars(service, db, serviceName);
 			}
 		}
 
@@ -158,6 +166,10 @@ export class ComposeGenerator {
 				const mq = config.messageQueues[i];
 				const serviceName = i === 0 ? mq.type : `${mq.type}-${i + 1}`;
 				service.depends_on.push(serviceName);
+
+				if (!useEnvFile) {
+					this.addMessageQueueEnvVars(service, mq, serviceName);
+				}
 			}
 		}
 
@@ -165,7 +177,6 @@ export class ComposeGenerator {
 			service.env_file = [".env"];
 		}
 
-		// فقط اگر enableHealthCheck فعال باشه
 		if (config.enableHealthCheck !== false) {
 			const healthEndpoint = analysis.outputType === "war" ? `http://localhost:${port}/` : `http://localhost:${port}${config.healthCheckEndpoint || "/actuator/health"}`;
 			service.healthcheck = {
@@ -173,25 +184,68 @@ export class ComposeGenerator {
 				interval: "30s",
 				timeout: "3s",
 				retries: 3,
+				start_period: "30s",
 			};
 		}
 
 		return service;
 	}
 
-	private getJdbcUrl(db: any, serviceName: string): string {
+	private addDatabaseEnvVars(service: ComposeService, db: any, serviceName: string): void {
 		const jdbcUrls: Record<string, string> = {
 			postgresql: `jdbc:postgresql://${serviceName}:${db.port}/${db.name}`,
-			mysql: `jdbc:mysql://${serviceName}:${db.port}/${db.name}`,
+			mysql: `jdbc:mysql://${serviceName}:${db.port}/${db.name}?useSSL=false&serverTimezone=UTC`,
 			mariadb: `jdbc:mariadb://${serviceName}:${db.port}/${db.name}`,
-			mongodb: `mongodb://${db.username}:${db.password}@${serviceName}:${db.port}/${db.name}`,
+			mongodb: `mongodb://${db.username}:${db.password}@${serviceName}:${db.port}/${db.name}?authSource=admin`,
 			redis: `redis://${serviceName}:${db.port}`,
 			cassandra: `cassandra://${serviceName}:${db.port}/${db.name}`,
 			elasticsearch: `http://${serviceName}:${db.port}`,
 			neo4j: `bolt://${serviceName}:${db.port}`,
 			h2: `jdbc:h2:mem:${db.name}`,
 		};
-		return jdbcUrls[db.type] || `jdbc:${db.type}://${serviceName}:${db.port}/${db.name}`;
+
+		if (db.type === "postgresql" || db.type === "mysql" || db.type === "mariadb" || db.type === "h2") {
+			service.environment["SPRING_DATASOURCE_URL"] = jdbcUrls[db.type];
+			service.environment["SPRING_DATASOURCE_USERNAME"] = db.username;
+			service.environment["SPRING_DATASOURCE_PASSWORD"] = db.password;
+		} else if (db.type === "mongodb") {
+			service.environment["SPRING_DATA_MONGODB_URI"] = jdbcUrls[db.type];
+			service.environment["SPRING_DATA_MONGODB_DATABASE"] = db.name;
+		} else if (db.type === "redis") {
+			service.environment["SPRING_DATA_REDIS_HOST"] = serviceName;
+			service.environment["SPRING_DATA_REDIS_PORT"] = db.port.toString();
+		} else if (db.type === "cassandra") {
+			service.environment["SPRING_DATA_CASSANDRA_CONTACT_POINTS"] = serviceName;
+			service.environment["SPRING_DATA_CASSANDRA_PORT"] = db.port.toString();
+			service.environment["SPRING_DATA_CASSANDRA_KEYSPACE_NAME"] = db.name;
+			service.environment["SPRING_DATA_CASSANDRA_USERNAME"] = db.username;
+			service.environment["SPRING_DATA_CASSANDRA_PASSWORD"] = db.password;
+		} else if (db.type === "elasticsearch") {
+			service.environment["SPRING_ELASTICSEARCH_URIS"] = jdbcUrls[db.type];
+			service.environment["SPRING_ELASTICSEARCH_USERNAME"] = db.username;
+			service.environment["SPRING_ELASTICSEARCH_PASSWORD"] = db.password;
+		} else if (db.type === "neo4j") {
+			service.environment["SPRING_NEO4J_URI"] = jdbcUrls[db.type];
+			service.environment["SPRING_NEO4J_AUTHENTICATION_USERNAME"] = db.username;
+			service.environment["SPRING_NEO4J_AUTHENTICATION_PASSWORD"] = db.password;
+		}
+	}
+
+	private addMessageQueueEnvVars(service: ComposeService, mq: any, serviceName: string): void {
+		switch (mq.type) {
+			case "rabbitmq":
+				service.environment["SPRING_RABBITMQ_HOST"] = serviceName;
+				service.environment["SPRING_RABBITMQ_PORT"] = (mq.port || 5672).toString();
+				service.environment["SPRING_RABBITMQ_USERNAME"] = mq.username || "guest";
+				service.environment["SPRING_RABBITMQ_PASSWORD"] = mq.password || "guest";
+				break;
+			case "kafka":
+				service.environment["SPRING_KAFKA_BOOTSTRAP_SERVERS"] = `${serviceName}:${mq.port || 9092}`;
+				break;
+			case "activemq":
+				service.environment["SPRING_ACTIVEMQ_BROKER_URL"] = `tcp://${serviceName}:${mq.port || 61616}`;
+				break;
+		}
 	}
 
 	private generateDatabaseService(dbConfig: any, serviceName: string, externalPort: number): ComposeService {
@@ -204,6 +258,13 @@ export class ComposeGenerator {
 			depends_on: [],
 			restart: "unless-stopped",
 			networks: ["dockeryzen-network"],
+			logging: {
+				driver: "json-file",
+				options: {
+					"max-size": "10m",
+					"max-file": "3",
+				},
+			},
 		};
 
 		switch (dbConfig.type) {
@@ -212,7 +273,9 @@ export class ComposeGenerator {
 					POSTGRES_DB: dbConfig.name || "appdb",
 					POSTGRES_USER: dbConfig.username || "admin",
 					POSTGRES_PASSWORD: dbConfig.password || "password",
+					POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C",
 				};
+				service.volumes = [`${serviceName}-data:/var/lib/postgresql/data`, `./docker/${serviceName}/init:/docker-entrypoint-initdb.d:ro`];
 				break;
 			case "mysql":
 				service.environment = {
@@ -221,6 +284,7 @@ export class ComposeGenerator {
 					MYSQL_PASSWORD: dbConfig.password || "password",
 					MYSQL_ROOT_PASSWORD: dbConfig.password || "password",
 				};
+				service.volumes = [`${serviceName}-data:/var/lib/mysql`, `./docker/${serviceName}/init:/docker-entrypoint-initdb.d:ro`];
 				break;
 			case "mariadb":
 				service.environment = {
@@ -229,6 +293,7 @@ export class ComposeGenerator {
 					MARIADB_PASSWORD: dbConfig.password || "password",
 					MARIADB_ROOT_PASSWORD: dbConfig.password || "password",
 				};
+				service.volumes = [`${serviceName}-data:/var/lib/mysql`, `./docker/${serviceName}/init:/docker-entrypoint-initdb.d:ro`];
 				break;
 			case "mongodb":
 				service.environment = {
@@ -236,6 +301,7 @@ export class ComposeGenerator {
 					MONGO_INITDB_ROOT_USERNAME: dbConfig.username || "admin",
 					MONGO_INITDB_ROOT_PASSWORD: dbConfig.password || "password",
 				};
+				service.volumes = [`${serviceName}-data:/data/db`, `./docker/${serviceName}/init:/docker-entrypoint-initdb.d:ro`];
 				break;
 			case "redis":
 				if (dbConfig.password && dbConfig.password !== "password") {
@@ -243,32 +309,38 @@ export class ComposeGenerator {
 						REDIS_PASSWORD: dbConfig.password,
 					};
 				}
+				service.volumes = [`${serviceName}-data:/data`];
 				break;
 			case "cassandra":
 				service.environment = {
 					CASSANDRA_USER: dbConfig.username || "admin",
 					CASSANDRA_PASSWORD: dbConfig.password || "password",
 				};
+				service.volumes = [`${serviceName}-data:/var/lib/cassandra`];
 				break;
 			case "elasticsearch":
 				service.environment = {
 					"discovery.type": "single-node",
 					ES_JAVA_OPTS: "-Xms512m -Xmx512m",
+					"xpack.security.enabled": "false",
 				};
+				service.volumes = [`${serviceName}-data:/usr/share/elasticsearch/data`];
 				break;
 			case "neo4j":
 				service.environment = {
 					NEO4J_AUTH: `${dbConfig.username || "neo4j"}/${dbConfig.password || "password"}`,
 					NEO4J_dbms_memory_heap_max__size: "512m",
 				};
+				service.volumes = [`${serviceName}-data:/data`, `./docker/${serviceName}/plugins:/plugins`];
 				break;
 		}
 
 		service.healthcheck = {
 			test: this.getDatabaseHealthCheck(dbConfig.type, dbConfig),
-			interval: "30s",
-			timeout: "3s",
+			interval: "10s",
+			timeout: "5s",
 			retries: 5,
+			start_period: "30s",
 		};
 
 		return service;
@@ -284,14 +356,39 @@ export class ComposeGenerator {
 			depends_on: [],
 			restart: "unless-stopped",
 			networks: ["dockeryzen-network"],
+			logging: {
+				driver: "json-file",
+				options: {
+					"max-size": "10m",
+					"max-file": "3",
+				},
+			},
 		};
 
 		if (mqConfig.type === "kafka") {
+			const kafkaPort = mqConfig.port || 9092;
+			const controllerPort = kafkaPort + 1;
+
+			service.ports = [`${externalPort}:${kafkaPort}`, `${externalPort + 1}:${controllerPort}`];
+
 			service.environment = {
-				KAFKA_ADVERTISED_LISTENERS: `PLAINTEXT://${serviceName}:${mqConfig.port || 9092}`,
-				KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1",
-				KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT",
+				KAFKA_NODE_ID: "1",
+				KAFKA_PROCESS_ROLES: "broker,controller",
+				KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER",
+				KAFKA_LISTENERS: `PLAINTEXT://:${kafkaPort},CONTROLLER://:${controllerPort}`,
+				KAFKA_ADVERTISED_LISTENERS: `PLAINTEXT://${serviceName}:${kafkaPort}`,
+				KAFKA_CONTROLLER_QUORUM_VOTERS: `1@${serviceName}:${controllerPort}`,
+				KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT",
 				KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT",
+				KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1",
+				KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1",
+				KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1",
+				KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0",
+				KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true",
+				KAFKA_DELETE_TOPIC_ENABLE: "true",
+				KAFKA_LOG_DIRS: "/var/lib/kafka/data",
+				KAFKA_LOG_RETENTION_HOURS: "168",
+				KAFKA_LOG_SEGMENT_BYTES: "1073741824",
 			};
 		} else if (mqConfig.type === "rabbitmq") {
 			service.environment = {
@@ -302,9 +399,10 @@ export class ComposeGenerator {
 
 		service.healthcheck = {
 			test: this.getMessageQueueHealthCheck(mqConfig.type),
-			interval: "30s",
-			timeout: "3s",
+			interval: "10s",
+			timeout: "5s",
 			retries: 5,
+			start_period: "30s",
 		};
 
 		return service;
@@ -320,20 +418,28 @@ export class ComposeGenerator {
 			depends_on: [],
 			restart: "unless-stopped",
 			networks: ["dockeryzen-network"],
+			logging: {
+				driver: "json-file",
+				options: {
+					"max-size": "10m",
+					"max-file": "3",
+				},
+			},
 		};
 
 		switch (svcConfig.type) {
 			case "nginx":
-				service.volumes = [`${serviceName}-data:/etc/nginx/conf.d`];
+				service.volumes = [`./nginx/nginx.conf:/etc/nginx/nginx.conf:ro`, `./nginx/conf.d:/etc/nginx/conf.d:ro`];
 				break;
 			case "grafana":
 				service.environment = {
 					GF_SECURITY_ADMIN_PASSWORD: svcConfig.password || "admin",
+					GF_USERS_ALLOW_SIGN_UP: "false",
 				};
-				service.volumes = [`${serviceName}-data:/var/lib/grafana`];
+				service.volumes = [`${serviceName}-data:/var/lib/grafana`, `./grafana/dashboards:/etc/grafana/dashboards:ro`];
 				break;
 			case "prometheus":
-				service.volumes = [`${serviceName}-data:/prometheus`];
+				service.volumes = [`./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro`, `${serviceName}-data:/prometheus`];
 				break;
 			case "keycloak":
 				service.environment = {
@@ -349,6 +455,16 @@ export class ComposeGenerator {
 				};
 				service.volumes = [`${serviceName}-data:/data`];
 				break;
+		}
+
+		if (svcConfig.type === "grafana" || svcConfig.type === "prometheus") {
+			service.healthcheck = {
+				test: svcConfig.type === "grafana" ? ["CMD", "wget", "--spider", `http://localhost:${svcConfig.port}/api/health`] : ["CMD", "wget", "--spider", `http://localhost:${svcConfig.port}/-/healthy`],
+				interval: "10s",
+				timeout: "5s",
+				retries: 5,
+				start_period: "30s",
+			};
 		}
 
 		return service;
@@ -372,7 +488,6 @@ export class ComposeGenerator {
 
 		const baseImage = images[type] || "postgres";
 
-		// Neo4j تصویر Alpine نداره
 		if (useAlpine && !version.includes("-alpine") && type !== "elasticsearch" && type !== "neo4j") {
 			return `${baseImage}:${version}-alpine`;
 		}
@@ -415,7 +530,6 @@ export class ComposeGenerator {
 
 		const baseImage = images[type] || "nginx";
 
-		// Keycloak تصویر Alpine نداره در نسخه‌های جدید
 		if (useAlpine && !version.includes("-alpine") && type !== "keycloak") {
 			return `${baseImage}:${version}-alpine`;
 		}
@@ -449,14 +563,13 @@ export class ComposeGenerator {
 	private getDatabaseHealthCheck(dbType: string, dbConfig?: any): string[] {
 		switch (dbType) {
 			case "postgresql":
-				return ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"];
+				return ["CMD-SHELL", `pg_isready -U ${dbConfig?.username || "admin"} -d ${dbConfig?.name || "appdb"}`];
 			case "mysql":
 			case "mariadb":
 				return ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD:-password}"];
 			case "mongodb":
 				return ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"];
 			case "redis":
-				// Redis با پسورد
 				if (dbConfig?.password && dbConfig.password !== "password") {
 					return ["CMD", "redis-cli", "-a", dbConfig.password, "ping"];
 				}
@@ -558,6 +671,10 @@ services:
       timeout: ${service.healthcheck.timeout}
       retries: ${service.healthcheck.retries}
 `;
+				if (service.healthcheck.start_period) {
+					content += `      start_period: ${service.healthcheck.start_period}
+`;
+				}
 			}
 
 			if (service.restart) {
@@ -574,6 +691,17 @@ services:
 				}
 			}
 
+			if (service.logging) {
+				content += `    logging:
+      driver: ${service.logging.driver}
+      options:
+`;
+				for (const [key, value] of Object.entries(service.logging.options)) {
+					content += `        ${key}: "${value}"
+`;
+				}
+			}
+
 			content += "\n";
 		}
 
@@ -582,6 +710,7 @@ services:
 `;
 			for (const volume of uniqueVolumes) {
 				content += `  ${volume.name}:
+    driver: ${volume.driver || "local"}
 `;
 			}
 			content += "\n";
@@ -593,6 +722,9 @@ services:
 			for (const network of networks) {
 				content += `  ${network.name}:
     driver: ${network.driver}
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 `;
 			}
 		}

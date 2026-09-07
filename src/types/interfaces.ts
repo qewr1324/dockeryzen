@@ -220,6 +220,21 @@ export interface AdditionalServiceConfig {
 	password?: string;
 }
 
+/** Health check configuration */
+export interface HealthCheckConfig {
+	test: string[];
+	interval: string;
+	timeout: string;
+	retries: number;
+	start_period?: string;
+}
+
+/** Logging configuration */
+export interface LoggingConfig {
+	driver: string;
+	options: Record<string, string>;
+}
+
 /** Docker Compose service */
 export interface ComposeService {
 	name: string;
@@ -233,14 +248,10 @@ export interface ComposeService {
 	env_file?: string[];
 	volumes: string[];
 	depends_on: string[];
-	healthcheck?: {
-		test: string[];
-		interval: string;
-		timeout: string;
-		retries: number;
-	};
+	healthcheck?: HealthCheckConfig;
 	restart?: string;
 	networks: string[];
+	logging?: LoggingConfig;
 	deploy?: {
 		resources?: {
 			limits?: {
