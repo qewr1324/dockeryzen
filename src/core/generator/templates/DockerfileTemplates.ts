@@ -27,7 +27,11 @@ export class DockerfileTemplates {
 	 */
 	private static getJarTemplate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
-		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
+
+		// Remove 'alpine' from jvmOptions for JVM
+		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
+		const jvmOptions = cleanJvmOptions;
+
 		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${config.debugPort || 5005} ` : "";
 		const profiles = analysis.profiles?.length ? `-Dspring.profiles.active=${analysis.profiles[0]} ` : "";
 
@@ -116,13 +120,17 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 	 */
 	private static getWarTemplate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
-		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
 
-		// Check if alpine is selected
-		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+		// Remove 'alpine' from jvmOptions for JVM
+		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
+		const jvmOptions = cleanJvmOptions;
+
+		// Check if alpine is selected - but Oracle JDK doesn't support Alpine
+		const vendor = config.baseImage || analysis.jdkVendor;
+		const useAlpine = (config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
 
 		const baseImage = this.getBaseImage(analysis, config);
-		const tomcatImage = useAlpine ? `tomcat:10.1-jdk${analysis.jdkVersion}-temurin-alpine` : `tomcat:10.1-jdk${analysis.jdkVersion}-temurin`;
+		const tomcatImage = this.getTomcatImage(analysis, config, useAlpine);
 
 		return `# Multi-stage build for WAR files
 # Build stage
@@ -173,6 +181,31 @@ LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 LABEL org.opencontainers.image.vendor="Dockeryzen"
 `;
+	}
+
+	/**
+	 * Generate TomcatImage for War image
+	 */
+	private static getTomcatImage(analysis: ProjectAnalysis, config: DockerConfig, useAlpine: boolean): string {
+		const jdkVersion = analysis.jdkVersion;
+		const vendor = config.baseImage || analysis.jdkVendor;
+
+		const tomcatVariants: Record<string, string> = {
+			"eclipse-temurin": "temurin",
+			"amazon-corretto": "corretto",
+			openjdk: "openjdk",
+			liberica: "liberica",
+		};
+
+		const variant = tomcatVariants[vendor] || "temurin";
+
+		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
+
+		if (canUseAlpine) {
+			return `tomcat:10.1-jdk${jdkVersion}-${variant}-alpine`;
+		}
+
+		return `tomcat:10.1-jdk${jdkVersion}-${variant}`;
 	}
 
 	/**

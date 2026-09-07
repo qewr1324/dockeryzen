@@ -59,11 +59,14 @@ export class DockerfileGenerator {
 		// Check if alpine is selected
 		const useAlpine = config.jvmOptions?.includes("alpine") || false;
 
+		// Remove 'alpine' from jvmOptions for JVM
+		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
+
 		const buildImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, "full");
 		const runtimeImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, useAlpine ? "alpine" : "slim");
 
 		const port = config.port || analysis.port || 8080;
-		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
+		const jvmOptions = cleanJvmOptions;
 
 		let dockerfile = `# Build stage
 FROM ${buildImage} AS build
@@ -129,15 +132,19 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 	 * Generate multi-stage Dockerfile for WAR
 	 */
 	public generateWarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
-		// Check if alpine is selected
-		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+		// Check if alpine is selected - but Oracle JDK doesn't support Alpine
+		const vendor = config.baseImage || analysis.jdkVendor;
+		const useAlpine = (config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
 
-		const buildImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, useAlpine ? "alpine" : "full");
+		// Remove 'alpine' from jvmOptions for JVM
+		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
+
+		const buildImage = this.getBaseImage(vendor, analysis.jdkVersion, useAlpine ? "alpine" : "full");
 		const port = config.port || analysis.port || 8080;
-		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
+		const jvmOptions = cleanJvmOptions;
 
-		// Tomcat image based on alpine
-		const tomcatImage = useAlpine ? `tomcat:10.1-jdk${analysis.jdkVersion}-temurin-alpine` : `tomcat:10.1-jdk${analysis.jdkVersion}-temurin`;
+		// Tomcat image based on vendor and alpine
+		const tomcatImage = this.getTomcatImage(analysis, config, useAlpine);
 
 		return `# Build stage
 FROM ${buildImage} AS build
@@ -184,7 +191,32 @@ LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 `;
 	}
+	/**
+	 * Generate TomcatImage for War image
+	 */
+	private getTomcatImage(analysis: ProjectAnalysis, config: DockerConfig, useAlpine: boolean): string {
+		const jdkVersion = analysis.jdkVersion;
+		const vendor = config.baseImage || analysis.jdkVendor;
 
+		// Map JDK vendor to Tomcat image variant
+		const tomcatVariants: Record<string, string> = {
+			"eclipse-temurin": "temurin",
+			"amazon-corretto": "corretto",
+			openjdk: "openjdk",
+			liberica: "liberica",
+		};
+
+		const variant = tomcatVariants[vendor] || "temurin";
+
+		// Oracle JDK and Red Hat don't have Alpine variants
+		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
+
+		if (canUseAlpine) {
+			return `tomcat:10.1-jdk${jdkVersion}-${variant}-alpine`;
+		}
+
+		return `tomcat:10.1-jdk${jdkVersion}-${variant}`;
+	}
 	/**
 	 * Generate Dockerfile for GraalVM native image
 	 */
