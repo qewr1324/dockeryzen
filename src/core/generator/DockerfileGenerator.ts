@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import type { ProjectAnalysis, DockerConfig, OutputType, Framework } from "../../types/interfaces.js";
-import { JdkVendor} from "../../types/interfaces.js";
+import type { ProjectAnalysis, DockerConfig, Framework } from "../../types/interfaces.js";
+import { JdkVendor, OutputType } from "../../types/interfaces.js";
 import { DockerfileTemplates } from "../generator/templates/DockerfileTemplates.js";
 
 /**
@@ -12,8 +12,15 @@ export class DockerfileGenerator {
 	 * Generate Dockerfile content
 	 */
 	public generate(analysis: ProjectAnalysis, config: DockerConfig): string {
-		const template = DockerfileTemplates.getTemplate(analysis, config);
-		return template;
+		switch (analysis.outputType) {
+			case OutputType.WAR:
+				return this.generateWarDockerfile(analysis, config);
+			case OutputType.NATIVE:
+				return this.generateNativeDockerfile(analysis, config);
+			case OutputType.JAR:
+			default:
+				return this.generateJarDockerfile(analysis, config);
+		}
 	}
 
 	/**

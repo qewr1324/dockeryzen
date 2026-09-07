@@ -1,3 +1,5 @@
+import * as path from "path";
+import * as fs from "fs-extra";
 import type { ProjectAnalysis, DockerConfig } from "../../../types/interfaces.js";
 import { OutputType } from "../../../types/interfaces.js";
 
@@ -116,6 +118,10 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 
 		const baseImage = this.getBaseImage(analysis, config);
 
+		// Determine final WAR name from pom.xml if possible
+		let warName = "ROOT";
+		const pomPath = path.join(analysis.configFiles?.[0]?.path ? path.dirname(analysis.configFiles[0].path) : "", "pom.xml");
+
 		return `# Multi-stage build for WAR files
 # Build stage
 FROM ${baseImage} AS build
@@ -138,15 +144,13 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
 # Runtime stage - Using Tomcat
-FROM tomcat:9-jdk${analysis.jdkVersion}-temurin
-
-WORKDIR /usr/local/tomcat/webapps
+FROM tomcat:10.1-jdk${analysis.jdkVersion}
 
 # Remove default applications
 RUN rm -rf /usr/local/tomcat/webapps/*
 
 # Copy WAR file
-COPY --from=build /app/target/*.war ROOT.war
+COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 # Expose port
 EXPOSE ${port}
@@ -161,7 +165,7 @@ ENV JAVA_OPTS="${jvmOptions}"
 
 # Add metadata labels
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Web Application"}"
-LABEL org.opencontainers.image.description="Dockerized Java web application"
+LABEL org.opencontainers.image.description="Dockerized Java web application (WAR)"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 LABEL org.opencontainers.image.vendor="Dockeryzen"

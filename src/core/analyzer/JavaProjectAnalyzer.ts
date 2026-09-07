@@ -300,12 +300,36 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 	 * Detect output type
 	 */
 	protected detectOutputType(framework: Framework, dependencies: Dependency[]): OutputType {
-		// Check for WAR packaging
+		// Check pom.xml for packaging type
+		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
+		if (fs.existsSync(pomPath)) {
+			const pomContent = fs.readFileSync(pomPath, "utf8");
+
+			// Check for WAR packaging
+			if (/<packaging>\s*war\s*<\/packaging>/.test(pomContent)) {
+				return OutputType.WAR;
+			}
+
+			// Check for native image
+			if (/<packaging>\s*native-image\s*<\/packaging>/.test(pomContent)) {
+				return OutputType.NATIVE;
+			}
+		}
+
+		// Check for WAR packaging in build settings
 		if (framework === Framework.SPRING_MVC || framework === Framework.JAVA_EE || framework === Framework.JAKARTA_EE) {
 			for (const dep of dependencies) {
 				if (dep.artifactId.toLowerCase().includes("tomcat") || dep.artifactId.toLowerCase().includes("jetty") || dep.artifactId.toLowerCase().includes("undertow")) {
 					return OutputType.WAR;
 				}
+			}
+		}
+
+		// Check for servlet dependencies (indicates WAR)
+		for (const dep of dependencies) {
+			const artifactId = dep.artifactId.toLowerCase();
+			if (artifactId.includes("servlet") || artifactId.includes("jsp") || artifactId.includes("jstl")) {
+				return OutputType.WAR;
 			}
 		}
 
