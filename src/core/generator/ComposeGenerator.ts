@@ -162,7 +162,7 @@ export class ComposeGenerator {
 			case DatabaseType.MARIADB:
 				return ["CMD-SHELL", "mysqladmin ping -h localhost"];
 			case DatabaseType.MONGODB:
-				return ["CMD-SHELL", "mongosh --eval \"db.adminCommand('ping')\""];
+				return ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"];
 			case DatabaseType.REDIS:
 				return ["CMD", "redis-cli", "ping"];
 			case DatabaseType.CASSANDRA:

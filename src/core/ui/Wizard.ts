@@ -33,13 +33,13 @@ export class Wizard {
 			return undefined;
 		}
 
-		// Step 3: Configure JDK
+		// Step 3: Configure JDK (این فقط یک بار میپرسه)
 		const jdkConfig = await this.configureJdk();
 		if (!jdkConfig) {
 			return undefined;
 		}
 
-		// Step 4: Configure port
+		// Step 4: Configure port (این فقط یک بار میپرسه)
 		const port = await this.configurePort();
 		if (!port) {
 			return undefined;
@@ -126,8 +126,8 @@ export class Wizard {
 
 		const choice = await vscode.window.showQuickPick(
 			[
-				{ label: "$(check) Continue", description: "Proceed with these settings" },
-				{ label: "$(edit) Edit Settings", description: "Modify project analysis" },
+				{ label: "$(check) Continue", description: "Proceed with detected settings" },
+				{ label: "$(x) Cancel", description: "Cancel the wizard" },
 			],
 			{
 				placeHolder: `Project analysis completed:\n${details.join("\n")}`,
@@ -135,7 +135,110 @@ export class Wizard {
 			},
 		);
 
-		return choice !== undefined;
+		return choice !== undefined && !choice.label.includes("Cancel");
+	}
+
+	/**
+	 * Edit detected settings
+	 */
+	private async editDetectedSettings(): Promise<boolean> {
+		const portInput = await vscode.window.showInputBox({
+			prompt: "Enter application port:",
+			value: this.analysis.port?.toString() || "8080",
+			validateInput: (value) => {
+				const port = parseInt(value);
+				if (isNaN(port) || port < 1 || port > 65535) {
+					return "Please enter a valid port number (1-65535)";
+				}
+				return null;
+			},
+		});
+
+		if (portInput) {
+			this.analysis.port = parseInt(portInput);
+		}
+
+		const jdkVersionInput = await vscode.window.showInputBox({
+			prompt: "Enter JDK version:",
+			value: this.analysis.jdkVersion || "17",
+			validateInput: (value) => {
+				if (!/^\d+$/.test(value)) {
+					return "Please enter a valid JDK version (e.g., 17, 21, 25)";
+				}
+				return null;
+			},
+		});
+
+		if (jdkVersionInput) {
+			this.analysis.jdkVersion = jdkVersionInput;
+		}
+
+		const outputTypeChoice = await vscode.window.showQuickPick(
+			[
+				{ label: "JAR", description: "Executable JAR file" },
+				{ label: "WAR", description: "Web application archive" },
+				{ label: "Native", description: "GraalVM native image" },
+			],
+			{
+				placeHolder: "Select output type:",
+				title: "Dockeryzen - Edit Output Type",
+			},
+		);
+
+		if (outputTypeChoice) {
+			this.analysis.outputType = outputTypeChoice.label.toLowerCase() as any;
+		}
+
+		const dbChoice = await vscode.window.showQuickPick(
+			[
+				{ label: "$(database) PostgreSQL", description: "Recommended" },
+				{ label: "$(database) MySQL", description: "Popular" },
+				{ label: "$(database) MariaDB", description: "MySQL fork" },
+				{ label: "$(database) MongoDB", description: "NoSQL" },
+				{ label: "$(database) Redis", description: "Cache" },
+				{ label: "$(database) Cassandra", description: "Distributed" },
+				{ label: "$(database) Elasticsearch", description: "Search" },
+				{ label: "$(database) Neo4j", description: "Graph" },
+				{ label: "$(circle-slash) None", description: "No database" },
+			],
+			{
+				placeHolder: "Select database type:",
+				title: "Dockeryzen - Edit Database",
+			},
+		);
+
+		if (dbChoice && !dbChoice.label.includes("None")) {
+			const dbName = await vscode.window.showInputBox({
+				prompt: "Enter database name:",
+				value: this.analysis.database?.name || "appdb",
+			});
+
+			const dbUser = await vscode.window.showInputBox({
+				prompt: "Enter database username:",
+				value: this.analysis.database?.username || "admin",
+			});
+
+			const dbPass = await vscode.window.showInputBox({
+				prompt: "Enter database password:",
+				value: this.analysis.database?.password || "password",
+				password: true,
+			});
+
+			if (dbName && dbUser && dbPass) {
+				this.analysis.database = {
+					type: dbChoice.label.split(" ")[1].toLowerCase() as any,
+					version: "latest",
+					port: 5432,
+					name: dbName,
+					username: dbUser,
+					password: dbPass,
+				};
+			}
+		} else if (dbChoice && dbChoice.label.includes("None")) {
+			this.analysis.database = undefined;
+		}
+
+		return true;
 	}
 
 	/**
