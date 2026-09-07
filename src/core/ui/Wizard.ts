@@ -356,9 +356,19 @@ export class Wizard {
 		this.preferences.enableHealthCheck = enableHealthCheck;
 		this.preferences.imageOptimization = useAlpine ? "alpine" : "slim";
 
+		// اینجا jvmOptions رو تغییر بده که alpine رو شامل بشه
+		let jvmOptions = this.preferences.jvmOptions;
+		if (useAlpine) {
+			// اگه alpine انتخاب شده، اضافه کن
+			if (!jvmOptions.includes("alpine")) {
+				jvmOptions = jvmOptions ? `${jvmOptions} alpine` : "alpine";
+			}
+		}
+
 		return {
 			enableHealthCheck,
 			healthCheckEndpoint: "/actuator/health",
+			jvmOptions: jvmOptions,
 		};
 	}
 

@@ -31,7 +31,11 @@ export class DockerfileTemplates {
 		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${config.debugPort || 5005} ` : "";
 		const profiles = analysis.profiles?.length ? `-Dspring.profiles.active=${analysis.profiles[0]} ` : "";
 
+		// Check if alpine is selected
+		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+
 		const baseImage = this.getBaseImage(analysis, config);
+		const runtimeImage = useAlpine ? `${baseImage}-alpine` : `${baseImage}-slim`;
 
 		return `# Multi-stage build for optimized image size
 # Build stage
@@ -41,7 +45,6 @@ WORKDIR /app
 
 # Copy build configuration files
 COPY pom.xml .
-COPY .mvn .mvn 2>/dev/null || true
 COPY mvnw .
 COPY mvnw.cmd .
 
@@ -55,7 +58,7 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
 # Runtime stage
-FROM ${this.getRuntimeImage(analysis, config)}
+FROM ${runtimeImage}
 
 WORKDIR /app
 
@@ -108,7 +111,6 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.vendor="Dockeryzen"
 `;
 	}
-
 	/**
 	 * Get WAR template
 	 */
@@ -116,11 +118,11 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
 
-		const baseImage = this.getBaseImage(analysis, config);
+		// Check if alpine is selected
+		const useAlpine = config.jvmOptions?.includes("alpine") || false;
 
-		// Determine final WAR name from pom.xml if possible
-		let warName = "ROOT";
-		const pomPath = path.join(analysis.configFiles?.[0]?.path ? path.dirname(analysis.configFiles[0].path) : "", "pom.xml");
+		const baseImage = this.getBaseImage(analysis, config);
+		const tomcatImage = useAlpine ? `tomcat:10.1-jdk${analysis.jdkVersion}-temurin-alpine` : `tomcat:10.1-jdk${analysis.jdkVersion}-temurin`;
 
 		return `# Multi-stage build for WAR files
 # Build stage
@@ -130,7 +132,6 @@ WORKDIR /app
 
 # Copy build configuration files
 COPY pom.xml .
-COPY .mvn .mvn 2>/dev/null || true
 COPY mvnw .
 COPY mvnw.cmd .
 
@@ -144,7 +145,9 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
 # Runtime stage - Using Tomcat
-FROM tomcat:10.1-jdk${analysis.jdkVersion}
+FROM ${tomcatImage}
+
+WORKDIR /usr/local/tomcat/webapps
 
 # Remove default applications
 RUN rm -rf /usr/local/tomcat/webapps/*
@@ -186,7 +189,6 @@ WORKDIR /app
 
 # Copy build configuration files
 COPY pom.xml .
-COPY .mvn .mvn 2>/dev/null || true
 COPY mvnw .
 COPY mvnw.cmd .
 

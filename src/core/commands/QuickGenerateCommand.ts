@@ -42,7 +42,7 @@ export class QuickGenerateCommand {
 					baseImage: preferences.jdkImage,
 					jdkVersion: analysis.jdkVersion,
 					port: analysis.port || preferences.port,
-					jvmOptions: preferences.jvmOptions,
+					jvmOptions: preferences.imageOptimization === "alpine" ? `${preferences.jvmOptions} alpine` : preferences.jvmOptions,
 					enableDebug: preferences.enableDebug,
 					debugPort: 5005,
 					enableHealthCheck: preferences.enableHealthCheck,

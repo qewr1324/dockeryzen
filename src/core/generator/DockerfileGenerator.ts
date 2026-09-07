@@ -56,8 +56,11 @@ export class DockerfileGenerator {
 	 * Generate multi-stage Dockerfile for JAR
 	 */
 	public generateJarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
-		const buildImage = this.getBaseImage(analysis.jdkVendor, analysis.jdkVersion, "full");
-		const runtimeImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, "slim");
+		// Check if alpine is selected
+		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+
+		const buildImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, "full");
+		const runtimeImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, useAlpine ? "alpine" : "slim");
 
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
@@ -69,7 +72,6 @@ WORKDIR /app
 
 # Copy build files
 COPY pom.xml .
-COPY .mvn .mvn 2>/dev/null || true
 COPY mvnw .
 COPY mvnw.cmd .
 
@@ -127,9 +129,15 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 	 * Generate multi-stage Dockerfile for WAR
 	 */
 	public generateWarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
-		const buildImage = this.getBaseImage(analysis.jdkVendor, analysis.jdkVersion, "full");
+		// Check if alpine is selected
+		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+
+		const buildImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, useAlpine ? "alpine" : "full");
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
+
+		// Tomcat image based on alpine
+		const tomcatImage = useAlpine ? `tomcat:10.1-jdk${analysis.jdkVersion}-temurin-alpine` : `tomcat:10.1-jdk${analysis.jdkVersion}-temurin`;
 
 		return `# Build stage
 FROM ${buildImage} AS build
@@ -138,7 +146,6 @@ WORKDIR /app
 
 # Copy build files
 COPY pom.xml .
-COPY .mvn .mvn 2>/dev/null || true
 COPY mvnw .
 COPY mvnw.cmd .
 
@@ -152,7 +159,7 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
 # Runtime stage - Using Tomcat
-FROM tomcat:9-jdk${analysis.jdkVersion}-temurin
+FROM ${tomcatImage}
 
 WORKDIR /usr/local/tomcat/webapps
 
@@ -191,7 +198,6 @@ WORKDIR /app
 
 # Copy build files
 COPY pom.xml .
-COPY .mvn .mvn 2>/dev/null || true
 COPY mvnw .
 COPY mvnw.cmd .
 
