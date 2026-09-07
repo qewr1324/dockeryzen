@@ -1,21 +1,20 @@
 import * as vscode from "vscode";
+import * as fs from "fs-extra";
+import * as path from "path";
 import type { ProjectAnalysis, DockerConfig, ComposeService, Volume, Network } from "../../types/interfaces.js";
 import { DatabaseType } from "../../types/interfaces.js";
 
-/**
- * Docker Compose generator
- */
 export class ComposeGenerator {
-	/**
-	 * Generate docker-compose.yml content
-	 */
 	public generate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const services: ComposeService[] = [];
 		const volumes: Volume[] = [];
 		const networks: Network[] = [];
 
+		// Check if .env exists
+		const hasEnvFile = this.checkEnvFileExists();
+
 		// Add application service
-		services.push(this.generateAppService(analysis, config));
+		services.push(this.generateAppService(analysis, config, hasEnvFile));
 
 		// Add database service if needed
 		if (config.database && config.database.type !== DatabaseType.NONE) {
@@ -35,9 +34,22 @@ export class ComposeGenerator {
 	}
 
 	/**
+	 * Check if .env file exists
+	 */
+	private checkEnvFileExists(): boolean {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+		if (!workspaceFolder) {
+			return false;
+		}
+
+		const envPath = path.join(workspaceFolder.uri.fsPath, ".env");
+		return fs.existsSync(envPath);
+	}
+
+	/**
 	 * Generate application service
 	 */
-	private generateAppService(analysis: ProjectAnalysis, config: DockerConfig): ComposeService {
+	private generateAppService(analysis: ProjectAnalysis, config: DockerConfig, hasEnvFile: boolean): ComposeService {
 		const service: ComposeService = {
 			name: "app",
 			build: {
@@ -54,24 +66,31 @@ export class ComposeGenerator {
 
 		// Add debug port if enabled
 		if (config.enableDebug) {
-			const debugPort = config.debugPort || 5005;
-			service.ports.push(`${debugPort}:${debugPort}`);
+			service.ports.push(`${config.debugPort || 5005}:${config.debugPort || 5005}`);
 		}
 
 		// Add environment variables
-		if (config.envVariables) {
-			service.environment = { ...config.envVariables };
+		if (!hasEnvFile) {
+			// If no .env file, put env vars directly in compose
+			if (config.envVariables) {
+				service.environment = { ...config.envVariables };
+			}
+
+			// Add database environment variables directly
+			if (config.database && config.database.type !== DatabaseType.NONE) {
+				const dbType = config.database.type;
+				service.environment[`SPRING_DATASOURCE_URL`] = `jdbc:${dbType}://${dbType}:${config.database.port}/${config.database.name}`;
+				service.environment[`SPRING_DATASOURCE_USERNAME`] = config.database.username;
+				service.environment[`SPRING_DATASOURCE_PASSWORD`] = config.database.password;
+			}
+		} else {
+			// If .env exists, use env_file
+			service.env_file = [".env"];
 		}
 
 		// Add database dependencies
 		if (config.database && config.database.type !== DatabaseType.NONE) {
 			service.depends_on.push(config.database.type);
-
-			// Add database environment variables
-			const dbType = config.database.type;
-			service.environment[`SPRING_DATASOURCE_URL`] = `jdbc:${dbType}://${dbType}:${config.database.port}/${config.database.name}`;
-			service.environment[`SPRING_DATASOURCE_USERNAME`] = config.database.username;
-			service.environment[`SPRING_DATASOURCE_PASSWORD`] = config.database.password;
 		}
 
 		// Add health check
@@ -83,18 +102,6 @@ export class ComposeGenerator {
 				interval: "30s",
 				timeout: "3s",
 				retries: 3,
-			};
-		}
-
-		// Add resource limits
-		if (config.resourceLimits) {
-			service.deploy = {
-				resources: {
-					limits: {
-						cpus: config.resourceLimits.cpus,
-						memory: config.resourceLimits.memory,
-					},
-				},
 			};
 		}
 
@@ -126,12 +133,19 @@ export class ComposeGenerator {
 				};
 				break;
 			case DatabaseType.MYSQL:
-			case DatabaseType.MARIADB:
 				service.environment = {
 					MYSQL_DATABASE: dbConfig.name,
 					MYSQL_USER: dbConfig.username,
 					MYSQL_PASSWORD: dbConfig.password,
 					MYSQL_ROOT_PASSWORD: dbConfig.password,
+				};
+				break;
+			case DatabaseType.MARIADB:
+				service.environment = {
+					MARIADB_DATABASE: dbConfig.name,
+					MARIADB_USER: dbConfig.username,
+					MARIADB_PASSWORD: dbConfig.password,
+					MARIADB_ROOT_PASSWORD: dbConfig.password,
 				};
 				break;
 			case DatabaseType.MONGODB:
@@ -143,6 +157,19 @@ export class ComposeGenerator {
 				break;
 			case DatabaseType.REDIS:
 				service.environment = {};
+				break;
+			case DatabaseType.CASSANDRA:
+				service.environment = {};
+				break;
+			case DatabaseType.ELASTICSEARCH:
+				service.environment = {
+					ES_JAVA_OPTS: "-Xms512m -Xmx512m",
+				};
+				break;
+			case DatabaseType.NEO4J:
+				service.environment = {
+					NEO4J_AUTH: `${dbConfig.username}/${dbConfig.password}`,
+				};
 				break;
 		}
 
@@ -206,9 +233,9 @@ export class ComposeGenerator {
 			case DatabaseType.NEO4J:
 				return ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j 'RETURN 1'"];
 			case DatabaseType.H2:
-				return ["CMD-SHELL", "echo 'healthy'"];
+				return ["CMD-SHELL", 'echo "healthy"'];
 			default:
-				return ["CMD-SHELL", "echo 'healthy'"];
+				return ["CMD-SHELL", 'echo "healthy"'];
 		}
 	}
 
@@ -245,7 +272,14 @@ services:
 				}
 			}
 
-			if (service.environment && Object.keys(service.environment).length > 0) {
+			if (service.env_file && service.env_file.length > 0) {
+				content += `    env_file:
+`;
+				for (const envFile of service.env_file) {
+					content += `      - ${envFile}
+`;
+				}
+			} else if (service.environment && Object.keys(service.environment).length > 0) {
 				content += `    environment:
 `;
 				for (const [key, value] of Object.entries(service.environment)) {
@@ -296,24 +330,6 @@ services:
 				}
 			}
 
-			if (service.deploy) {
-				content += `    deploy:
-      resources:
-`;
-				if (service.deploy.resources?.limits) {
-					content += `        limits:
-`;
-					if (service.deploy.resources.limits.cpus) {
-						content += `          cpus: '${service.deploy.resources.limits.cpus}'
-`;
-					}
-					if (service.deploy.resources.limits.memory) {
-						content += `          memory: ${service.deploy.resources.limits.memory}
-`;
-					}
-				}
-			}
-
 			content += "\n";
 		}
 
@@ -324,10 +340,6 @@ services:
 			for (const volume of volumes) {
 				content += `  ${volume.name}:
 `;
-				if (volume.driver) {
-					content += `    driver: ${volume.driver}
-`;
-				}
 			}
 			content += "\n";
 		}

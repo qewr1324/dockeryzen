@@ -2,11 +2,11 @@ import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
 import type { ProjectAnalysis, DockerConfig, GenerationResult } from "../../types/interfaces.js";
-// import { ProjectAnalyzer } from "../analyzer/ProjectAnalyzer.js";
 import { AnalyzerFactory } from "../analyzer/AnalyzerFactory.js";
 import { DockerfileGenerator } from "../generator/DockerfileGenerator.js";
 import { ComposeGenerator } from "../generator/ComposeGenerator.js";
 import { IgnoreGenerator } from "../generator/IgnoreGenerator.js";
+import { EnvGenerator } from "../generator/EnvGenerator.js";
 import { DevContainerGenerator } from "../generator/DevContainerGenerator.js";
 import { Wizard } from "../ui/Wizard.js";
 import { ProgressReporter } from "../ui/ProgressReporter.js";
@@ -26,7 +26,6 @@ export class GenerateCommand {
 				return;
 			}
 
-			// Show progress
 			const progress = new ProgressReporter();
 
 			await progress.run("Analyzing project...", async (reporter) => {
@@ -92,21 +91,18 @@ export class GenerateCommand {
 			});
 
 			// Generate docker-compose.yml
-			if (config.composeServices || config.database) {
-				const composeGenerator = new ComposeGenerator();
-				const compose = composeGenerator.generate(analysis, config);
-				result.files.push({
-					path: path.join(outputPath, "docker-compose.yml"),
-					content: compose,
-					type: "compose",
-				});
-			}
+			const composeGenerator = new ComposeGenerator();
+			const compose = composeGenerator.generate(analysis, config);
+			result.files.push({
+				path: path.join(outputPath, "docker-compose.yml"),
+				content: compose,
+				type: "compose",
+			});
 
-			// Generate .env file if needed
-			if (config.envVariables && Object.keys(config.envVariables).length > 0) {
-				const envContent = Object.entries(config.envVariables)
-					.map(([key, value]) => `${key}=${value}`)
-					.join("\n");
+			// Generate .env file if database exists
+			if (config.database || (config.envVariables && Object.keys(config.envVariables).length > 0)) {
+				const envGenerator = new EnvGenerator();
+				const envContent = envGenerator.generate(analysis, config);
 				result.files.push({
 					path: path.join(outputPath, ".env"),
 					content: envContent,

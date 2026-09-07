@@ -257,3 +257,37 @@ export interface UserPreferences {
 	enableCiCd: boolean;
 	enableKubernetes: boolean;
 }
+
+export interface ComposeService {
+	name: string;
+	image?: string;
+	build?: {
+		context: string;
+		dockerfile: string;
+	};
+	ports: string[];
+	environment: Record<string, string>;
+	env_file?: string[];
+	volumes: string[];
+	depends_on: string[];
+	healthcheck?: {
+		test: string[];
+		interval: string;
+		timeout: string;
+		retries: number;
+	};
+	restart?: string;
+	networks: string[];
+	deploy?: {
+		resources?: {
+			limits?: {
+				cpus?: string;
+				memory?: string;
+			};
+			reservations?: {
+				cpus?: string;
+				memory?: string;
+			};
+		};
+	};
+}
