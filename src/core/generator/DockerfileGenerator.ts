@@ -74,6 +74,10 @@ export class DockerfileGenerator {
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = cleanJvmOptions;
 
+		// Debug options
+		const debugPort = config.debugPort || 5005;
+		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort} ` : "";
+
 		let dockerfile = `# Build stage
 FROM ${buildImage} AS build
 
@@ -108,21 +112,28 @@ COPY --from=build --chown=appuser:appuser /app/target/*.jar app.jar
 EXPOSE ${port}
 
 ${
-	config.enableHealthCheck
-		? `# Health check
+	config.enableDebug
+		? `# Expose debug port
+EXPOSE ${debugPort}
+
+`
+		: ""
+}${
+			config.enableHealthCheck
+				? `# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD wget --no-verbose --tries=1 --spider http://localhost:${port}${config.healthCheckEndpoint || "/actuator/health"} || exit 1
 
 `
-		: ""
-}# Set environment variables
+				: ""
+		}# Set environment variables
 ENV JAVA_OPTS="${jvmOptions}"
 
 # Run as non-root user
 USER appuser
 
 # Start the application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS ${debugOptions}-jar app.jar"]
 
 # Add metadata
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Application"}"
@@ -140,7 +151,7 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 	public generateWarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
 		// Check if alpine is selected - but Oracle JDK doesn't support Alpine
 		const vendor = config.baseImage || analysis.jdkVendor;
-		const useAlpine = (config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
+		const useAlpine = (config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
 
 		// Remove 'alpine' from jvmOptions for JVM
 		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
@@ -148,6 +159,10 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 		const buildImage = this.getBaseImage(vendor, analysis.jdkVersion, useAlpine ? "alpine" : "full");
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = cleanJvmOptions;
+
+		// Debug options
+		const debugPort = config.debugPort || 5005;
+		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort} ` : "";
 
 		// Tomcat image based on vendor and alpine
 		const tomcatImage = this.getTomcatImage(analysis, config, useAlpine);
@@ -182,13 +197,20 @@ COPY --from=build /app/target/*.war ROOT.war
 # Expose port
 EXPOSE ${port}
 
-# Health check
+${
+	config.enableDebug
+		? `# Expose debug port
+EXPOSE ${debugPort}
+
+`
+		: ""
+}# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD wget --no-verbose --tries=1 --spider http://localhost:${port}/ || exit 1
 
 # Set environment variables
-ENV CATALINA_OPTS="${jvmOptions}"
-ENV JAVA_OPTS="${jvmOptions}"
+ENV CATALINA_OPTS="${jvmOptions} ${debugOptions}"
+ENV JAVA_OPTS="${jvmOptions} ${debugOptions}"
 
 # Add metadata
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Web Application"}"

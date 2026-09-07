@@ -52,6 +52,28 @@ export class ComposeGenerator {
 			networks: ["dockeryzen-network"],
 		};
 
+		// Add debug port if enabled
+		if (config.enableDebug) {
+			const debugPort = config.debugPort || 5005;
+			service.ports.push(`${debugPort}:${debugPort}`);
+		}
+
+		// Add environment variables
+		if (config.envVariables) {
+			service.environment = { ...config.envVariables };
+		}
+
+		// Add database dependencies
+		if (config.database && config.database.type !== DatabaseType.NONE) {
+			service.depends_on.push(config.database.type);
+
+			// Add database environment variables
+			const dbType = config.database.type;
+			service.environment[`SPRING_DATASOURCE_URL`] = `jdbc:${dbType}://${dbType}:${config.database.port}/${config.database.name}`;
+			service.environment[`SPRING_DATASOURCE_USERNAME`] = config.database.username;
+			service.environment[`SPRING_DATASOURCE_PASSWORD`] = config.database.password;
+		}
+
 		// Add health check
 		if (config.enableHealthCheck) {
 			const healthEndpoint = analysis.outputType === "war" ? `http://localhost:${config.port}/` : `http://localhost:${config.port}${config.healthCheckEndpoint || "/actuator/health"}`;
@@ -61,6 +83,18 @@ export class ComposeGenerator {
 				interval: "30s",
 				timeout: "3s",
 				retries: 3,
+			};
+		}
+
+		// Add resource limits
+		if (config.resourceLimits) {
+			service.deploy = {
+				resources: {
+					limits: {
+						cpus: config.resourceLimits.cpus,
+						memory: config.resourceLimits.memory,
+					},
+				},
 			};
 		}
 
