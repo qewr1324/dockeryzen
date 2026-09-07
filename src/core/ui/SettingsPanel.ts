@@ -522,6 +522,40 @@ export class SettingsPanel {
     .hidden {
       display: none !important;
     }
+
+    /* ✅ Password toggle styles */
+    .password-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-input-wrapper input {
+      padding-right: 35px;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-muted);
+      padding: 4px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+    }
+
+    .password-toggle-btn:hover {
+      color: var(--accent);
+      background: var(--surface-light);
+    }
   </style>
 </head>
 <body>
@@ -703,6 +737,21 @@ export class SettingsPanel {
       } else {
         urlGroup.classList.add('hidden');
         standardFields.classList.remove('hidden');
+      }
+    }
+
+    function togglePassword(inputId, btnId) {
+      const input = document.getElementById(inputId);
+      const btn = document.getElementById(btnId);
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🔒';
+        btn.title = 'Hide password';
+      } else {
+        input.type = 'password';
+        btn.textContent = '🔓';
+        btn.title = 'Show password';
       }
     }
 
@@ -979,7 +1028,10 @@ export class SettingsPanel {
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
+            <div class="password-input-wrapper">
+              <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
+              <button type="button" class="password-toggle-btn" id="db-password-toggle-\${index}" onclick="togglePassword('db-password-\${index}', 'db-password-toggle-\${index}')" title="Show password">👁️</button>
+            </div>
           </div>
         </div>
         <div id="db-custom-url-group-\${index}" class="url-mode-group \${!isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
@@ -1024,7 +1076,10 @@ export class SettingsPanel {
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
+            <div class="password-input-wrapper">
+              <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
+              <button type="button" class="password-toggle-btn" id="mq-password-toggle-\${index}" onclick="togglePassword('mq-password-\${index}', 'mq-password-toggle-\${index}')" title="Show password">👁️</button>
+            </div>
           </div>\` : ''}
         </div>
         <div class="toggle-group" style="margin-top: 10px;">
@@ -1102,7 +1157,6 @@ export class SettingsPanel {
       toggleDebugPort();
       toggleHealthEndpoint();
       
-      // Initialize database URL modes
       const dbModes = document.querySelectorAll('[id^="db-connection-mode-"]');
       dbModes.forEach((select) => {
         const index = select.id.split('-').pop();
@@ -1156,7 +1210,10 @@ export class SettingsPanel {
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
+            <div class="password-input-wrapper">
+              <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
+              <button type="button" class="password-toggle-btn" id="db-password-toggle-${index}" onclick="togglePassword('db-password-${index}', 'db-password-toggle-${index}')" title="Show password">👁️</button>
+            </div>
           </div>
         </div>
         <div id="db-custom-url-group-${index}" class="url-mode-group ${!isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
@@ -1203,7 +1260,10 @@ export class SettingsPanel {
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input type="password" id="mq-password-${index}" value="${mq.password || "guest"}" onchange="markDirty()">
+            <div class="password-input-wrapper">
+              <input type="password" id="mq-password-${index}" value="${mq.password || "guest"}" onchange="markDirty()">
+              <button type="button" class="password-toggle-btn" id="mq-password-toggle-${index}" onclick="togglePassword('mq-password-${index}', 'mq-password-toggle-${index}')" title="Show password">👁️</button>
+            </div>
           </div>`
 					: ""
 			}
