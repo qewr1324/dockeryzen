@@ -52,6 +52,15 @@ export class SettingsPanel {
 					case "removeMessageQueue":
 						this.removeMessageQueue(message.index);
 						break;
+					case "updateDatabaseSummary":
+						this.updateDatabaseSummary(message.index);
+						break;
+					case "updateMessageQueueSummary":
+						this.updateMessageQueueSummary(message.index);
+						break;
+					case "updateServiceSummary":
+						this.updateServiceSummary(message.index);
+						break;
 				}
 			},
 			null,
@@ -143,6 +152,18 @@ export class SettingsPanel {
 				index: index,
 			});
 		}
+	}
+
+	private updateDatabaseSummary(index: number): void {
+		this._isDirty = true;
+	}
+
+	private updateMessageQueueSummary(index: number): void {
+		this._isDirty = true;
+	}
+
+	private updateServiceSummary(index: number): void {
+		this._isDirty = true;
 	}
 
 	private getDefaultPort(dbType: string): number {
@@ -446,40 +467,6 @@ export class SettingsPanel {
       font-size: 11px;
     }
 
-    .config-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-
-    .config-item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .config-item-title {
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--accent);
-    }
-
-    .config-item-actions {
-      display: flex;
-      gap: 4px;
-    }
-
-    .config-item-details {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-    }
-
     .add-buttons {
       display: flex;
       flex-wrap: wrap;
@@ -523,7 +510,6 @@ export class SettingsPanel {
       display: none !important;
     }
 
-    /* ✅ Password toggle styles */
     .password-input-wrapper {
       position: relative;
       display: flex;
@@ -555,6 +541,126 @@ export class SettingsPanel {
     .password-toggle-btn:hover {
       color: var(--accent);
       background: var(--surface-light);
+    }
+
+    .config-item-collapsible {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .config-item-collapsible:hover {
+      border-color: var(--accent);
+    }
+
+    .config-item-collapsible summary {
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--accent);
+      list-style: none;
+      transition: var(--transition);
+      flex-wrap: wrap;
+    }
+
+    .config-item-collapsible summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .config-item-collapsible summary:hover {
+      background: var(--surface-light);
+    }
+
+    .config-item-collapsible summary::before {
+      content: '▶';
+      font-size: 9px;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .config-item-collapsible[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .config-item-collapsible summary .summary-info {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .config-item-collapsible summary .info-chip {
+      background: var(--surface-light);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 400;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+    }
+
+    .config-item-collapsible summary .info-chip .chip-label {
+      color: var(--accent);
+      opacity: 0.6;
+      font-size: 9px;
+    }
+
+    .config-item-collapsible summary .info-chip.url-chip {
+      max-width: 250px;
+      overflow: hidden;
+    }
+
+    .config-item-collapsible summary .info-chip.url-chip .chip-value {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+
+    .config-item-collapsible[open] summary .summary-info {
+      display: none;
+    }
+
+    .config-item-collapsible summary .remove-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .config-item-collapsible summary .remove-btn:hover {
+      background: var(--danger);
+      color: var(--bg);
+    }
+
+    .config-item-body {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .config-item-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
     }
   </style>
 </head>
@@ -738,6 +844,105 @@ export class SettingsPanel {
         urlGroup.classList.add('hidden');
         standardFields.classList.remove('hidden');
       }
+      
+      updateDatabaseSummary(index);
+    }
+
+    function updateDatabaseSummary(index) {
+      const details = document.querySelector('.config-item-collapsible[data-db-index="' + index + '"]');
+      if (!details) return;
+      
+      const summary = details.querySelector('summary');
+      const summaryInfo = summary.querySelector('.summary-info');
+      if (!summaryInfo) return;
+      
+      const mode = document.getElementById('db-connection-mode-' + index).value;
+      const version = document.getElementById('db-version-' + index).value;
+      const port = document.getElementById('db-internal-port-' + index).value;
+      const externalPort = document.getElementById('db-external-port-' + index).value;
+      const useAlpine = document.getElementById('db-alpine-' + index).checked;
+      
+      let newSummaryInfo = '';
+      if (mode === 'custom') {
+        const customUrl = document.getElementById('db-url-' + index).value || 'custom';
+        newSummaryInfo = \`
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> \${version || 'latest'}</span>
+            <span class="info-chip url-chip"><span class="chip-label">url:</span> <span class="chip-value">\${customUrl}</span></span>
+            <span class="info-chip">\${useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+          </span>\`;
+      } else {
+        const username = document.getElementById('db-username-' + index).value;
+        const dbName = document.getElementById('db-name-' + index).value;
+        newSummaryInfo = \`
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> \${version || 'latest'}</span>
+            <span class="info-chip"><span class="chip-label">port:</span> \${port}</span>
+            <span class="info-chip"><span class="chip-label">ext:</span> \${externalPort || port}</span>
+            <span class="info-chip"><span class="chip-label">user:</span> \${username || 'admin'}</span>
+            <span class="info-chip"><span class="chip-label">db:</span> \${dbName || 'appdb'}</span>
+            <span class="info-chip">\${useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+          </span>\`;
+      }
+      
+      summaryInfo.outerHTML = newSummaryInfo;
+    }
+
+    function updateMessageQueueSummary(index) {
+      const details = document.querySelector('.config-item-collapsible[data-mq-index="' + index + '"]');
+      if (!details) return;
+      
+      const summary = details.querySelector('summary');
+      const summaryInfo = summary.querySelector('.summary-info');
+      if (!summaryInfo) return;
+      
+      const version = document.getElementById('mq-version-' + index).value;
+      const port = document.getElementById('mq-internal-port-' + index).value;
+      const externalPort = document.getElementById('mq-external-port-' + index).value;
+      const useAlpine = document.getElementById('mq-alpine-' + index).checked;
+      
+      let newSummaryInfo = \`
+        <span class="summary-info">
+          <span class="info-chip"><span class="chip-label">v:</span> \${version || 'latest'}</span>
+          <span class="info-chip"><span class="chip-label">port:</span> \${port}</span>
+          <span class="info-chip"><span class="chip-label">ext:</span> \${externalPort || port}</span>\`;
+      
+      const usernameInput = document.getElementById('mq-username-' + index);
+      if (usernameInput) {
+        const username = usernameInput.value;
+        newSummaryInfo += \`
+          <span class="info-chip"><span class="chip-label">user:</span> \${username || 'guest'}</span>\`;
+      }
+      
+      newSummaryInfo += \`
+          <span class="info-chip">\${useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+        </span>\`;
+      
+      summaryInfo.outerHTML = newSummaryInfo;
+    }
+
+    function updateServiceSummary(index) {
+      const details = document.querySelector('.config-item-collapsible[data-svc-index="' + index + '"]');
+      if (!details) return;
+      
+      const summary = details.querySelector('summary');
+      const summaryInfo = summary.querySelector('.summary-info');
+      if (!summaryInfo) return;
+      
+      const version = document.getElementById('svc-version-' + index).value;
+      const port = document.getElementById('svc-internal-port-' + index).value;
+      const externalPort = document.getElementById('svc-external-port-' + index).value;
+      const useAlpine = document.getElementById('svc-alpine-' + index).checked;
+      
+      const newSummaryInfo = \`
+        <span class="summary-info">
+          <span class="info-chip"><span class="chip-label">v:</span> \${version || 'latest'}</span>
+          <span class="info-chip"><span class="chip-label">port:</span> \${port}</span>
+          <span class="info-chip"><span class="chip-label">ext:</span> \${externalPort || port}</span>
+          <span class="info-chip">\${useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+        </span>\`;
+      
+      summaryInfo.outerHTML = newSummaryInfo;
     }
 
     function togglePassword(inputId, btnId) {
@@ -760,7 +965,7 @@ export class SettingsPanel {
       const dbItems = document.querySelectorAll('[id^="db-version-"]');
       dbItems.forEach((el) => {
         const index = el.id.split('-').pop();
-        const dbType = el.closest('.config-item').querySelector('.config-item-title').textContent.replace('🗄️ ', '').toLowerCase();
+        const dbType = el.closest('.config-item-collapsible').querySelector('summary').childNodes[1].textContent.trim().toLowerCase();
         const connectionMode = document.getElementById('db-connection-mode-' + index).value;
         const customUrl = document.getElementById('db-url-' + index).value;
         
@@ -788,7 +993,7 @@ export class SettingsPanel {
       const mqItems = document.querySelectorAll('[id^="mq-version-"]');
       mqItems.forEach((el) => {
         const index = el.id.split('-').pop();
-        const mqType = el.closest('.config-item').querySelector('.config-item-title').textContent.replace('📨 ', '').toLowerCase();
+        const mqType = el.closest('.config-item-collapsible').querySelector('summary').childNodes[1].textContent.trim().toLowerCase();
         
         const mqConfig = {
           type: mqType,
@@ -810,7 +1015,7 @@ export class SettingsPanel {
       const svcItems = document.querySelectorAll('[id^="svc-version-"]');
       svcItems.forEach((el) => {
         const index = el.id.split('-').pop();
-        const svcType = el.closest('.config-item').querySelector('.config-item-title').textContent.replace('🔧 ', '').toLowerCase();
+        const svcType = el.closest('.config-item-collapsible').querySelector('summary').childNodes[1].textContent.trim().toLowerCase();
         
         services.push({
           type: svcType,
@@ -935,11 +1140,11 @@ export class SettingsPanel {
       }
       else if (message.command === 'databaseRemoved') {
         const container = document.getElementById('databases-container');
-        const items = container.querySelectorAll('.config-item');
+        const items = container.querySelectorAll('.config-item-collapsible[data-db-index]');
         if (items[message.index]) {
           items[message.index].remove();
         }
-        if (container.querySelectorAll('.config-item').length === 0) {
+        if (container.querySelectorAll('.config-item-collapsible[data-db-index]').length === 0) {
           container.innerHTML = '<div class="empty-state" id="databases-empty">No databases configured</div>';
         }
         markDirty();
@@ -955,11 +1160,11 @@ export class SettingsPanel {
       }
       else if (message.command === 'serviceRemoved') {
         const container = document.getElementById('services-container');
-        const items = container.querySelectorAll('.config-item');
+        const items = container.querySelectorAll('.config-item-collapsible[data-svc-index]');
         if (items[message.index]) {
           items[message.index].remove();
         }
-        if (container.querySelectorAll('.config-item').length === 0) {
+        if (container.querySelectorAll('.config-item-collapsible[data-svc-index]').length === 0) {
           container.innerHTML = '<div class="empty-state" id="services-empty">No additional services</div>';
         }
         markDirty();
@@ -975,11 +1180,11 @@ export class SettingsPanel {
       }
       else if (message.command === 'messageQueueRemoved') {
         const container = document.getElementById('messagequeues-container');
-        const items = container.querySelectorAll('.config-item');
+        const items = container.querySelectorAll('.config-item-collapsible[data-mq-index]');
         if (items[message.index]) {
           items[message.index].remove();
         }
-        if (container.querySelectorAll('.config-item').length === 0) {
+        if (container.querySelectorAll('.config-item-collapsible[data-mq-index]').length === 0) {
           container.innerHTML = '<div class="empty-state" id="messagequeues-empty">No message queues configured</div>';
         }
         markDirty();
@@ -988,135 +1193,179 @@ export class SettingsPanel {
 
     function generateDatabaseHtml(db, index) {
       const isCustomMode = db.connectionMode === 'custom' || db.customUrl;
+      
+      let summaryInfo = '';
+      if (!isCustomMode) {
+        summaryInfo = \`
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> \${db.version || 'latest'}</span>
+            <span class="info-chip"><span class="chip-label">port:</span> \${db.port}</span>
+            <span class="info-chip"><span class="chip-label">ext:</span> \${db.externalPort || db.port}</span>
+            <span class="info-chip"><span class="chip-label">user:</span> \${db.username || 'admin'}</span>
+            <span class="info-chip"><span class="chip-label">db:</span> \${db.name || 'appdb'}</span>
+            <span class="info-chip">\${db.useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+          </span>\`;
+      } else {
+        summaryInfo = \`
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> \${db.version || 'latest'}</span>
+            <span class="info-chip url-chip"><span class="chip-label">url:</span> <span class="chip-value">\${db.customUrl || 'custom'}</span></span>
+            <span class="info-chip">\${db.useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+          </span>\`;
+      }
+      
       return \`
-      <div class="config-item" data-index="\${index}">
-        <div class="config-item-header">
-          <span class="config-item-title">🗄️ \${db.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeDatabase(\${index})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="db-version-\${index}" value="\${db.version || 'latest'}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="db-internal-port-\${index}" value="\${db.port || getDefaultPort(db.type)}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="db-external-port-\${index}" value="\${db.externalPort || db.port || getDefaultPort(db.type)}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Connection Mode</label>
-            <select id="db-connection-mode-\${index}" onchange="toggleDbUrlMode(\${index}); markDirty()">
-              <option value="standard" \${!isCustomMode ? 'selected' : ''}>Standard (Local Docker)</option>
-              <option value="custom" \${isCustomMode ? 'selected' : ''}>Custom URL (External)</option>
-            </select>
-          </div>
-        </div>
-        <div id="db-standard-fields-\${index}" class="config-item-details \${isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
-          <div class="form-group">
-            <label>Database Name</label>
-            <input type="text" id="db-name-\${index}" value="\${db.name || 'appdb'}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="db-username-\${index}" value="\${db.username || 'admin'}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="password-input-wrapper">
-              <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="db-password-toggle-\${index}" onclick="togglePassword('db-password-\${index}', 'db-password-toggle-\${index}')" title="Show password">🔒</button>
+      <details class="config-item-collapsible" data-db-index="\${index}">
+        <summary>
+          🗄️ \${db.type.toUpperCase()}
+          \${summaryInfo}
+          <button class="remove-btn" onclick="removeDatabase(\${index}); event.stopPropagation();">✕</button>
+        </summary>
+        <div class="config-item-body">
+          <div class="config-item-details">
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="db-version-\${index}" value="\${db.version || 'latest'}" onchange="markDirty(); updateDatabaseSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>Internal Port</label>
+              <input type="number" id="db-internal-port-\${index}" value="\${db.port || getDefaultPort(db.type)}" onchange="markDirty(); updateDatabaseSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>External Port</label>
+              <input type="number" id="db-external-port-\${index}" value="\${db.externalPort || db.port || getDefaultPort(db.type)}" onchange="markDirty(); updateDatabaseSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>Connection Mode</label>
+              <select id="db-connection-mode-\${index}" onchange="toggleDbUrlMode(\${index}); markDirty(); updateDatabaseSummary(\${index});">
+                <option value="standard" \${!isCustomMode ? 'selected' : ''}>Standard (Local Docker)</option>
+                <option value="custom" \${isCustomMode ? 'selected' : ''}>Custom URL (External)</option>
+              </select>
             </div>
           </div>
-        </div>
-        <div id="db-custom-url-group-\${index}" class="url-mode-group \${!isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
-          <div class="form-group">
-            <label>Custom URL</label>
-            <input type="text" id="db-url-\${index}" value="\${db.customUrl || ''}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
+          <div id="db-standard-fields-\${index}" class="config-item-details \${isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
+            <div class="form-group">
+              <label>Database Name</label>
+              <input type="text" id="db-name-\${index}" value="\${db.name || 'appdb'}" onchange="markDirty(); updateDatabaseSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="db-username-\${index}" value="\${db.username || 'admin'}" onchange="markDirty(); updateDatabaseSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
+                <button type="button" class="password-toggle-btn" id="db-password-toggle-\${index}" onclick="togglePassword('db-password-\${index}', 'db-password-toggle-\${index}')" title="Show password">🔒</button>
+              </div>
+            </div>
+          </div>
+          <div id="db-custom-url-group-\${index}" class="url-mode-group \${!isCustomMode ? 'hidden' : ''}" style="margin-top: 10px;">
+            <div class="form-group">
+              <label>Custom URL</label>
+              <input type="text" id="db-url-\${index}" value="\${db.customUrl || ''}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty(); updateDatabaseSummary(\${index});">
+            </div>
+          </div>
+          <div class="toggle-group" style="margin-top: 10px;">
+            <input type="checkbox" id="db-alpine-\${index}" \${db.useAlpine ? 'checked' : ''} onchange="markDirty(); updateDatabaseSummary(\${index});">
+            <label for="db-alpine-\${index}">Use Alpine (Smaller Image)</label>
           </div>
         </div>
-        <div class="toggle-group" style="margin-top: 10px;">
-          <input type="checkbox" id="db-alpine-\${index}" \${db.useAlpine ? 'checked' : ''} onchange="markDirty()">
-          <label for="db-alpine-\${index}">Use Alpine (Smaller Image)</label>
-        </div>
-      </div>\`;
+      </details>\`;
     }
 
     function generateMessageQueueHtml(mq, index) {
+      let summaryInfo = \`
+        <span class="summary-info">
+          <span class="info-chip"><span class="chip-label">v:</span> \${mq.version || 'latest'}</span>
+          <span class="info-chip"><span class="chip-label">port:</span> \${mq.port}</span>
+          <span class="info-chip"><span class="chip-label">ext:</span> \${mq.externalPort || mq.port}</span>\`;
+      
+      if (mq.type === 'rabbitmq') {
+        summaryInfo += \`
+          <span class="info-chip"><span class="chip-label">user:</span> \${mq.username || 'guest'}</span>\`;
+      }
+      
+      summaryInfo += \`
+          <span class="info-chip">\${mq.useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+        </span>\`;
+      
       return \`
-      <div class="config-item" data-index="\${index}">
-        <div class="config-item-header">
-          <span class="config-item-title">📨 \${mq.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(\${index})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="mq-version-\${index}" value="\${mq.version || 'latest'}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="mq-internal-port-\${index}" value="\${mq.port || ''}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="mq-external-port-\${index}" value="\${mq.externalPort || mq.port || ''}" onchange="markDirty()">
-          </div>
-          \${mq.type === 'rabbitmq' ? \`
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="mq-username-\${index}" value="\${mq.username || 'guest'}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="password-input-wrapper">
-              <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="mq-password-toggle-\${index}" onclick="togglePassword('mq-password-\${index}', 'mq-password-toggle-\${index}')" title="Show password">🔒</button>
+      <details class="config-item-collapsible" data-mq-index="\${index}">
+        <summary>
+          📨 \${mq.type.toUpperCase()}
+          \${summaryInfo}
+          <button class="remove-btn" onclick="removeMessageQueue(\${index}); event.stopPropagation();">✕</button>
+        </summary>
+        <div class="config-item-body">
+          <div class="config-item-details">
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="mq-version-\${index}" value="\${mq.version || 'latest'}" onchange="markDirty(); updateMessageQueueSummary(\${index});">
             </div>
-          </div>\` : ''}
+            <div class="form-group">
+              <label>Internal Port</label>
+              <input type="number" id="mq-internal-port-\${index}" value="\${mq.port || ''}" onchange="markDirty(); updateMessageQueueSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>External Port</label>
+              <input type="number" id="mq-external-port-\${index}" value="\${mq.externalPort || mq.port || ''}" onchange="markDirty(); updateMessageQueueSummary(\${index});">
+            </div>
+            \${mq.type === 'rabbitmq' ? \`
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="mq-username-\${index}" value="\${mq.username || 'guest'}" onchange="markDirty(); updateMessageQueueSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
+                <button type="button" class="password-toggle-btn" id="mq-password-toggle-\${index}" onclick="togglePassword('mq-password-\${index}', 'mq-password-toggle-\${index}')" title="Show password">🔒</button>
+              </div>
+            </div>\` : ''}
+          </div>
+          <div class="toggle-group" style="margin-top: 10px;">
+            <input type="checkbox" id="mq-alpine-\${index}" \${mq.useAlpine ? 'checked' : ''} onchange="markDirty(); updateMessageQueueSummary(\${index});">
+            <label for="mq-alpine-\${index}">Use Alpine (Smaller Image)</label>
+          </div>
         </div>
-        <div class="toggle-group" style="margin-top: 10px;">
-          <input type="checkbox" id="mq-alpine-\${index}" \${mq.useAlpine ? 'checked' : ''} onchange="markDirty()">
-          <label for="mq-alpine-\${index}">Use Alpine (Smaller Image)</label>
-        </div>
-      </div>\`;
+      </details>\`;
     }
 
     function generateServiceHtml(svc, index) {
       return \`
-      <div class="config-item" data-index="\${index}">
-        <div class="config-item-header">
-          <span class="config-item-title">🔧 \${svc.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeService(\${index})">✕ Remove</button>
+      <details class="config-item-collapsible" data-svc-index="\${index}">
+        <summary>
+          🔧 \${svc.type.toUpperCase()}
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> \${svc.version || 'latest'}</span>
+            <span class="info-chip"><span class="chip-label">port:</span> \${svc.port}</span>
+            <span class="info-chip"><span class="chip-label">ext:</span> \${svc.externalPort || svc.port}</span>
+            <span class="info-chip">\${svc.useAlpine ? '🏔️ alpine' : '📦 full'}</span>
+          </span>
+          <button class="remove-btn" onclick="removeService(\${index}); event.stopPropagation();">✕</button>
+        </summary>
+        <div class="config-item-body">
+          <div class="config-item-details">
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="svc-version-\${index}" value="\${svc.version || 'latest'}" onchange="markDirty(); updateServiceSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>Internal Port</label>
+              <input type="number" id="svc-internal-port-\${index}" value="\${svc.port || ''}" onchange="markDirty(); updateServiceSummary(\${index});">
+            </div>
+            <div class="form-group">
+              <label>External Port</label>
+              <input type="number" id="svc-external-port-\${index}" value="\${svc.externalPort || svc.port || ''}" onchange="markDirty(); updateServiceSummary(\${index});">
+            </div>
+          </div>
+          <div class="toggle-group" style="margin-top: 10px;">
+            <input type="checkbox" id="svc-alpine-\${index}" \${svc.useAlpine ? 'checked' : ''} onchange="markDirty(); updateServiceSummary(\${index});">
+            <label for="svc-alpine-\${index}">Use Alpine (Smaller Image)</label>
           </div>
         </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="svc-version-\${index}" value="\${svc.version || 'latest'}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="svc-internal-port-\${index}" value="\${svc.port || ''}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="svc-external-port-\${index}" value="\${svc.externalPort || svc.port || ''}" onchange="markDirty()">
-          </div>
-        </div>
-        <div class="toggle-group" style="margin-top: 10px;">
-          <input type="checkbox" id="svc-alpine-\${index}" \${svc.useAlpine ? 'checked' : ''} onchange="markDirty()">
-          <label for="svc-alpine-\${index}">Use Alpine (Smaller Image)</label>
-        </div>
-      </div>\`;
+      </details>\`;
     }
 
     function getDefaultPort(type) {
@@ -1152,7 +1401,6 @@ export class SettingsPanel {
       return versions[type] || "latest";
     }
 
-    // Initialize UI state
     document.addEventListener('DOMContentLoaded', function() {
       toggleDebugPort();
       toggleHealthEndpoint();
@@ -1170,139 +1418,183 @@ export class SettingsPanel {
 
 	private generateDatabaseHtml(db: any, index: number): string {
 		const isCustomMode = db.connectionMode === "custom" || db.customUrl;
+
+		let summaryInfo = "";
+		if (!isCustomMode) {
+			summaryInfo = `
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> ${db.version || "latest"}</span>
+            <span class="info-chip"><span class="chip-label">port:</span> ${db.port}</span>
+            <span class="info-chip"><span class="chip-label">ext:</span> ${db.externalPort || db.port}</span>
+            <span class="info-chip"><span class="chip-label">user:</span> ${db.username || "admin"}</span>
+            <span class="info-chip"><span class="chip-label">db:</span> ${db.name || "appdb"}</span>
+            <span class="info-chip">${db.useAlpine ? "🏔️ alpine" : "📦 full"}</span>
+          </span>`;
+		} else {
+			summaryInfo = `
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> ${db.version || "latest"}</span>
+            <span class="info-chip url-chip"><span class="chip-label">url:</span> <span class="chip-value">${db.customUrl || "custom"}</span></span>
+            <span class="info-chip">${db.useAlpine ? "🏔️ alpine" : "📦 full"}</span>
+          </span>`;
+		}
+
 		return `
-      <div class="config-item" data-index="${index}">
-        <div class="config-item-header">
-          <span class="config-item-title">🗄️ ${db.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeDatabase(${index})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="db-version-${index}" value="${db.version || "latest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="db-internal-port-${index}" value="${db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="db-external-port-${index}" value="${db.externalPort || db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Connection Mode</label>
-            <select id="db-connection-mode-${index}" onchange="toggleDbUrlMode(${index}); markDirty()">
-              <option value="standard" ${!isCustomMode ? "selected" : ""}>Standard (Local Docker)</option>
-              <option value="custom" ${isCustomMode ? "selected" : ""}>Custom URL (External)</option>
-            </select>
-          </div>
-        </div>
-        <div id="db-standard-fields-${index}" class="config-item-details ${isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
-          <div class="form-group">
-            <label>Database Name</label>
-            <input type="text" id="db-name-${index}" value="${db.name || "appdb"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="db-username-${index}" value="${db.username || "admin"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="password-input-wrapper">
-              <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="db-password-toggle-${index}" onclick="togglePassword('db-password-${index}', 'db-password-toggle-${index}')" title="Show password">🔒</button>
+      <details class="config-item-collapsible" data-db-index="${index}">
+        <summary>
+          🗄️ ${db.type.toUpperCase()}
+          ${summaryInfo}
+          <button class="remove-btn" onclick="removeDatabase(${index}); event.stopPropagation();">✕</button>
+        </summary>
+        <div class="config-item-body">
+          <div class="config-item-details">
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="db-version-${index}" value="${db.version || "latest"}" onchange="markDirty(); updateDatabaseSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>Internal Port</label>
+              <input type="number" id="db-internal-port-${index}" value="${db.port || this.getDefaultPort(db.type)}" onchange="markDirty(); updateDatabaseSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>External Port</label>
+              <input type="number" id="db-external-port-${index}" value="${db.externalPort || db.port || this.getDefaultPort(db.type)}" onchange="markDirty(); updateDatabaseSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>Connection Mode</label>
+              <select id="db-connection-mode-${index}" onchange="toggleDbUrlMode(${index}); markDirty(); updateDatabaseSummary(${index});">
+                <option value="standard" ${!isCustomMode ? "selected" : ""}>Standard (Local Docker)</option>
+                <option value="custom" ${isCustomMode ? "selected" : ""}>Custom URL (External)</option>
+              </select>
             </div>
           </div>
-        </div>
-        <div id="db-custom-url-group-${index}" class="url-mode-group ${!isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
-          <div class="form-group">
-            <label>Custom URL</label>
-            <input type="text" id="db-url-${index}" value="${db.customUrl || ""}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
+          <div id="db-standard-fields-${index}" class="config-item-details ${isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
+            <div class="form-group">
+              <label>Database Name</label>
+              <input type="text" id="db-name-${index}" value="${db.name || "appdb"}" onchange="markDirty(); updateDatabaseSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="db-username-${index}" value="${db.username || "admin"}" onchange="markDirty(); updateDatabaseSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
+                <button type="button" class="password-toggle-btn" id="db-password-toggle-${index}" onclick="togglePassword('db-password-${index}', 'db-password-toggle-${index}')" title="Show password">🔒</button>
+              </div>
+            </div>
+          </div>
+          <div id="db-custom-url-group-${index}" class="url-mode-group ${!isCustomMode ? "hidden" : ""}" style="margin-top: 10px;">
+            <div class="form-group">
+              <label>Custom URL</label>
+              <input type="text" id="db-url-${index}" value="${db.customUrl || ""}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty(); updateDatabaseSummary(${index});">
+            </div>
+          </div>
+          <div class="toggle-group" style="margin-top: 10px;">
+            <input type="checkbox" id="db-alpine-${index}" ${db.useAlpine ? "checked" : ""} onchange="markDirty(); updateDatabaseSummary(${index});">
+            <label for="db-alpine-${index}">Use Alpine (Smaller Image)</label>
           </div>
         </div>
-        <div class="toggle-group" style="margin-top: 10px;">
-          <input type="checkbox" id="db-alpine-${index}" ${db.useAlpine ? "checked" : ""} onchange="markDirty()">
-          <label for="db-alpine-${index}">Use Alpine (Smaller Image)</label>
-        </div>
-      </div>`;
+      </details>`;
 	}
 
 	private generateMessageQueueHtml(mq: any, index: number): string {
+		let summaryInfo = `
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> ${mq.version || "latest"}</span>
+            <span class="info-chip"><span class="chip-label">port:</span> ${mq.port}</span>
+            <span class="info-chip"><span class="chip-label">ext:</span> ${mq.externalPort || mq.port}</span>`;
+
+		if (mq.type === "rabbitmq") {
+			summaryInfo += `
+            <span class="info-chip"><span class="chip-label">user:</span> ${mq.username || "guest"}</span>`;
+		}
+
+		summaryInfo += `
+            <span class="info-chip">${mq.useAlpine ? "🏔️ alpine" : "📦 full"}</span>
+          </span>`;
+
 		return `
-      <div class="config-item" data-index="${index}">
-        <div class="config-item-header">
-          <span class="config-item-title">📨 ${mq.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(${index})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="mq-version-${index}" value="${mq.version || "latest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="mq-internal-port-${index}" value="${mq.port || ""}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="mq-external-port-${index}" value="${mq.externalPort || mq.port || ""}" onchange="markDirty()">
-          </div>
-          ${
+      <details class="config-item-collapsible" data-mq-index="${index}">
+        <summary>
+          📨 ${mq.type.toUpperCase()}
+          ${summaryInfo}
+          <button class="remove-btn" onclick="removeMessageQueue(${index}); event.stopPropagation();">✕</button>
+        </summary>
+        <div class="config-item-body">
+          <div class="config-item-details">
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="mq-version-${index}" value="${mq.version || "latest"}" onchange="markDirty(); updateMessageQueueSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>Internal Port</label>
+              <input type="number" id="mq-internal-port-${index}" value="${mq.port || ""}" onchange="markDirty(); updateMessageQueueSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>External Port</label>
+              <input type="number" id="mq-external-port-${index}" value="${mq.externalPort || mq.port || ""}" onchange="markDirty(); updateMessageQueueSummary(${index});">
+            </div>
+            ${
 				mq.type === "rabbitmq"
 					? `
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="mq-username-${index}" value="${mq.username || "guest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="password-input-wrapper">
-              <input type="password" id="mq-password-${index}" value="${mq.password || "guest"}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="mq-password-toggle-${index}" onclick="togglePassword('mq-password-${index}', 'mq-password-toggle-${index}')" title="Show password">🔒</button>
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="mq-username-${index}" value="${mq.username || "guest"}" onchange="markDirty(); updateMessageQueueSummary(${index});">
             </div>
-          </div>`
+            <div class="form-group">
+              <label>Password</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="mq-password-${index}" value="${mq.password || "guest"}" onchange="markDirty()">
+                <button type="button" class="password-toggle-btn" id="mq-password-toggle-${index}" onclick="togglePassword('mq-password-${index}', 'mq-password-toggle-${index}')" title="Show password">🔒</button>
+              </div>
+            </div>`
 					: ""
 			}
+          </div>
+          <div class="toggle-group" style="margin-top: 10px;">
+            <input type="checkbox" id="mq-alpine-${index}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty(); updateMessageQueueSummary(${index});">
+            <label for="mq-alpine-${index}">Use Alpine (Smaller Image)</label>
+          </div>
         </div>
-        <div class="toggle-group" style="margin-top: 10px;">
-          <input type="checkbox" id="mq-alpine-${index}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty()">
-          <label for="mq-alpine-${index}">Use Alpine (Smaller Image)</label>
-        </div>
-      </div>`;
+      </details>`;
 	}
 
 	private generateServiceHtml(svc: any, index: number): string {
 		return `
-      <div class="config-item" data-index="${index}">
-        <div class="config-item-header">
-          <span class="config-item-title">🔧 ${svc.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeService(${index})">✕ Remove</button>
+      <details class="config-item-collapsible" data-svc-index="${index}">
+        <summary>
+          🔧 ${svc.type.toUpperCase()}
+          <span class="summary-info">
+            <span class="info-chip"><span class="chip-label">v:</span> ${svc.version || "latest"}</span>
+            <span class="info-chip"><span class="chip-label">port:</span> ${svc.port}</span>
+            <span class="info-chip"><span class="chip-label">ext:</span> ${svc.externalPort || svc.port}</span>
+            <span class="info-chip">${svc.useAlpine ? "🏔️ alpine" : "📦 full"}</span>
+          </span>
+          <button class="remove-btn" onclick="removeService(${index}); event.stopPropagation();">✕</button>
+        </summary>
+        <div class="config-item-body">
+          <div class="config-item-details">
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="svc-version-${index}" value="${svc.version || "latest"}" onchange="markDirty(); updateServiceSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>Internal Port</label>
+              <input type="number" id="svc-internal-port-${index}" value="${svc.port || ""}" onchange="markDirty(); updateServiceSummary(${index});">
+            </div>
+            <div class="form-group">
+              <label>External Port</label>
+              <input type="number" id="svc-external-port-${index}" value="${svc.externalPort || svc.port || ""}" onchange="markDirty(); updateServiceSummary(${index});">
+            </div>
+          </div>
+          <div class="toggle-group" style="margin-top: 10px;">
+            <input type="checkbox" id="svc-alpine-${index}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty(); updateServiceSummary(${index});">
+            <label for="svc-alpine-${index}">Use Alpine (Smaller Image)</label>
           </div>
         </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="svc-version-${index}" value="${svc.version || "latest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="svc-internal-port-${index}" value="${svc.port || ""}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="svc-external-port-${index}" value="${svc.externalPort || svc.port || ""}" onchange="markDirty()">
-          </div>
-        </div>
-        <div class="toggle-group" style="margin-top: 10px;">
-          <input type="checkbox" id="svc-alpine-${index}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty()">
-          <label for="svc-alpine-${index}">Use Alpine (Smaller Image)</label>
-        </div>
-      </div>`;
+      </details>`;
 	}
 
 	public dispose(): void {
