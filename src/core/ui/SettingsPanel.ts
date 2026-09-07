@@ -1,6 +1,4 @@
 import * as vscode from "vscode";
-import * as fs from "fs-extra";
-import * as path from "path";
 import { ConfigLoader } from "../config/ConfigLoader.js";
 
 export class SettingsPanel {
@@ -10,13 +8,11 @@ export class SettingsPanel {
 	private _config: any;
 	private _configFormat: "json" = "json";
 	private _isDirty: boolean = false;
-	private _currentConfig: any; // ذخیره موقت تنظیمات
 
 	private constructor(panel: vscode.WebviewPanel, config: any) {
 		this._panel = panel;
-		this._config = JSON.parse(JSON.stringify(config)); // Deep copy
-		this._currentConfig = JSON.parse(JSON.stringify(config)); // Deep copy
-		this._panel.webview.html = this.getHtml(this._config);
+		this._config = config;
+		this._panel.webview.html = this.getHtml(config);
 
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
@@ -25,14 +21,12 @@ export class SettingsPanel {
 				switch (message.command) {
 					case "save":
 						this._config = message.config;
-						this._currentConfig = JSON.parse(JSON.stringify(message.config));
 						await this.saveConfigToFile();
 						this._isDirty = false;
-						vscode.window.showInformationMessage("Configuration saved!");
+						vscode.window.showInformationMessage("✅ Configuration saved!");
 						break;
 					case "generate":
 						this._config = message.config;
-						this._currentConfig = JSON.parse(JSON.stringify(message.config));
 						await this.saveConfigToFile();
 						this._isDirty = false;
 						vscode.commands.executeCommand("dockeryzen.generateFromConfig");
@@ -43,26 +37,17 @@ export class SettingsPanel {
 					case "addDatabase":
 						this.addDatabase(message.dbConfig);
 						break;
-					case "updateDatabase":
-						this.updateDatabase(message.index, message.dbConfig);
-						break;
 					case "removeDatabase":
 						this.removeDatabase(message.index);
 						break;
 					case "addService":
 						this.addService(message.serviceConfig);
 						break;
-					case "updateService":
-						this.updateService(message.index, message.serviceConfig);
-						break;
 					case "removeService":
 						this.removeService(message.index);
 						break;
 					case "addMessageQueue":
 						this.addMessageQueue(message.mqConfig);
-						break;
-					case "updateMessageQueue":
-						this.updateMessageQueue(message.index, message.mqConfig);
 						break;
 					case "removeMessageQueue":
 						this.removeMessageQueue(message.index);
@@ -83,87 +68,81 @@ export class SettingsPanel {
 	}
 
 	private addDatabase(dbConfig: any): void {
-		if (!this._currentConfig.databases) {
-			this._currentConfig.databases = [];
+		if (!this._config.databases) {
+			this._config.databases = [];
 		}
-		this._currentConfig.databases.push(dbConfig);
+		this._config.databases.push(dbConfig);
 		this._isDirty = true;
-		this._updateWebview();
-	}
 
-	private updateDatabase(index: number, dbConfig: any): void {
-		if (this._currentConfig.databases && this._currentConfig.databases[index]) {
-			this._currentConfig.databases[index] = dbConfig;
-			this._isDirty = true;
-		}
+		this._panel.webview.postMessage({
+			command: "databaseAdded",
+			dbConfig: dbConfig,
+			index: this._config.databases.length - 1,
+		});
 	}
 
 	private removeDatabase(index: number): void {
-		if (this._currentConfig.databases && this._currentConfig.databases[index]) {
-			this._currentConfig.databases.splice(index, 1);
+		if (this._config.databases && this._config.databases[index]) {
+			this._config.databases.splice(index, 1);
 			this._isDirty = true;
-			this._updateWebview();
+
+			this._panel.webview.postMessage({
+				command: "databaseRemoved",
+				index: index,
+			});
 		}
 	}
 
 	private addService(serviceConfig: any): void {
-		if (!this._currentConfig.services) {
-			this._currentConfig.services = [];
+		if (!this._config.services) {
+			this._config.services = [];
 		}
-		this._currentConfig.services.push(serviceConfig);
+		this._config.services.push(serviceConfig);
 		this._isDirty = true;
-		this._updateWebview();
-	}
 
-	private updateService(index: number, serviceConfig: any): void {
-		if (this._currentConfig.services && this._currentConfig.services[index]) {
-			this._currentConfig.services[index] = serviceConfig;
-			this._isDirty = true;
-		}
+		this._panel.webview.postMessage({
+			command: "serviceAdded",
+			serviceConfig: serviceConfig,
+			index: this._config.services.length - 1,
+		});
 	}
 
 	private removeService(index: number): void {
-		if (this._currentConfig.services && this._currentConfig.services[index]) {
-			this._currentConfig.services.splice(index, 1);
+		if (this._config.services && this._config.services[index]) {
+			this._config.services.splice(index, 1);
 			this._isDirty = true;
-			this._updateWebview();
+
+			this._panel.webview.postMessage({
+				command: "serviceRemoved",
+				index: index,
+			});
 		}
 	}
 
 	private addMessageQueue(mqConfig: any): void {
-		if (!this._currentConfig.messageQueues) {
-			this._currentConfig.messageQueues = [];
+		if (!this._config.messageQueues) {
+			this._config.messageQueues = [];
 		}
-		this._currentConfig.messageQueues.push(mqConfig);
+		this._config.messageQueues.push(mqConfig);
 		this._isDirty = true;
-		this._updateWebview();
-	}
 
-	private updateMessageQueue(index: number, mqConfig: any): void {
-		if (this._currentConfig.messageQueues && this._currentConfig.messageQueues[index]) {
-			this._currentConfig.messageQueues[index] = mqConfig;
-			this._isDirty = true;
-		}
+		this._panel.webview.postMessage({
+			command: "messageQueueAdded",
+			mqConfig: mqConfig,
+			index: this._config.messageQueues.length - 1,
+		});
 	}
 
 	private removeMessageQueue(index: number): void {
-		if (this._currentConfig.messageQueues && this._currentConfig.messageQueues[index]) {
-			this._currentConfig.messageQueues.splice(index, 1);
+		if (this._config.messageQueues && this._config.messageQueues[index]) {
+			this._config.messageQueues.splice(index, 1);
 			this._isDirty = true;
-			this._updateWebview();
+
+			this._panel.webview.postMessage({
+				command: "messageQueueRemoved",
+				index: index,
+			});
 		}
-	}
-
-	// متد جدید برای به‌روزرسانی webview بدون از دست رفتن تغییرات
-	private _updateWebview(): void {
-		// فقط HTML را با config فعلی به‌روزرسانی کن
-		this._panel.webview.html = this.getHtml(this._currentConfig);
-
-		// پیام به webview برای اطلاع از تغییر
-		this._panel.webview.postMessage({
-			command: "configUpdated",
-			config: this._currentConfig,
-		});
 	}
 
 	private getDefaultPort(dbType: string): number {
@@ -225,153 +204,6 @@ export class SettingsPanel {
 		const databases = config?.databases || [];
 		const services = config?.services || [];
 		const messageQueues = config?.messageQueues || [];
-
-		// Build databases HTML
-		let databasesHtml = "";
-		if (databases.length > 0) {
-			for (let i = 0; i < databases.length; i++) {
-				const db = databases[i];
-				databasesHtml += `
-      <div class="config-item" data-index="${i}">
-        <div class="config-item-header">
-          <span class="config-item-title">🗄️ ${db.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeDatabase(${i})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="db-version-${i}" value="${db.version || "latest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="db-internal-port-${i}" value="${db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="db-external-port-${i}" value="${db.externalPort || db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Database Name</label>
-            <input type="text" id="db-name-${i}" value="${db.name || "appdb"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="db-username-${i}" value="${db.username || "admin"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="db-password-${i}" value="${db.password || "password"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Connection Mode</label>
-            <select id="db-connection-mode-${i}" onchange="toggleDbUrlMode(${i}); markDirty()">
-              <option value="standard" ${!db.customUrl ? "selected" : ""}>Standard (Local Docker)</option>
-              <option value="custom" ${db.customUrl ? "selected" : ""}>Custom URL (External Server)</option>
-            </select>
-          </div>
-          <div class="form-group" id="db-custom-url-group-${i}" style="${db.customUrl ? "" : "display: none;"}">
-            <label>Custom URL</label>
-            <input type="text" id="db-url-${i}" value="${db.customUrl || ""}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
-          </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="db-alpine-${i}" ${db.useAlpine ? "checked" : ""} onchange="markDirty()">
-            <label for="db-alpine-${i}">Use Alpine</label>
-          </div>
-        </div>
-      </div>`;
-			}
-		} else {
-			databasesHtml = '<div class="empty-state">No databases configured</div>';
-		}
-
-		// Build message queues HTML
-		let messageQueuesHtml = "";
-		if (messageQueues.length > 0) {
-			for (let i = 0; i < messageQueues.length; i++) {
-				const mq = messageQueues[i];
-				messageQueuesHtml += `
-      <div class="config-item" data-index="${i}">
-        <div class="config-item-header">
-          <span class="config-item-title">📨 ${mq.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(${i})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="mq-version-${i}" value="${mq.version || "latest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="mq-internal-port-${i}" value="${mq.port || ""}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="mq-external-port-${i}" value="${mq.externalPort || mq.port || ""}" onchange="markDirty()">
-          </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="mq-alpine-${i}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty()">
-            <label for="mq-alpine-${i}">Use Alpine</label>
-          </div>
-          ${
-				mq.type === "rabbitmq"
-					? `
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="mq-username-${i}" value="${mq.username || "guest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="mq-password-${i}" value="${mq.password || "guest"}" onchange="markDirty()">
-          </div>`
-					: ""
-			}
-        </div>
-      </div>`;
-			}
-		} else {
-			messageQueuesHtml = '<div class="empty-state">No message queues configured</div>';
-		}
-
-		// Build services HTML
-		let servicesHtml = "";
-		if (services.length > 0) {
-			for (let i = 0; i < services.length; i++) {
-				const svc = services[i];
-				servicesHtml += `
-      <div class="config-item" data-index="${i}">
-        <div class="config-item-header">
-          <span class="config-item-title">🔧 ${svc.type.toUpperCase()}</span>
-          <div class="config-item-actions">
-            <button class="btn btn-danger btn-sm" onclick="removeService(${i})">✕ Remove</button>
-          </div>
-        </div>
-        <div class="config-item-details">
-          <div class="form-group">
-            <label>Version</label>
-            <input type="text" id="svc-version-${i}" value="${svc.version || "latest"}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>Internal Port</label>
-            <input type="number" id="svc-internal-port-${i}" value="${svc.port || ""}" onchange="markDirty()">
-          </div>
-          <div class="form-group">
-            <label>External Port</label>
-            <input type="number" id="svc-external-port-${i}" value="${svc.externalPort || svc.port || ""}" onchange="markDirty()">
-          </div>
-          <div class="form-group checkbox-group">
-            <input type="checkbox" id="svc-alpine-${i}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty()">
-            <label for="svc-alpine-${i}">Use Alpine</label>
-          </div>
-        </div>
-      </div>`;
-			}
-		} else {
-			servicesHtml = '<div class="empty-state">No additional services</div>';
-		}
 
 		return `<!DOCTYPE html>
 <html lang="en">
@@ -506,6 +338,7 @@ export class SettingsPanel {
       font-size: 14px;
       transition: var(--transition);
       outline: none;
+      width: 100%;
     }
 
     .form-group input:focus,
@@ -656,7 +489,6 @@ export class SettingsPanel {
   </div>
 
   <div class="container">
-    <!-- Project Section -->
     <div class="section">
       <div class="section-title">Project</div>
       <div class="form-grid">
@@ -699,7 +531,6 @@ export class SettingsPanel {
       </div>
     </div>
 
-    <!-- Docker Section -->
     <div class="section">
       <div class="section-title">Docker</div>
       <div class="form-grid">
@@ -730,40 +561,46 @@ export class SettingsPanel {
       </div>
     </div>
 
-    <!-- Databases Section -->
     <div class="section">
       <div class="section-title">Databases</div>
-      ${databasesHtml}
+      <div id="databases-container">
+        ${databases.length > 0 ? databases.map((db: any, i: number) => this.generateDatabaseHtml(db, i)).join("") : '<div class="empty-state" id="databases-empty">No databases configured</div>'}
+      </div>
       <div class="add-buttons">
         ${dbTypes.map((db) => `<button class="add-btn" onclick="addDatabase('${db}')">+ ${db}</button>`).join("")}
       </div>
     </div>
 
-    <!-- Message Queues Section -->
     <div class="section">
       <div class="section-title">Message Queues</div>
-      ${messageQueuesHtml}
+      <div id="messagequeues-container">
+        ${messageQueues.length > 0 ? messageQueues.map((mq: any, i: number) => this.generateMessageQueueHtml(mq, i)).join("") : '<div class="empty-state" id="messagequeues-empty">No message queues configured</div>'}
+      </div>
       <div class="add-buttons">
         ${mqTypes.map((mq) => `<button class="add-btn" onclick="addMessageQueue('${mq}')">+ ${mq}</button>`).join("")}
       </div>
     </div>
 
-    <!-- Services Section -->
     <div class="section">
       <div class="section-title">Additional Services</div>
-      ${servicesHtml}
+      <div id="services-container">
+        ${services.length > 0 ? services.map((svc: any, i: number) => this.generateServiceHtml(svc, i)).join("") : '<div class="empty-state" id="services-empty">No additional services</div>'}
+      </div>
       <div class="add-buttons">
         ${serviceTypes.map((svc) => `<button class="add-btn" onclick="addService('${svc}')">+ ${svc}</button>`).join("")}
       </div>
     </div>
 
-    <!-- Advanced Section -->
     <div class="section">
       <div class="section-title">Advanced</div>
       <div class="form-grid">
         <div class="form-group checkbox-group">
           <input type="checkbox" id="envFile" ${config?.envFile !== false ? "checked" : ""} onchange="markDirty()">
           <label for="envFile">Generate .env file</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="devContainer" ${config?.devContainer?.enabled ? "checked" : ""} onchange="markDirty()">
+          <label for="devContainer">Generate Dev Container</label>
         </div>
       </div>
     </div>
@@ -881,6 +718,9 @@ export class SettingsPanel {
         messageQueues: messageQueues,
         services: services,
         envFile: document.getElementById('envFile').checked,
+        devContainer: {
+          enabled: document.getElementById('devContainer').checked
+        },
         profiles: [],
         ciCd: {
           github: false,
@@ -889,9 +729,6 @@ export class SettingsPanel {
         kubernetes: {
           enabled: false,
           replicas: 3
-        },
-        devContainer: {
-          enabled: false
         }
       };
     }
@@ -957,6 +794,193 @@ export class SettingsPanel {
       vscode.postMessage({ command: 'removeMessageQueue', index: index });
     }
 
+    window.addEventListener('message', event => {
+      const message = event.data;
+      
+      if (message.command === 'databaseAdded') {
+        const container = document.getElementById('databases-container');
+        const emptyState = document.getElementById('databases-empty');
+        if (emptyState) emptyState.remove();
+        
+        const html = generateDatabaseHtml(message.dbConfig, message.index);
+        container.insertAdjacentHTML('beforeend', html);
+        markDirty();
+      }
+      else if (message.command === 'databaseRemoved') {
+        const container = document.getElementById('databases-container');
+        const items = container.querySelectorAll('.config-item');
+        if (items[message.index]) {
+          items[message.index].remove();
+        }
+        if (container.querySelectorAll('.config-item').length === 0) {
+          container.innerHTML = '<div class="empty-state" id="databases-empty">No databases configured</div>';
+        }
+        markDirty();
+      }
+      else if (message.command === 'serviceAdded') {
+        const container = document.getElementById('services-container');
+        const emptyState = document.getElementById('services-empty');
+        if (emptyState) emptyState.remove();
+        
+        const html = generateServiceHtml(message.serviceConfig, message.index);
+        container.insertAdjacentHTML('beforeend', html);
+        markDirty();
+      }
+      else if (message.command === 'serviceRemoved') {
+        const container = document.getElementById('services-container');
+        const items = container.querySelectorAll('.config-item');
+        if (items[message.index]) {
+          items[message.index].remove();
+        }
+        if (container.querySelectorAll('.config-item').length === 0) {
+          container.innerHTML = '<div class="empty-state" id="services-empty">No additional services</div>';
+        }
+        markDirty();
+      }
+      else if (message.command === 'messageQueueAdded') {
+        const container = document.getElementById('messagequeues-container');
+        const emptyState = document.getElementById('messagequeues-empty');
+        if (emptyState) emptyState.remove();
+        
+        const html = generateMessageQueueHtml(message.mqConfig, message.index);
+        container.insertAdjacentHTML('beforeend', html);
+        markDirty();
+      }
+      else if (message.command === 'messageQueueRemoved') {
+        const container = document.getElementById('messagequeues-container');
+        const items = container.querySelectorAll('.config-item');
+        if (items[message.index]) {
+          items[message.index].remove();
+        }
+        if (container.querySelectorAll('.config-item').length === 0) {
+          container.innerHTML = '<div class="empty-state" id="messagequeues-empty">No message queues configured</div>';
+        }
+        markDirty();
+      }
+    });
+
+    function generateDatabaseHtml(db, index) {
+      return \`
+      <div class="config-item" data-index="\${index}">
+        <div class="config-item-header">
+          <span class="config-item-title">🗄️ \${db.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeDatabase(\${index})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="db-version-\${index}" value="\${db.version || 'latest'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="db-internal-port-\${index}" value="\${db.port || getDefaultPort(db.type)}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="db-external-port-\${index}" value="\${db.externalPort || db.port || getDefaultPort(db.type)}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Database Name</label>
+            <input type="text" id="db-name-\${index}" value="\${db.name || 'appdb'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="db-username-\${index}" value="\${db.username || 'admin'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Connection Mode</label>
+            <select id="db-connection-mode-\${index}" onchange="toggleDbUrlMode(\${index}); markDirty()">
+              <option value="standard" \${!db.customUrl ? 'selected' : ''}>Standard (Local Docker)</option>
+              <option value="custom" \${db.customUrl ? 'selected' : ''}>Custom URL (External Server)</option>
+            </select>
+          </div>
+          <div class="form-group" id="db-custom-url-group-\${index}" style="\${db.customUrl ? '' : 'display: none;'}">
+            <label>Custom URL</label>
+            <input type="text" id="db-url-\${index}" value="\${db.customUrl || ''}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="db-alpine-\${index}" \${db.useAlpine ? 'checked' : ''} onchange="markDirty()">
+            <label for="db-alpine-\${index}">Use Alpine</label>
+          </div>
+        </div>
+      </div>\`;
+    }
+
+    function generateMessageQueueHtml(mq, index) {
+      return \`
+      <div class="config-item" data-index="\${index}">
+        <div class="config-item-header">
+          <span class="config-item-title">📨 \${mq.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(\${index})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="mq-version-\${index}" value="\${mq.version || 'latest'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="mq-internal-port-\${index}" value="\${mq.port || ''}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="mq-external-port-\${index}" value="\${mq.externalPort || mq.port || ''}" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="mq-alpine-\${index}" \${mq.useAlpine ? 'checked' : ''} onchange="markDirty()">
+            <label for="mq-alpine-\${index}">Use Alpine</label>
+          </div>
+          \${mq.type === 'rabbitmq' ? \`
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="mq-username-\${index}" value="\${mq.username || 'guest'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
+          </div>\` : ''}
+        </div>
+      </div>\`;
+    }
+
+    function generateServiceHtml(svc, index) {
+      return \`
+      <div class="config-item" data-index="\${index}">
+        <div class="config-item-header">
+          <span class="config-item-title">🔧 \${svc.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeService(\${index})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="svc-version-\${index}" value="\${svc.version || 'latest'}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="svc-internal-port-\${index}" value="\${svc.port || ''}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="svc-external-port-\${index}" value="\${svc.externalPort || svc.port || ''}" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="svc-alpine-\${index}" \${svc.useAlpine ? 'checked' : ''} onchange="markDirty()">
+            <label for="svc-alpine-\${index}">Use Alpine</label>
+          </div>
+        </div>
+      </div>\`;
+    }
+
     function getDefaultPort(type) {
       const ports = {
         postgresql: 5432, mysql: 3306, mariadb: 3306, mongodb: 27017,
@@ -992,6 +1016,132 @@ export class SettingsPanel {
   </script>
 </body>
 </html>`;
+	}
+
+	private generateDatabaseHtml(db: any, index: number): string {
+		return `
+      <div class="config-item" data-index="${index}">
+        <div class="config-item-header">
+          <span class="config-item-title">🗄️ ${db.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeDatabase(${index})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="db-version-${index}" value="${db.version || "latest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="db-internal-port-${index}" value="${db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="db-external-port-${index}" value="${db.externalPort || db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Database Name</label>
+            <input type="text" id="db-name-${index}" value="${db.name || "appdb"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="db-username-${index}" value="${db.username || "admin"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Connection Mode</label>
+            <select id="db-connection-mode-${index}" onchange="toggleDbUrlMode(${index}); markDirty()">
+              <option value="standard" ${!db.customUrl ? "selected" : ""}>Standard (Local Docker)</option>
+              <option value="custom" ${db.customUrl ? "selected" : ""}>Custom URL (External Server)</option>
+            </select>
+          </div>
+          <div class="form-group" id="db-custom-url-group-${index}" style="${db.customUrl ? "" : "display: none;"}">
+            <label>Custom URL</label>
+            <input type="text" id="db-url-${index}" value="${db.customUrl || ""}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="db-alpine-${index}" ${db.useAlpine ? "checked" : ""} onchange="markDirty()">
+            <label for="db-alpine-${index}">Use Alpine</label>
+          </div>
+        </div>
+      </div>`;
+	}
+
+	private generateMessageQueueHtml(mq: any, index: number): string {
+		return `
+      <div class="config-item" data-index="${index}">
+        <div class="config-item-header">
+          <span class="config-item-title">📨 ${mq.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(${index})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="mq-version-${index}" value="${mq.version || "latest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="mq-internal-port-${index}" value="${mq.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="mq-external-port-${index}" value="${mq.externalPort || mq.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="mq-alpine-${index}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty()">
+            <label for="mq-alpine-${index}">Use Alpine</label>
+          </div>
+          ${
+				mq.type === "rabbitmq"
+					? `
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="mq-username-${index}" value="${mq.username || "guest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="mq-password-${index}" value="${mq.password || "guest"}" onchange="markDirty()">
+          </div>`
+					: ""
+			}
+        </div>
+      </div>`;
+	}
+
+	private generateServiceHtml(svc: any, index: number): string {
+		return `
+      <div class="config-item" data-index="${index}">
+        <div class="config-item-header">
+          <span class="config-item-title">🔧 ${svc.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeService(${index})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="svc-version-${index}" value="${svc.version || "latest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="svc-internal-port-${index}" value="${svc.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="svc-external-port-${index}" value="${svc.externalPort || svc.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="svc-alpine-${index}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty()">
+            <label for="svc-alpine-${index}">Use Alpine</label>
+          </div>
+        </div>
+      </div>`;
 	}
 
 	public dispose(): void {

@@ -92,10 +92,18 @@ export interface DatabaseConfig {
 	type: DatabaseType;
 	version: string;
 	port: number;
+	/** External port for docker-compose mapping */
+	externalPort?: number;
 	name: string;
 	username: string;
 	password: string;
 	host?: string;
+	/** Custom JDBC URL for external connections */
+	customUrl?: string;
+	/** Connection mode: standard or custom */
+	connectionMode?: "standard" | "custom";
+	/** Use Alpine variant */
+	useAlpine?: boolean;
 }
 
 /** Database types */
@@ -158,8 +166,10 @@ export interface DockerConfig {
 	healthCheckEndpoint: string;
 	/** Output type */
 	outputType: OutputType;
-	/** Database config */
+	/** Database config (single, for backward compatibility) */
 	database?: DatabaseConfig;
+	/** Multiple databases */
+	databases?: DatabaseConfig[];
 	/** Environment variables */
 	envVariables: Record<string, string>;
 	/** Docker compose services */
@@ -176,6 +186,8 @@ export interface DockerConfig {
 	messageQueues?: MessageQueueConfig[];
 	/** Additional services */
 	additionalServices?: AdditionalServiceConfig[];
+	/** Use Alpine for base image */
+	useAlpine?: boolean;
 }
 
 /** Message queue configuration */
@@ -183,6 +195,14 @@ export interface MessageQueueConfig {
 	type: "kafka" | "rabbitmq" | "activemq";
 	version: string;
 	port: number;
+	/** External port for docker-compose mapping */
+	externalPort?: number;
+	/** Use Alpine variant */
+	useAlpine?: boolean;
+	/** Username (for RabbitMQ) */
+	username?: string;
+	/** Password (for RabbitMQ) */
+	password?: string;
 }
 
 /** Additional service configuration */
@@ -190,6 +210,10 @@ export interface AdditionalServiceConfig {
 	type: "nginx" | "grafana" | "prometheus" | "keycloak" | "minio";
 	version: string;
 	port: number;
+	/** External port for docker-compose mapping */
+	externalPort?: number;
+	/** Use Alpine variant */
+	useAlpine?: boolean;
 }
 
 /** Docker Compose service */
@@ -277,46 +301,4 @@ export interface UserPreferences {
 	enableDevContainer: boolean;
 	enableCiCd: boolean;
 	enableKubernetes: boolean;
-}
-
-/** Docker configuration */
-export interface DockerConfig {
-	/** Base image */
-	baseImage: string;
-	/** JDK version */
-	jdkVersion: string;
-	/** Application port */
-	port: number;
-	/** JVM options */
-	jvmOptions: string;
-	/** Enable debug */
-	enableDebug: boolean;
-	/** Debug port */
-	debugPort: number;
-	/** Enable health check */
-	enableHealthCheck: boolean;
-	/** Health check endpoint */
-	healthCheckEndpoint: string;
-	/** Output type */
-	outputType: OutputType;
-	/** Database config (single, for backward compatibility) */
-	database?: DatabaseConfig;
-	/** Multiple databases */
-	databases?: DatabaseConfig[];
-	/** Environment variables */
-	envVariables: Record<string, string>;
-	/** Docker compose services */
-	composeServices: ComposeService[];
-	/** Volumes */
-	volumes: Volume[];
-	/** Networks */
-	networks: Network[];
-	/** Resource limits */
-	resourceLimits?: ResourceLimits;
-	/** Generate .env file */
-	generateEnvFile?: boolean;
-	/** Message queues */
-	messageQueues?: MessageQueueConfig[];
-	/** Additional services */
-	additionalServices?: AdditionalServiceConfig[];
 }

@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
 import type { UserPreferences, JdkVendor, DatabaseType } from "../../types/interfaces.js";
 
-/**
- * Singleton configuration manager
- */
 export class ConfigManager {
 	private static instance: ConfigManager;
 	private preferences: UserPreferences;
@@ -20,9 +17,6 @@ export class ConfigManager {
 		return ConfigManager.instance;
 	}
 
-	/**
-	 * Load user preferences from VS Code settings
-	 */
 	private loadPreferences(): UserPreferences {
 		const config = vscode.workspace.getConfiguration("dockeryzen");
 
@@ -46,24 +40,15 @@ export class ConfigManager {
 		};
 	}
 
-	/**
-	 * Get user preferences
-	 */
 	public getPreferences(): UserPreferences {
 		return this.preferences;
 	}
 
-	/**
-	 * Update user preferences
-	 */
 	public updatePreferences(prefs: Partial<UserPreferences>): void {
 		this.preferences = { ...this.preferences, ...prefs };
 		this.savePreferences();
 	}
 
-	/**
-	 * Save preferences to VS Code settings
-	 */
 	private savePreferences(): void {
 		const config = vscode.workspace.getConfiguration("dockeryzen");
 		config.update("defaultJdkImage", this.preferences.jdkImage, vscode.ConfigurationTarget.Global);
@@ -76,9 +61,6 @@ export class ConfigManager {
 		config.update("imageOptimization", this.preferences.imageOptimization, vscode.ConfigurationTarget.Global);
 	}
 
-	/**
-	 * Cache analysis results
-	 */
 	public cacheData(key: string, data: any, timeoutSeconds: number = 300): void {
 		this.cache.set(key, {
 			data,
@@ -86,9 +68,6 @@ export class ConfigManager {
 		});
 	}
 
-	/**
-	 * Get cached data
-	 */
 	public getCachedData(key: string): any | undefined {
 		const cached = this.cache.get(key);
 		if (cached && cached.timestamp > Date.now()) {
@@ -100,9 +79,6 @@ export class ConfigManager {
 		return undefined;
 	}
 
-	/**
-	 * Clear cache
-	 */
 	public clearCache(): void {
 		this.cache.clear();
 	}

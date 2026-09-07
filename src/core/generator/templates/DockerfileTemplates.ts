@@ -3,13 +3,7 @@ import * as fs from "fs-extra";
 import type { ProjectAnalysis, DockerConfig } from "../../../types/interfaces.js";
 import { OutputType } from "../../../types/interfaces.js";
 
-/**
- * Dockerfile templates
- */
 export class DockerfileTemplates {
-	/**
-	 * Get appropriate template
-	 */
 	public static getTemplate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		switch (analysis.outputType) {
 			case OutputType.WAR:
@@ -22,21 +16,16 @@ export class DockerfileTemplates {
 		}
 	}
 
-	/**
-	 * Get JAR template
-	 */
 	private static getJarTemplate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
 
-		// Remove 'alpine' from jvmOptions for JVM
 		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
 		const jvmOptions = cleanJvmOptions;
 
 		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${config.debugPort || 5005} ` : "";
 		const profiles = analysis.profiles?.length ? `-Dspring.profiles.active=${analysis.profiles[0]} ` : "";
 
-		// Check if alpine is selected
-		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+		const useAlpine = config.useAlpine || config.jvmOptions?.includes("alpine") || false;
 
 		const baseImage = this.getBaseImage(analysis, config);
 		const runtimeImage = useAlpine ? `${baseImage}-alpine` : `${baseImage}-slim`;
@@ -115,19 +104,15 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.vendor="Dockeryzen"
 `;
 	}
-	/**
-	 * Get WAR template
-	 */
+
 	private static getWarTemplate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
 
-		// Remove 'alpine' from jvmOptions for JVM
 		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
 		const jvmOptions = cleanJvmOptions;
 
-		// Check if alpine is selected - but Oracle JDK doesn't support Alpine
 		const vendor = config.baseImage || analysis.jdkVendor;
-		const useAlpine = (config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
+		const useAlpine = (config.useAlpine || config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
 
 		const baseImage = this.getBaseImage(analysis, config);
 		const tomcatImage = this.getTomcatImage(analysis, config, useAlpine);
@@ -183,27 +168,26 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 `;
 	}
 
-	/**
-	 * Generate TomcatImage for War image
-	 */
 	private static getTomcatImage(analysis: ProjectAnalysis, config: DockerConfig, useAlpine: boolean): string {
-		const jdkVersion = analysis.jdkVersion;
+		let jdkVersion = analysis.jdkVersion;
 		const vendor = config.baseImage || analysis.jdkVendor;
 
-		// GraalVM should not be used with Tomcat for WAR files
 		const tomcatVariants: Record<string, string> = {
 			"eclipse-temurin": "temurin",
 			"amazon-corretto": "corretto",
 			openjdk: "openjdk",
 			liberica: "liberica",
-			graalvm: "temurin", // Fallback to temurin for Tomcat
-			"oracle-jdk": "temurin", // Fallback to temurin for Tomcat
-			"redhat-openjdk": "temurin", // Fallback to temurin for Tomcat
+			graalvm: "temurin",
+			"oracle-jdk": "oracle",
+			"redhat-openjdk": "ubi9",
 		};
 
 		const variant = tomcatVariants[vendor] || "temurin";
 
-		// Oracle JDK, Red Hat, and GraalVM don't have Alpine variants for Tomcat
+		if (vendor === "redhat-openjdk" && ["25", "24", "23", "22"].includes(jdkVersion)) {
+			jdkVersion = "21";
+		}
+
 		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
 
 		if (canUseAlpine) {
@@ -213,9 +197,6 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 		return `tomcat:10.1-jdk${jdkVersion}-${variant}`;
 	}
 
-	/**
-	 * Get native image template
-	 */
 	private static getNativeTemplate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
 
@@ -275,9 +256,6 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 `;
 	}
 
-	/**
-	 * Get base image
-	 */
 	private static getBaseImage(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const baseImages: Record<string, string> = {
 			"eclipse-temurin": "eclipse-temurin",
@@ -286,33 +264,25 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 			"oracle-jdk": "oraclelinux",
 			graalvm: "ghcr.io/graalvm/graalvm-community",
 			liberica: "bellsoft/liberica-openjdk",
-			"redhat-openjdk": "registry.access.redhat.com/ubi8/openjdk",
+			"redhat-openjdk": "registry.access.redhat.com/ubi9/openjdk",
 		};
 
 		const vendor = config.baseImage || analysis.jdkVendor;
 		const baseImage = baseImages[vendor] || baseImages["eclipse-temurin"];
 
-		// GraalVM has different image naming
+		let jdkVersion = analysis.jdkVersion;
+
+		if (vendor === "redhat-openjdk") {
+			const supportedVersions = ["8", "11", "17", "21"];
+			if (!supportedVersions.includes(jdkVersion)) {
+				jdkVersion = "21";
+			}
+		}
+
 		if (vendor === "graalvm") {
-			return `${baseImage}:${analysis.jdkVersion}`;
+			return `${baseImage}:${jdkVersion}`;
 		}
 
-		return `${baseImage}:${analysis.jdkVersion}`;
-	}
-
-	/**
-	 * Get runtime image
-	 */
-	private static getRuntimeImage(analysis: ProjectAnalysis, config: DockerConfig): string {
-		const optimization = config.jvmOptions?.includes("alpine") ? "alpine" : "slim";
-		const baseImage = this.getBaseImage(analysis, config);
-
-		if (optimization === "alpine") {
-			return `${baseImage}-alpine`;
-		} else if (optimization === "slim") {
-			return `${baseImage}-slim`;
-		}
-
-		return baseImage;
+		return `${baseImage}:${jdkVersion}`;
 	}
 }

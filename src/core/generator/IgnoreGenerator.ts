@@ -1,10 +1,4 @@
-/**
- * .dockerignore generator
- */
 export class IgnoreGenerator {
-	/**
-	 * Generate .dockerignore content
-	 */
 	public generate(): string {
 		return `# Version control
 .git

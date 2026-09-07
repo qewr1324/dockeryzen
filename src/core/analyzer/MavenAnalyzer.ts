@@ -6,25 +6,16 @@ import type { ProjectAnalysis, Dependency } from "../../types/interfaces.js";
 import { Framework } from "../../types/interfaces.js";
 import { JavaProjectAnalyzer } from "./JavaProjectAnalyzer.js";
 
-/**
- * Maven project analyzer
- */
 export class MavenAnalyzer extends JavaProjectAnalyzer {
-	/**
-	 * Analyze Maven project
-	 */
 	public async analyze(): Promise<ProjectAnalysis> {
 		const analysis = await super.analyze();
 
-		// Additional Maven-specific analysis
 		const pomDetails = await this.parsePomFile();
 
 		if (pomDetails) {
-			// Extract additional dependencies
 			const additionalDeps = pomDetails.dependencies || [];
 			analysis.dependencies = [...analysis.dependencies, ...additionalDeps];
 
-			// Extract Maven plugins
 			const plugins = pomDetails.plugins || [];
 			for (const plugin of plugins) {
 				if (plugin.artifactId === "spring-boot-maven-plugin") {
@@ -36,9 +27,6 @@ export class MavenAnalyzer extends JavaProjectAnalyzer {
 		return analysis;
 	}
 
-	/**
-	 * Parse pom.xml file
-	 */
 	private async parsePomFile(): Promise<any> {
 		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 
@@ -56,7 +44,6 @@ export class MavenAnalyzer extends JavaProjectAnalyzer {
 			const dependencies: Dependency[] = [];
 			const plugins: any[] = [];
 
-			// Extract dependencies
 			if (project.dependencies && project.dependencies[0].dependency) {
 				for (const dep of project.dependencies[0].dependency) {
 					dependencies.push({
@@ -69,7 +56,6 @@ export class MavenAnalyzer extends JavaProjectAnalyzer {
 				}
 			}
 
-			// Extract build plugins
 			if (project.build && project.build[0].plugins && project.build[0].plugins[0].plugin) {
 				for (const plugin of project.build[0].plugins[0].plugin) {
 					plugins.push({

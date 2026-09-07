@@ -4,9 +4,6 @@ import * as path from "path";
 import type { ProjectAnalysis } from "../../types/interfaces.js";
 import { BuildTool } from "../../types/interfaces.js";
 
-/**
- * Base project analyzer
- */
 export abstract class ProjectAnalyzer {
 	protected workspaceFolder: vscode.WorkspaceFolder;
 
@@ -14,14 +11,8 @@ export abstract class ProjectAnalyzer {
 		this.workspaceFolder = workspaceFolder;
 	}
 
-	/**
-	 * Analyze project
-	 */
 	public abstract analyze(): Promise<ProjectAnalysis>;
 
-	/**
-	 * Detect build tool
-	 */
 	public async detectBuildTool(): Promise<BuildTool> {
 		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 		const gradlePath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle");
@@ -36,11 +27,7 @@ export abstract class ProjectAnalyzer {
 		return BuildTool.NONE;
 	}
 
-	/**
-	 * Detect JDK version from build file
-	 */
 	protected async detectJdkVersion(buildTool: BuildTool): Promise<string> {
-		// Default JDK version
 		let jdkVersion = "17";
 
 		if (buildTool === BuildTool.MAVEN) {
@@ -66,13 +53,9 @@ export abstract class ProjectAnalyzer {
 		return jdkVersion;
 	}
 
-	/**
-	 * Detect application port
-	 */
 	protected async detectPort(): Promise<number> {
 		let port = 8080;
 
-		// Check application.properties
 		const propertiesFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/application.properties"), "**/node_modules/**");
 
 		for (const file of propertiesFiles) {
@@ -84,7 +67,6 @@ export abstract class ProjectAnalyzer {
 			}
 		}
 
-		// Check application.yml
 		const yamlFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/application.{yml,yaml}"), "**/node_modules/**");
 
 		for (const file of yamlFiles) {
@@ -99,16 +81,12 @@ export abstract class ProjectAnalyzer {
 		return port;
 	}
 
-	/**
-	 * Detect main class
-	 */
 	protected async detectMainClass(): Promise<string | undefined> {
 		const javaFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/*.java"), "**/node_modules/**");
 
 		for (const file of javaFiles) {
 			const content = await fs.readFile(file.fsPath, "utf8");
 
-			// Check for Spring Boot main class
 			if (content.includes("@SpringBootApplication") && content.includes("public static void main")) {
 				const classMatch = content.match(/public\s+class\s+(\w+)/);
 				if (classMatch) {
@@ -120,9 +98,6 @@ export abstract class ProjectAnalyzer {
 		return undefined;
 	}
 
-	/**
-	 * Analyze project structure
-	 */
 	protected async analyzeStructure(): Promise<any> {
 		const structure: any = {
 			hasSrcFolder: false,

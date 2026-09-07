@@ -3,7 +3,7 @@
 	"type": "module",
 	"displayName": "Dockeryzen",
 	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for Java projects for 💠 VSCode.",
-	"version": "0.82.146",
+	"version": "0.93.151",
 	"private": false,
 	"publisher": "GhurbeSABZI",
 	"packageManager": "bun@1.3.14",
@@ -30,7 +30,8 @@
 		"spring-boot",
 		"maven",
 		"gradle",
-		"vscode-extension"
+		"vscode-extension",
+		"config"
 	],
 	"categories": [
 		"Programming Languages",
@@ -44,82 +45,18 @@
 	"qna": "marketplace",
 	"activationEvents": [
 		"onStartupFinished",
-		"onCommand:dockeryzen.analyze",
-		"onCommand:dockeryzen.generate",
-		"onCommand:dockeryzen.generate-all",
-		"onCommand:dockeryzen.quick-generate",
-		"onCommand:dockeryzen.update",
-		"onCommand:dockeryzen.add-database",
-		"onCommand:dockeryzen.show-logs",
-		"onCommand:dockeryzen.health-check",
-		"onCommand:dockeryzen.generate-dev-container",
 		"onCommand:dockeryzen.openSettings",
 		"onCommand:dockeryzen.generateFromConfig",
-		"onCommand:dockeryzen.openConfigSettings",
-		"onView:dockeryzen.dockerExplorer"
+		"onCommand:dockeryzen.openConfigSettings"
 	],
 	"main": "./dist/extension.cjs",
 	"contributes": {
 		"commands": [
 			{
-				"command": "dockeryzen.analyze",
-				"title": "Analyze Java Project",
-				"category": "Dockeryzen",
-				"icon": "$(search)"
-			},
-			{
-				"command": "dockeryzen.generate",
-				"title": "Generate Docker Files",
-				"category": "Dockeryzen",
-				"icon": "$(file-code)"
-			},
-			{
-				"command": "dockeryzen.generate-all",
-				"title": "Generate All Docker Files (Auto)",
-				"category": "Dockeryzen",
-				"icon": "$(zap)"
-			},
-			{
-				"command": "dockeryzen.quick-generate",
-				"title": "Quick Generate (Default Settings)",
-				"category": "Dockeryzen",
-				"icon": "$(rocket)"
-			},
-			{
-				"command": "dockeryzen.update",
-				"title": "Update Existing Docker Files",
-				"category": "Dockeryzen",
-				"icon": "$(refresh)"
-			},
-			{
-				"command": "dockeryzen.add-database",
-				"title": "Add Database Service",
-				"category": "Dockeryzen",
-				"icon": "$(database)"
-			},
-			{
-				"command": "dockeryzen.show-logs",
-				"title": "Show Dockeryzen Logs",
-				"category": "Dockeryzen",
-				"icon": "$(output)"
-			},
-			{
-				"command": "dockeryzen.health-check",
-				"title": "Check Container Health",
-				"category": "Dockeryzen",
-				"icon": "$(pulse)"
-			},
-			{
-				"command": "dockeryzen.generate-dev-container",
-				"title": "Generate Dev Container",
-				"category": "Dockeryzen",
-				"icon": "$(container)"
-			},
-			{
 				"command": "dockeryzen.openSettings",
 				"title": "Open Dockeryzen Settings",
 				"category": "Dockeryzen",
-				"icon": "$(settings)"
+				"icon": "$(settings-gear)"
 			},
 			{
 				"command": "dockeryzen.generateFromConfig",
@@ -137,41 +74,19 @@
 		"menus": {
 			"explorer/context": [
 				{
-					"command": "dockeryzen.generate",
-					"when": "explorerResourceIsFolder",
-					"group": "dockeryzen@1"
-				},
-				{
-					"command": "dockeryzen.analyze",
-					"when": "explorerResourceIsFolder",
-					"group": "dockeryzen@2"
-				},
-				{
-					"command": "dockeryzen.add-database",
-					"when": "resourceFilename =~ /docker-compose\\.ya?ml/",
-					"group": "dockeryzen@3"
-				},
-				{
 					"command": "dockeryzen.openConfigSettings",
 					"when": "resourceFilename =~ /dockeryzen\\.config\\.(json|yaml|yml|toml)/",
-					"group": "dockeryzen@4"
+					"group": "dockeryzen@1"
 				},
 				{
 					"command": "dockeryzen.generateFromConfig",
 					"when": "resourceFilename =~ /dockeryzen\\.config\\.(json|yaml|yml|toml)/",
-					"group": "dockeryzen@5"
+					"group": "dockeryzen@2"
 				},
 				{
 					"command": "dockeryzen.openSettings",
 					"when": "explorerResourceIsFolder",
-					"group": "dockeryzen@6"
-				}
-			],
-			"editor/title/context": [
-				{
-					"command": "dockeryzen.generate",
-					"when": "resourceFilename =~ /pom\\.xml|build\\.gradle|build\\.gradle\\.kts/",
-					"group": "dockeryzen@1"
+					"group": "dockeryzen@3"
 				}
 			]
 		},
@@ -197,7 +112,7 @@
 		"viewsWelcome": [
 			{
 				"view": "dockeryzen.dockerExplorer",
-				"contents": "No Docker containers found.\n[Generate Docker Files](command:dockeryzen.generate)\n[Analyze Project](command:dockeryzen.analyze)\n[Open Settings](command:dockeryzen.openSettings)",
+				"contents": "No Docker containers found.\n[Generate from Config](command:dockeryzen.generateFromConfig)\n[Open Settings](command:dockeryzen.openSettings)",
 				"when": "!dockeryzen.hasContainers"
 			}
 		],

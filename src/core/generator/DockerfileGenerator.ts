@@ -1,16 +1,9 @@
 import * as vscode from "vscode";
 import type { ProjectAnalysis, DockerConfig, Framework } from "../../types/interfaces.js";
 import { JdkVendor, OutputType } from "../../types/interfaces.js";
-import { DockerfileTemplates } from "../generator/templates/DockerfileTemplates.js";
+import { DockerfileTemplates } from "./templates/DockerfileTemplates.js";
 
-/**
- * Dockerfile generator
- * Uses Factory Pattern
- */
 export class DockerfileGenerator {
-	/**
-	 * Generate Dockerfile content
-	 */
 	public generate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		if (config.baseImage && config.baseImage !== analysis.jdkVendor) {
 			analysis.jdkVendor = config.baseImage as any;
@@ -27,9 +20,6 @@ export class DockerfileGenerator {
 		}
 	}
 
-	/**
-	 * Get base image name
-	 */
 	private getBaseImage(jdkVendor: string, version: string, optimization: string): string {
 		const baseImages: Record<string, string> = {
 			"eclipse-temurin": "eclipse-temurin",
@@ -38,17 +28,22 @@ export class DockerfileGenerator {
 			"oracle-jdk": "oraclelinux",
 			graalvm: "ghcr.io/graalvm/graalvm-community",
 			liberica: "bellsoft/liberica-openjdk",
-			"redhat-openjdk": "registry.access.redhat.com/ubi8/openjdk",
+			"redhat-openjdk": "registry.access.redhat.com/ubi9/openjdk",
 		};
 
 		const baseImage = baseImages[jdkVendor] || baseImages["eclipse-temurin"];
 
-		// GraalVM has different image naming and doesn't support alpine
+		if (jdkVendor === "redhat-openjdk") {
+			const supportedVersions = ["8", "11", "17", "21"];
+			if (!supportedVersions.includes(version)) {
+				version = "21";
+			}
+		}
+
 		if (jdkVendor === "graalvm") {
 			return `${baseImage}:${version}`;
 		}
 
-		// Oracle JDK and Red Hat don't support alpine
 		if (optimization === "alpine" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
 			return `${baseImage}:${version}-alpine`;
 		} else if (optimization === "slim" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
@@ -58,14 +53,9 @@ export class DockerfileGenerator {
 		return `${baseImage}:${version}`;
 	}
 
-	/**
-	 * Generate multi-stage Dockerfile for JAR
-	 */
 	public generateJarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
-		// Check if alpine is selected
-		const useAlpine = config.jvmOptions?.includes("alpine") || false;
+		const useAlpine = config.useAlpine || config.jvmOptions?.includes("alpine") || false;
 
-		// Remove 'alpine' from jvmOptions for JVM
 		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
 
 		const buildImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, "full");
@@ -74,7 +64,6 @@ export class DockerfileGenerator {
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = cleanJvmOptions;
 
-		// Debug options
 		const debugPort = config.debugPort || 5005;
 		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort} ` : "";
 
@@ -145,27 +134,22 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 		return dockerfile;
 	}
 
-	/**
-	 * Generate multi-stage Dockerfile for WAR
-	 */
 	public generateWarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
-		// Check if alpine is selected - but Oracle JDK doesn't support Alpine
 		const vendor = config.baseImage || analysis.jdkVendor;
-		const useAlpine = (config.jvmOptions?.includes("alpine") || false) && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
+		const useAlpine = config.useAlpine || config.jvmOptions?.includes("alpine") || false;
 
-		// Remove 'alpine' from jvmOptions for JVM
+		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
+
 		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
 
-		const buildImage = this.getBaseImage(vendor, analysis.jdkVersion, useAlpine ? "alpine" : "full");
+		const buildImage = this.getBaseImage(vendor, analysis.jdkVersion, canUseAlpine ? "alpine" : "full");
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = cleanJvmOptions;
 
-		// Debug options
 		const debugPort = config.debugPort || 5005;
 		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort} ` : "";
 
-		// Tomcat image based on vendor and alpine
-		const tomcatImage = this.getTomcatImage(analysis, config, useAlpine);
+		const tomcatImage = this.getTomcatImage(analysis, config, canUseAlpine);
 
 		return `# Build stage
 FROM ${buildImage} AS build
@@ -219,27 +203,27 @@ LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 `;
 	}
-	/**
-	 * Generate TomcatImage for War image
-	 */
+
 	private getTomcatImage(analysis: ProjectAnalysis, config: DockerConfig, useAlpine: boolean): string {
-		const jdkVersion = analysis.jdkVersion;
+		let jdkVersion = analysis.jdkVersion;
 		const vendor = config.baseImage || analysis.jdkVendor;
 
-		// GraalVM should not be used with Tomcat for WAR files
 		const tomcatVariants: Record<string, string> = {
 			"eclipse-temurin": "temurin",
 			"amazon-corretto": "corretto",
 			openjdk: "openjdk",
 			liberica: "liberica",
-			graalvm: "temurin", // Fallback to temurin for Tomcat
-			"oracle-jdk": "temurin", // Fallback to temurin for Tomcat
-			"redhat-openjdk": "temurin", // Fallback to temurin for Tomcat
+			graalvm: "temurin",
+			"oracle-jdk": "oracle",
+			"redhat-openjdk": "ubi9",
 		};
 
 		const variant = tomcatVariants[vendor] || "temurin";
 
-		// Oracle JDK, Red Hat, and GraalVM don't have Alpine variants for Tomcat
+		if (vendor === "redhat-openjdk" && ["25", "24", "23", "22"].includes(jdkVersion)) {
+			jdkVersion = "21";
+		}
+
 		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
 
 		if (canUseAlpine) {
@@ -248,9 +232,7 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 
 		return `tomcat:10.1-jdk${jdkVersion}-${variant}`;
 	}
-	/**
-	 * Generate Dockerfile for GraalVM native image
-	 */
+
 	public generateNativeDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
 

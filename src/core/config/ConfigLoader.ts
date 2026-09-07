@@ -5,9 +5,6 @@ import * as yaml from "js-yaml";
 import * as toml from "@iarna/toml";
 
 export class ConfigLoader {
-	/**
-	 * Load configuration from file
-	 */
 	public async load(workspaceFolder: vscode.WorkspaceFolder): Promise<any> {
 		const configFiles = ["dockeryzen.config.json", "dockeryzen.config.yaml", "dockeryzen.config.yml", "dockeryzen.config.toml", ".dockeryzen.json", ".dockeryzen.yaml", ".dockeryzen.yml", ".dockeryzen.toml"];
 
@@ -21,9 +18,6 @@ export class ConfigLoader {
 		return undefined;
 	}
 
-	/**
-	 * Parse config file based on extension
-	 */
 	private async parseFile(filePath: string): Promise<any> {
 		const content = await fs.readFile(filePath, "utf8");
 		const ext = path.extname(filePath).toLowerCase();
@@ -41,9 +35,6 @@ export class ConfigLoader {
 		}
 	}
 
-	/**
-	 * Save configuration to file
-	 */
 	public async save(workspaceFolder: vscode.WorkspaceFolder, config: any, format: "json" | "yaml" | "toml"): Promise<string> {
 		const fileName = `dockeryzen.config.${format}`;
 		const filePath = path.join(workspaceFolder.uri.fsPath, fileName);

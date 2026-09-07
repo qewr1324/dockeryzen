@@ -1,13 +1,7 @@
 import * as vscode from "vscode";
 import type { ProjectAnalysis, DockerConfig } from "../../types/interfaces.js";
 
-/**
- * Dev Container generator
- */
 export class DevContainerGenerator {
-	/**
-	 * Generate devcontainer.json content
-	 */
 	public generate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const devContainer = {
 			name: analysis.mainClass || "Java Development Container",
@@ -46,9 +40,6 @@ export class DevContainerGenerator {
 		return JSON.stringify(devContainer, null, 2);
 	}
 
-	/**
-	 * Get JDK distribution
-	 */
 	private getJdkDistro(jdkVendor: string): string {
 		const distroMap: Record<string, string> = {
 			"eclipse-temurin": "tem",
@@ -62,9 +53,6 @@ export class DevContainerGenerator {
 		return distroMap[jdkVendor] || "tem";
 	}
 
-	/**
-	 * Get post-create command
-	 */
 	private getPostCreateCommand(analysis: ProjectAnalysis): string {
 		if (analysis.buildTool === "maven") {
 			return "mvn clean install -DskipTests && mvn dependency:go-offline";

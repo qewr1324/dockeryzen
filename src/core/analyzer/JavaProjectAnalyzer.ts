@@ -6,13 +6,7 @@ import { DatabaseType, BuildTool, ProjectType, Framework, JdkVendor, OutputType 
 import { ProjectAnalyzer } from "./ProjectAnalyzer.js";
 import { FrameworkDetector } from "./FrameworkDetector.js";
 
-/**
- * Java project analyzer
- */
 export class JavaProjectAnalyzer extends ProjectAnalyzer {
-	/**
-	 * Analyze Java project
-	 */
 	public async analyze(): Promise<ProjectAnalysis> {
 		const buildTool = await this.detectBuildTool();
 		const jdkVersion = await this.detectJdkVersion(buildTool);
@@ -52,9 +46,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		};
 	}
 
-	/**
-	 * Extract dependencies from build files
-	 */
 	protected async extractDependencies(buildTool: BuildTool): Promise<Dependency[]> {
 		const dependencies: Dependency[] = [];
 
@@ -94,9 +85,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		return dependencies;
 	}
 
-	/**
-	 * Detect database from dependencies and configuration
-	 */
 	protected async detectDatabase(dependencies: Dependency[], framework: Framework): Promise<DatabaseConfig | undefined> {
 		let dbType: DatabaseType = DatabaseType.NONE;
 		let dbVersion = "latest";
@@ -105,20 +93,16 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		let dbPassword = "password";
 		let dbPort = 5432;
 
-		// Check dependencies for database drivers
 		for (const dep of dependencies) {
 			const artifactId = dep.artifactId.toLowerCase();
 			const groupId = dep.groupId.toLowerCase();
 
-			// PostgreSQL
 			if (artifactId.includes("postgresql") || groupId.includes("postgresql")) {
 				dbType = DatabaseType.POSTGRESQL;
 				dbVersion = "16";
 				dbPort = 5432;
 				break;
-			}
-			// MySQL
-			else if (artifactId.includes("mysql") && !artifactId.includes("mysql-connector-java")) {
+			} else if (artifactId.includes("mysql") && !artifactId.includes("mysql-connector-java")) {
 				dbType = DatabaseType.MYSQL;
 				dbVersion = "8.4";
 				dbPort = 3306;
@@ -128,73 +112,44 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 				dbVersion = "8.4";
 				dbPort = 3306;
 				break;
-			}
-			// MariaDB
-			else if (artifactId.includes("mariadb")) {
+			} else if (artifactId.includes("mariadb")) {
 				dbType = DatabaseType.MARIADB;
 				dbVersion = "11";
 				dbPort = 3306;
 				break;
-			}
-			// MongoDB
-			else if (artifactId.includes("mongodb") || groupId.includes("mongo")) {
+			} else if (artifactId.includes("mongodb") || groupId.includes("mongo")) {
 				dbType = DatabaseType.MONGODB;
 				dbVersion = "7";
 				dbPort = 27017;
 				break;
-			}
-			// Redis
-			else if (artifactId.includes("redis") || groupId.includes("redis")) {
+			} else if (artifactId.includes("redis") || groupId.includes("redis")) {
 				dbType = DatabaseType.REDIS;
 				dbVersion = "7";
 				dbPort = 6379;
 				break;
-			}
-			// H2
-			else if (artifactId.includes("h2")) {
+			} else if (artifactId.includes("h2")) {
 				dbType = DatabaseType.H2;
 				dbVersion = "latest";
 				dbPort = 9092;
 				break;
-			}
-			// Cassandra
-			else if (artifactId.includes("cassandra")) {
+			} else if (artifactId.includes("cassandra")) {
 				dbType = DatabaseType.CASSANDRA;
 				dbVersion = "5";
 				dbPort = 9042;
 				break;
-			}
-			// Elasticsearch
-			else if (artifactId.includes("elasticsearch")) {
+			} else if (artifactId.includes("elasticsearch")) {
 				dbType = DatabaseType.ELASTICSEARCH;
 				dbVersion = "8";
 				dbPort = 9200;
 				break;
-			}
-			// Neo4j
-			else if (artifactId.includes("neo4j")) {
+			} else if (artifactId.includes("neo4j")) {
 				dbType = DatabaseType.NEO4J;
 				dbVersion = "5";
 				dbPort = 7687;
 				break;
 			}
-			// Oracle
-			else if (artifactId.includes("oracle") && artifactId.includes("jdbc")) {
-				dbType = DatabaseType.POSTGRESQL; // Fallback to PostgreSQL
-				dbVersion = "16";
-				dbPort = 5432;
-				break;
-			}
-			// SQL Server
-			else if (artifactId.includes("sqlserver") || artifactId.includes("mssql")) {
-				dbType = DatabaseType.POSTGRESQL; // Fallback to PostgreSQL
-				dbVersion = "16";
-				dbPort = 5432;
-				break;
-			}
 		}
 
-		// Check configuration files for database settings
 		if (dbType !== DatabaseType.NONE) {
 			const configFiles = await this.findConfigFiles();
 
@@ -202,23 +157,9 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 				if (configFile.type === "properties") {
 					const content = await fs.readFile(configFile.path, "utf8");
 
-					// Extract database name from URL
 					const urlMatch = content.match(/spring\.datasource\.url\s*=\s*.*?:\/\/(?:localhost|127\.0\.0\.1|db|database):\d+\/(\w+)/);
 					if (urlMatch) {
 						dbName = urlMatch[1];
-					}
-
-					// Check for JPA database platform
-					const jpaMatch = content.match(/spring\.jpa\.database-platform\s*=\s*.*?\.(\w+)Dialect/);
-					if (jpaMatch) {
-						const platform = jpaMatch[1].toLowerCase();
-						if (platform.includes("postgres")) {
-							dbType = DatabaseType.POSTGRESQL;
-							dbPort = 5432;
-						} else if (platform.includes("mysql")) {
-							dbType = DatabaseType.MYSQL;
-							dbPort = 3306;
-						}
 					}
 
 					const userMatch = content.match(/spring\.datasource\.username\s*=\s*(\w+)/);
@@ -233,23 +174,9 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 				} else if (configFile.type === "yml" || configFile.type === "yaml") {
 					const content = await fs.readFile(configFile.path, "utf8");
 
-					// Extract database name from URL
 					const urlMatch = content.match(/url:\s*.*?:\/\/(?:localhost|127\.0\.0\.1|db|database):\d+\/(\w+)/);
 					if (urlMatch) {
 						dbName = urlMatch[1];
-					}
-
-					// Check for JPA database platform
-					const jpaMatch = content.match(/database-platform:\s*.*?\.(\w+)Dialect/);
-					if (jpaMatch) {
-						const platform = jpaMatch[1].toLowerCase();
-						if (platform.includes("postgres")) {
-							dbType = DatabaseType.POSTGRESQL;
-							dbPort = 5432;
-						} else if (platform.includes("mysql")) {
-							dbType = DatabaseType.MYSQL;
-							dbPort = 3306;
-						}
 					}
 
 					const userMatch = content.match(/username:\s*(\w+)/);
@@ -277,45 +204,11 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		return undefined;
 	}
 
-	/**
-	 * Get default database port
-	 */
-	private getDefaultDbPort(dbType: DatabaseType): number {
-		switch (dbType) {
-			case DatabaseType.POSTGRESQL:
-				return 5432;
-			case DatabaseType.MYSQL:
-				return 3306;
-			case DatabaseType.MARIADB:
-				return 3306;
-			case DatabaseType.MONGODB:
-				return 27017;
-			case DatabaseType.REDIS:
-				return 6379;
-			case DatabaseType.CASSANDRA:
-				return 9042;
-			case DatabaseType.ELASTICSEARCH:
-				return 9200;
-			case DatabaseType.NEO4J:
-				return 7687;
-			case DatabaseType.H2:
-				return 9092;
-			default:
-				return 5432;
-		}
-	}
-
-	/**
-	 * Extract JVM options
-	 */
 	protected extractJvmOptions(): string | undefined {
 		const config = vscode.workspace.getConfiguration("dockeryzen");
 		return config.get("jvmOptions") || "-Xmx512m -Xms256m";
 	}
 
-	/**
-	 * Detect Spring profiles
-	 */
 	protected async detectProfiles(): Promise<string[] | undefined> {
 		const profiles: string[] = [];
 
@@ -332,13 +225,9 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		return profiles.length > 0 ? profiles : undefined;
 	}
 
-	/**
-	 * Extract environment variables
-	 */
 	protected async extractEnvVariables(): Promise<Record<string, string>> {
 		const envVars: Record<string, string> = {};
 
-		// Check .env file
 		const envPath = path.join(this.workspaceFolder.uri.fsPath, ".env");
 		if (await fs.pathExists(envPath)) {
 			const content = await fs.readFile(envPath, "utf8");
@@ -352,45 +241,23 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 			}
 		}
 
-		// Check application.properties for environment variables
-		const configFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.workspaceFolder, "**/application.properties"), "**/node_modules/**");
-
-		for (const file of configFiles) {
-			const content = await fs.readFile(file.fsPath, "utf8");
-			const envPattern = /\$\{(\w+):([^}]+)\}/g;
-			let match;
-
-			while ((match = envPattern.exec(content)) !== null) {
-				if (!envVars[match[1]]) {
-					envVars[match[1]] = match[2];
-				}
-			}
-		}
-
 		return envVars;
 	}
 
-	/**
-	 * Detect output type
-	 */
 	protected detectOutputType(framework: Framework, dependencies: Dependency[]): OutputType {
-		// Check pom.xml for packaging type FIRST
 		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 		if (fs.existsSync(pomPath)) {
 			const pomContent = fs.readFileSync(pomPath, "utf8");
 
-			// Check for WAR packaging
 			if (/<packaging>\s*war\s*<\/packaging>/.test(pomContent)) {
 				return OutputType.WAR;
 			}
 
-			// Check for native image
 			if (/<packaging>\s*native-image\s*<\/packaging>/.test(pomContent)) {
 				return OutputType.NATIVE;
 			}
 		}
 
-		// Check for WAR packaging in build settings
 		if (framework === Framework.SPRING_MVC || framework === Framework.JAVA_EE || framework === Framework.JAKARTA_EE) {
 			for (const dep of dependencies) {
 				if (dep.artifactId.toLowerCase().includes("tomcat") || dep.artifactId.toLowerCase().includes("jetty") || dep.artifactId.toLowerCase().includes("undertow")) {
@@ -399,7 +266,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 			}
 		}
 
-		// Check for servlet dependencies (indicates WAR)
 		for (const dep of dependencies) {
 			const artifactId = dep.artifactId.toLowerCase();
 			if (artifactId.includes("servlet") || artifactId.includes("jsp") || artifactId.includes("jstl")) {
@@ -407,7 +273,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 			}
 		}
 
-		// Check for GraalVM native image
 		for (const dep of dependencies) {
 			if (dep.groupId === "org.graalvm" || dep.artifactId.includes("graalvm")) {
 				return OutputType.NATIVE;
@@ -416,9 +281,7 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 
 		return OutputType.JAR;
 	}
-	/**
-	 * Find configuration files
-	 */
+
 	protected async findConfigFiles(): Promise<ConfigFile[]> {
 		const configFiles: ConfigFile[] = [];
 
@@ -438,9 +301,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		return configFiles;
 	}
 
-	/**
-	 * Parse configuration content
-	 */
 	private parseConfigContent(content: string, type: "properties" | "yml" | "yaml"): Record<string, any> {
 		const result: Record<string, any> = {};
 
@@ -453,7 +313,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 				}
 			}
 		} else {
-			// Simple YAML parser for key-value pairs
 			const lines = content.split("\n");
 			let currentKey = "";
 
@@ -482,9 +341,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		return result;
 	}
 
-	/**
-	 * Detect JDK vendor
-	 */
 	protected detectJdkVendor(dependencies: Dependency[]): JdkVendor {
 		const config = vscode.workspace.getConfiguration("dockeryzen");
 		const configuredVendor = config.get("defaultJdkImage") as string;
@@ -509,9 +365,6 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		}
 	}
 
-	/**
-	 * Check if project is multi-module
-	 */
 	protected async isMultiModule(): Promise<boolean> {
 		const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 		if (await fs.pathExists(pomPath)) {

@@ -5,10 +5,8 @@ export class EnvGenerator {
 	public generate(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const envVars: string[] = [];
 
-		// Remove 'alpine' from jvmOptions
 		const cleanJvmOptions = (config.jvmOptions || "-Xmx512m -Xms256m").replace(/\s*alpine\s*/g, " ").trim();
 
-		// Add database environment variables
 		if (config.databases && config.databases.length > 0) {
 			envVars.push(`# Database Configuration`);
 			for (const db of config.databases) {
@@ -18,7 +16,6 @@ export class EnvGenerator {
 					envVars.push(`SPRING_DATASOURCE_USERNAME_${db.type.toUpperCase()}=${db.username}`);
 					envVars.push(`SPRING_DATASOURCE_PASSWORD_${db.type.toUpperCase()}=${db.password}`);
 
-					// For primary database (first one)
 					if (config.databases && config.databases[0] === db) {
 						envVars.push(`SPRING_DATASOURCE_URL=jdbc:${db.type}://${db.type}:${db.port}/${db.name}`);
 						envVars.push(`SPRING_DATASOURCE_USERNAME=${db.username}`);
@@ -41,7 +38,6 @@ export class EnvGenerator {
 			envVars.push(``);
 		}
 
-		// Add message queue environment variables
 		if (config.messageQueues && config.messageQueues.length > 0) {
 			envVars.push(`# Message Queue Configuration`);
 			for (const mq of config.messageQueues) {
@@ -63,24 +59,20 @@ export class EnvGenerator {
 			envVars.push(``);
 		}
 
-		// Add application port
 		envVars.push(`# Application Configuration`);
 		envVars.push(`SERVER_PORT=${config.port || analysis.port || 8080}`);
 		envVars.push(``);
 
-		// Add JVM options
 		envVars.push(`# JVM Configuration`);
 		envVars.push(`JAVA_OPTS=${cleanJvmOptions}`);
 		envVars.push(``);
 
-		// Add debug configuration
 		if (config.enableDebug) {
 			envVars.push(`# Debug Configuration`);
 			envVars.push(`DEBUG_PORT=${config.debugPort || 5005}`);
 			envVars.push(``);
 		}
 
-		// Add custom environment variables
 		if (config.envVariables && Object.keys(config.envVariables).length > 0) {
 			envVars.push(`# Custom Environment Variables`);
 			for (const [key, value] of Object.entries(config.envVariables)) {
@@ -89,7 +81,6 @@ export class EnvGenerator {
 			envVars.push(``);
 		}
 
-		// Add security warning
 		envVars.push(`# SECURITY WARNING: Do not commit this file to version control!`);
 		envVars.push(`# Add .env to .gitignore immediately.`);
 
