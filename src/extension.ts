@@ -86,13 +86,13 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 
 	// Register status bar item
-	const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-	statusBarItem.command = "dockeryzen.generate";
-	statusBarItem.text = "$(container) Dockeryzen";
-	statusBarItem.tooltip = "Generate Docker files for Java project";
-	statusBarItem.show();
+	// const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	// statusBarItem.command = "dockeryzen.generate";
+	// statusBarItem.text = "$(container) Dockeryzen";
+	// statusBarItem.tooltip = "Generate Docker files for Java project";
+	// statusBarItem.show();
 
-	context.subscriptions.push(statusBarItem);
+	// context.subscriptions.push(statusBarItem);
 
 	// Set context for view welcome
 	vscode.commands.executeCommand("setContext", "dockeryzen.hasContainers", false);
