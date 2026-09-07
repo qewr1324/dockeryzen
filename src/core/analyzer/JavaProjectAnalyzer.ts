@@ -100,46 +100,96 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 	protected async detectDatabase(dependencies: Dependency[], framework: Framework): Promise<DatabaseConfig | undefined> {
 		let dbType: DatabaseType = DatabaseType.NONE;
 		let dbVersion = "latest";
+		let dbName = "appdb";
+		let dbUsername = "admin";
+		let dbPassword = "password";
+		let dbPort = 5432;
 
 		// Check dependencies for database drivers
 		for (const dep of dependencies) {
 			const artifactId = dep.artifactId.toLowerCase();
+			const groupId = dep.groupId.toLowerCase();
 
-			if (artifactId.includes("postgresql") || artifactId.includes("postgres")) {
+			// PostgreSQL
+			if (artifactId.includes("postgresql") || groupId.includes("postgresql")) {
 				dbType = DatabaseType.POSTGRESQL;
 				dbVersion = "16";
+				dbPort = 5432;
 				break;
-			} else if (artifactId.includes("mysql")) {
+			}
+			// MySQL
+			else if (artifactId.includes("mysql") && !artifactId.includes("mysql-connector-java")) {
 				dbType = DatabaseType.MYSQL;
 				dbVersion = "8.4";
+				dbPort = 3306;
 				break;
-			} else if (artifactId.includes("mariadb")) {
+			} else if (artifactId === "mysql-connector-j" || artifactId === "mysql-connector-java") {
+				dbType = DatabaseType.MYSQL;
+				dbVersion = "8.4";
+				dbPort = 3306;
+				break;
+			}
+			// MariaDB
+			else if (artifactId.includes("mariadb")) {
 				dbType = DatabaseType.MARIADB;
 				dbVersion = "11";
+				dbPort = 3306;
 				break;
-			} else if (artifactId.includes("mongodb")) {
+			}
+			// MongoDB
+			else if (artifactId.includes("mongodb") || groupId.includes("mongo")) {
 				dbType = DatabaseType.MONGODB;
 				dbVersion = "7";
+				dbPort = 27017;
 				break;
-			} else if (artifactId.includes("redis")) {
+			}
+			// Redis
+			else if (artifactId.includes("redis") || groupId.includes("redis")) {
 				dbType = DatabaseType.REDIS;
 				dbVersion = "7";
+				dbPort = 6379;
 				break;
-			} else if (artifactId.includes("h2")) {
+			}
+			// H2
+			else if (artifactId.includes("h2")) {
 				dbType = DatabaseType.H2;
 				dbVersion = "latest";
+				dbPort = 9092;
 				break;
-			} else if (artifactId.includes("cassandra")) {
+			}
+			// Cassandra
+			else if (artifactId.includes("cassandra")) {
 				dbType = DatabaseType.CASSANDRA;
 				dbVersion = "5";
+				dbPort = 9042;
 				break;
-			} else if (artifactId.includes("elasticsearch")) {
+			}
+			// Elasticsearch
+			else if (artifactId.includes("elasticsearch")) {
 				dbType = DatabaseType.ELASTICSEARCH;
 				dbVersion = "8";
+				dbPort = 9200;
 				break;
-			} else if (artifactId.includes("neo4j")) {
+			}
+			// Neo4j
+			else if (artifactId.includes("neo4j")) {
 				dbType = DatabaseType.NEO4J;
 				dbVersion = "5";
+				dbPort = 7687;
+				break;
+			}
+			// Oracle
+			else if (artifactId.includes("oracle") && artifactId.includes("jdbc")) {
+				dbType = DatabaseType.POSTGRESQL; // Fallback to PostgreSQL
+				dbVersion = "16";
+				dbPort = 5432;
+				break;
+			}
+			// SQL Server
+			else if (artifactId.includes("sqlserver") || artifactId.includes("mssql")) {
+				dbType = DatabaseType.POSTGRESQL; // Fallback to PostgreSQL
+				dbVersion = "16";
+				dbPort = 5432;
 				break;
 			}
 		}
@@ -147,18 +197,28 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 		// Check configuration files for database settings
 		if (dbType !== DatabaseType.NONE) {
 			const configFiles = await this.findConfigFiles();
-			let dbName = "appdb";
-			let dbUsername = "admin";
-			let dbPassword = "password";
-			let dbPort = this.getDefaultDbPort(dbType);
 
 			for (const configFile of configFiles) {
 				if (configFile.type === "properties") {
 					const content = await fs.readFile(configFile.path, "utf8");
 
-					const nameMatch = content.match(/spring\.datasource\.url.*?:\/\/(?:localhost|127\.0\.0\.1):\d+\/(\w+)/);
-					if (nameMatch) {
-						dbName = nameMatch[1];
+					// Extract database name from URL
+					const urlMatch = content.match(/spring\.datasource\.url\s*=\s*.*?:\/\/(?:localhost|127\.0\.0\.1|db|database):\d+\/(\w+)/);
+					if (urlMatch) {
+						dbName = urlMatch[1];
+					}
+
+					// Check for JPA database platform
+					const jpaMatch = content.match(/spring\.jpa\.database-platform\s*=\s*.*?\.(\w+)Dialect/);
+					if (jpaMatch) {
+						const platform = jpaMatch[1].toLowerCase();
+						if (platform.includes("postgres")) {
+							dbType = DatabaseType.POSTGRESQL;
+							dbPort = 5432;
+						} else if (platform.includes("mysql")) {
+							dbType = DatabaseType.MYSQL;
+							dbPort = 3306;
+						}
 					}
 
 					const userMatch = content.match(/spring\.datasource\.username\s*=\s*(\w+)/);
@@ -173,9 +233,23 @@ export class JavaProjectAnalyzer extends ProjectAnalyzer {
 				} else if (configFile.type === "yml" || configFile.type === "yaml") {
 					const content = await fs.readFile(configFile.path, "utf8");
 
-					const nameMatch = content.match(/url:.*?:\/\/(?:localhost|127\.0\.0\.1):\d+\/(\w+)/);
-					if (nameMatch) {
-						dbName = nameMatch[1];
+					// Extract database name from URL
+					const urlMatch = content.match(/url:\s*.*?:\/\/(?:localhost|127\.0\.0\.1|db|database):\d+\/(\w+)/);
+					if (urlMatch) {
+						dbName = urlMatch[1];
+					}
+
+					// Check for JPA database platform
+					const jpaMatch = content.match(/database-platform:\s*.*?\.(\w+)Dialect/);
+					if (jpaMatch) {
+						const platform = jpaMatch[1].toLowerCase();
+						if (platform.includes("postgres")) {
+							dbType = DatabaseType.POSTGRESQL;
+							dbPort = 5432;
+						} else if (platform.includes("mysql")) {
+							dbType = DatabaseType.MYSQL;
+							dbPort = 3306;
+						}
 					}
 
 					const userMatch = content.match(/username:\s*(\w+)/);

@@ -12,6 +12,10 @@ export class DockerfileGenerator {
 	 * Generate Dockerfile content
 	 */
 	public generate(analysis: ProjectAnalysis, config: DockerConfig): string {
+		if (config.baseImage && config.baseImage !== analysis.jdkVendor) {
+			analysis.jdkVendor = config.baseImage as any;
+		}
+
 		switch (analysis.outputType) {
 			case OutputType.WAR:
 				return this.generateWarDockerfile(analysis, config);
@@ -26,22 +30,22 @@ export class DockerfileGenerator {
 	/**
 	 * Get base image name
 	 */
-	private getBaseImage(jdkVendor: JdkVendor, version: string, optimization: string): string {
-		const baseImages: Record<JdkVendor, string> = {
-			[JdkVendor.ECLIPSE_TEMURIN]: "eclipse-temurin",
-			[JdkVendor.AMAZON_CORRETTO]: "amazoncorretto",
-			[JdkVendor.OPENJDK]: "openjdk",
-			[JdkVendor.ORACLE_JDK]: "oraclelinux",
-			[JdkVendor.GRAALVM]: "ghcr.io/graalvm",
-			[JdkVendor.LIBERICA]: "bellsoft/liberica-openjdk",
-			[JdkVendor.REDHAT_OPENJDK]: "registry.access.redhat.com/ubi8/openjdk",
+	private getBaseImage(jdkVendor: string, version: string, optimization: string): string {
+		const baseImages: Record<string, string> = {
+			"eclipse-temurin": "eclipse-temurin",
+			"amazon-corretto": "amazoncorretto",
+			openjdk: "openjdk",
+			"oracle-jdk": "oraclelinux",
+			graalvm: "ghcr.io/graalvm",
+			liberica: "bellsoft/liberica-openjdk",
+			"redhat-openjdk": "registry.access.redhat.com/ubi8/openjdk",
 		};
 
-		const baseImage = baseImages[jdkVendor] || baseImages[JdkVendor.ECLIPSE_TEMURIN];
+		const baseImage = baseImages[jdkVendor] || baseImages["eclipse-temurin"];
 
-		if (optimization === "alpine" && jdkVendor !== JdkVendor.ORACLE_JDK && jdkVendor !== JdkVendor.REDHAT_OPENJDK) {
+		if (optimization === "alpine" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
 			return `${baseImage}:${version}-alpine`;
-		} else if (optimization === "slim" && jdkVendor !== JdkVendor.ORACLE_JDK && jdkVendor !== JdkVendor.REDHAT_OPENJDK) {
+		} else if (optimization === "slim" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
 			return `${baseImage}:${version}-slim`;
 		}
 
@@ -52,12 +56,11 @@ export class DockerfileGenerator {
 	 * Generate multi-stage Dockerfile for JAR
 	 */
 	public generateJarDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
-		const buildImage = this.getBaseImage(analysis.jdkVendor, analysis.jdkVersion, config.jvmOptions.includes("alpine") ? "alpine" : "full");
-		const runtimeImage = this.getBaseImage(analysis.jdkVendor, analysis.jdkVersion, config.jvmOptions.includes("alpine") ? "alpine" : "slim");
+		const buildImage = this.getBaseImage(analysis.jdkVendor, analysis.jdkVersion, "full");
+		const runtimeImage = this.getBaseImage(config.baseImage || analysis.jdkVendor, analysis.jdkVersion, "slim");
 
 		const port = config.port || analysis.port || 8080;
 		const jvmOptions = config.jvmOptions || "-Xmx512m -Xms256m";
-		const mainClass = analysis.mainClass;
 
 		let dockerfile = `# Build stage
 FROM ${buildImage} AS build
@@ -97,7 +100,7 @@ ${
 	config.enableHealthCheck
 		? `# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${port}/actuator/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${port}${config.healthCheckEndpoint || "/actuator/health"} || exit 1
 
 `
 		: ""

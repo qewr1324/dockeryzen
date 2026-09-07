@@ -249,7 +249,8 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 			"redhat-openjdk": "registry.access.redhat.com/ubi8/openjdk",
 		};
 
-		const vendor = analysis.jdkVendor || "eclipse-temurin";
+		// Use config.baseImage if provided, otherwise use analysis.jdkVendor
+		const vendor = config.baseImage || analysis.jdkVendor || "eclipse-temurin";
 		const baseImage = baseImages[vendor] || baseImages["eclipse-temurin"];
 
 		return `${baseImage}:${analysis.jdkVersion}`;

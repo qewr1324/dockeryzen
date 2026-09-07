@@ -396,16 +396,16 @@ export class Wizard {
 		}
 
 		return {
-			baseImage: config.baseImage || "eclipse-temurin",
+			baseImage: config.baseImage || this.preferences.jdkImage,
 			jdkVersion: this.analysis.jdkVersion,
 			port: config.port || this.analysis.port || 8080,
 			jvmOptions: config.jvmOptions || this.preferences.jvmOptions,
 			enableDebug: config.enableDebug || false,
 			debugPort: config.debugPort || 5005,
-			enableHealthCheck: config.enableHealthCheck || true,
+			enableHealthCheck: config.enableHealthCheck ?? true,
 			healthCheckEndpoint: config.healthCheckEndpoint || "/actuator/health",
 			outputType: this.analysis.outputType,
-			database: config.database,
+			database: config.database || this.analysis.database,
 			envVariables: this.analysis.envVariables,
 			composeServices: [],
 			volumes: [],
