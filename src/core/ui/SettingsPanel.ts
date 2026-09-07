@@ -746,11 +746,11 @@ export class SettingsPanel {
       
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '🔒';
+        btn.textContent = '🔓';
         btn.title = 'Hide password';
       } else {
         input.type = 'password';
-        btn.textContent = '🔓';
+        btn.textContent = '🔒';
         btn.title = 'Show password';
       }
     }
@@ -1030,7 +1030,7 @@ export class SettingsPanel {
             <label>Password</label>
             <div class="password-input-wrapper">
               <input type="password" id="db-password-\${index}" value="\${db.password || 'password'}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="db-password-toggle-\${index}" onclick="togglePassword('db-password-\${index}', 'db-password-toggle-\${index}')" title="Show password">👁️</button>
+              <button type="button" class="password-toggle-btn" id="db-password-toggle-\${index}" onclick="togglePassword('db-password-\${index}', 'db-password-toggle-\${index}')" title="Show password">🔒</button>
             </div>
           </div>
         </div>
@@ -1078,7 +1078,7 @@ export class SettingsPanel {
             <label>Password</label>
             <div class="password-input-wrapper">
               <input type="password" id="mq-password-\${index}" value="\${mq.password || 'guest'}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="mq-password-toggle-\${index}" onclick="togglePassword('mq-password-\${index}', 'mq-password-toggle-\${index}')" title="Show password">👁️</button>
+              <button type="button" class="password-toggle-btn" id="mq-password-toggle-\${index}" onclick="togglePassword('mq-password-\${index}', 'mq-password-toggle-\${index}')" title="Show password">🔒</button>
             </div>
           </div>\` : ''}
         </div>
@@ -1212,7 +1212,7 @@ export class SettingsPanel {
             <label>Password</label>
             <div class="password-input-wrapper">
               <input type="password" id="db-password-${index}" value="${db.password || "password"}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="db-password-toggle-${index}" onclick="togglePassword('db-password-${index}', 'db-password-toggle-${index}')" title="Show password">👁️</button>
+              <button type="button" class="password-toggle-btn" id="db-password-toggle-${index}" onclick="togglePassword('db-password-${index}', 'db-password-toggle-${index}')" title="Show password">🔒</button>
             </div>
           </div>
         </div>
@@ -1262,7 +1262,7 @@ export class SettingsPanel {
             <label>Password</label>
             <div class="password-input-wrapper">
               <input type="password" id="mq-password-${index}" value="${mq.password || "guest"}" onchange="markDirty()">
-              <button type="button" class="password-toggle-btn" id="mq-password-toggle-${index}" onclick="togglePassword('mq-password-${index}', 'mq-password-toggle-${index}')" title="Show password">👁️</button>
+              <button type="button" class="password-toggle-btn" id="mq-password-toggle-${index}" onclick="togglePassword('mq-password-${index}', 'mq-password-toggle-${index}')" title="Show password">🔒</button>
             </div>
           </div>`
 					: ""
