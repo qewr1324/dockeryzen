@@ -8,12 +8,16 @@ export class SettingsPanel {
 	private readonly _panel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	private _config: any;
-	private _configFormat: "json" | "yaml" | "toml" = "json";
+	private _configFormat: "json" = "json";
+	private _isDirty: boolean = false;
+	private _currentConfig: any; // ذخیره موقت تنظیمات
 
 	private constructor(panel: vscode.WebviewPanel, config: any) {
 		this._panel = panel;
-		this._config = config;
-		this._panel.webview.html = this.getHtml(config);
+		this._config = JSON.parse(JSON.stringify(config)); // Deep copy
+		this._currentConfig = JSON.parse(JSON.stringify(config)); // Deep copy
+		this._panel.webview.html = this.getHtml(this._config);
+
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
 		this._panel.webview.onDidReceiveMessage(
@@ -21,44 +25,47 @@ export class SettingsPanel {
 				switch (message.command) {
 					case "save":
 						this._config = message.config;
+						this._currentConfig = JSON.parse(JSON.stringify(message.config));
 						await this.saveConfigToFile();
+						this._isDirty = false;
 						vscode.window.showInformationMessage("Configuration saved!");
 						break;
 					case "generate":
 						this._config = message.config;
+						this._currentConfig = JSON.parse(JSON.stringify(message.config));
 						await this.saveConfigToFile();
+						this._isDirty = false;
 						vscode.commands.executeCommand("dockeryzen.generateFromConfig");
+						break;
+					case "markDirty":
+						this._isDirty = true;
 						break;
 					case "addDatabase":
 						this.addDatabase(message.dbConfig);
 						break;
+					case "updateDatabase":
+						this.updateDatabase(message.index, message.dbConfig);
+						break;
 					case "removeDatabase":
 						this.removeDatabase(message.index);
-						await this.saveConfigToFile();
 						break;
 					case "addService":
 						this.addService(message.serviceConfig);
-						await this.saveConfigToFile();
+						break;
+					case "updateService":
+						this.updateService(message.index, message.serviceConfig);
 						break;
 					case "removeService":
 						this.removeService(message.index);
-						await this.saveConfigToFile();
 						break;
 					case "addMessageQueue":
 						this.addMessageQueue(message.mqConfig);
-						await this.saveConfigToFile();
+						break;
+					case "updateMessageQueue":
+						this.updateMessageQueue(message.index, message.mqConfig);
 						break;
 					case "removeMessageQueue":
 						this.removeMessageQueue(message.index);
-						await this.saveConfigToFile();
-						break;
-					case "addProfile":
-						this.addProfile(message.profileName);
-						await this.saveConfigToFile();
-						break;
-					case "removeProfile":
-						this.removeProfile(message.index);
-						await this.saveConfigToFile();
 						break;
 				}
 			},
@@ -76,89 +83,87 @@ export class SettingsPanel {
 	}
 
 	private addDatabase(dbConfig: any): void {
-		const db = {
-			type: dbConfig.type,
-			version: dbConfig.version || this.getDefaultVersion(dbConfig.type),
-			port: dbConfig.port || this.getDefaultPort(dbConfig.type),
-			name: dbConfig.name || "appdb",
-			username: dbConfig.username || "admin",
-			password: dbConfig.password || "password",
-			host: dbConfig.type,
-		};
-
-		if (!this._config.databases) {
-			this._config.databases = [];
+		if (!this._currentConfig.databases) {
+			this._currentConfig.databases = [];
 		}
+		this._currentConfig.databases.push(dbConfig);
+		this._isDirty = true;
+		this._updateWebview();
+	}
 
-		this._config.databases.push(db);
-
-		this.saveConfigToFile();
-
-		this._panel.webview.html = this.getHtml(this._config);
+	private updateDatabase(index: number, dbConfig: any): void {
+		if (this._currentConfig.databases && this._currentConfig.databases[index]) {
+			this._currentConfig.databases[index] = dbConfig;
+			this._isDirty = true;
+		}
 	}
 
 	private removeDatabase(index: number): void {
-		if (this._config.databases && this._config.databases[index]) {
-			this._config.databases.splice(index, 1);
-			this._panel.webview.html = this.getHtml(this._config);
+		if (this._currentConfig.databases && this._currentConfig.databases[index]) {
+			this._currentConfig.databases.splice(index, 1);
+			this._isDirty = true;
+			this._updateWebview();
 		}
 	}
 
 	private addService(serviceConfig: any): void {
-		const service = {
-			type: serviceConfig.type,
-			version: serviceConfig.version || this.getDefaultVersion(serviceConfig.type),
-			port: serviceConfig.port || this.getDefaultServicePort(serviceConfig.type),
-		};
-
-		if (!this._config.services) {
-			this._config.services = [];
+		if (!this._currentConfig.services) {
+			this._currentConfig.services = [];
 		}
-		this._config.services.push(service);
-		this._panel.webview.html = this.getHtml(this._config);
+		this._currentConfig.services.push(serviceConfig);
+		this._isDirty = true;
+		this._updateWebview();
+	}
+
+	private updateService(index: number, serviceConfig: any): void {
+		if (this._currentConfig.services && this._currentConfig.services[index]) {
+			this._currentConfig.services[index] = serviceConfig;
+			this._isDirty = true;
+		}
 	}
 
 	private removeService(index: number): void {
-		if (this._config.services && this._config.services[index]) {
-			this._config.services.splice(index, 1);
-			this._panel.webview.html = this.getHtml(this._config);
+		if (this._currentConfig.services && this._currentConfig.services[index]) {
+			this._currentConfig.services.splice(index, 1);
+			this._isDirty = true;
+			this._updateWebview();
 		}
 	}
 
 	private addMessageQueue(mqConfig: any): void {
-		const mq = {
-			type: mqConfig.type,
-			version: mqConfig.version || this.getDefaultVersion(mqConfig.type),
-			port: mqConfig.port || this.getDefaultServicePort(mqConfig.type),
-		};
-
-		if (!this._config.messageQueues) {
-			this._config.messageQueues = [];
+		if (!this._currentConfig.messageQueues) {
+			this._currentConfig.messageQueues = [];
 		}
-		this._config.messageQueues.push(mq);
-		this._panel.webview.html = this.getHtml(this._config);
+		this._currentConfig.messageQueues.push(mqConfig);
+		this._isDirty = true;
+		this._updateWebview();
+	}
+
+	private updateMessageQueue(index: number, mqConfig: any): void {
+		if (this._currentConfig.messageQueues && this._currentConfig.messageQueues[index]) {
+			this._currentConfig.messageQueues[index] = mqConfig;
+			this._isDirty = true;
+		}
 	}
 
 	private removeMessageQueue(index: number): void {
-		if (this._config.messageQueues && this._config.messageQueues[index]) {
-			this._config.messageQueues.splice(index, 1);
-			this._panel.webview.html = this.getHtml(this._config);
+		if (this._currentConfig.messageQueues && this._currentConfig.messageQueues[index]) {
+			this._currentConfig.messageQueues.splice(index, 1);
+			this._isDirty = true;
+			this._updateWebview();
 		}
 	}
 
-	private addProfile(profileName: string): void {
-		if (!this._config.profiles) {
-			this._config.profiles = [];
-		}
-		this._config.profiles.push(profileName);
-		this._panel.webview.html = this.getHtml(this._config);
-	}
+	// متد جدید برای به‌روزرسانی webview بدون از دست رفتن تغییرات
+	private _updateWebview(): void {
+		// فقط HTML را با config فعلی به‌روزرسانی کن
+		this._panel.webview.html = this.getHtml(this._currentConfig);
 
-	private removeProfile(index: number): void {
-		if (this._config.profiles && this._config.profiles[index]) {
-			this._config.profiles.splice(index, 1);
-			this._panel.webview.html = this.getHtml(this._config);
-		}
+		// پیام به webview برای اطلاع از تغییر
+		this._panel.webview.postMessage({
+			command: "configUpdated",
+			config: this._currentConfig,
+		});
 	}
 
 	private getDefaultPort(dbType: string): number {
@@ -176,20 +181,6 @@ export class SettingsPanel {
 		return ports[dbType] || 5432;
 	}
 
-	private getDefaultServicePort(serviceType: string): number {
-		const ports: Record<string, number> = {
-			kafka: 9092,
-			rabbitmq: 5672,
-			activemq: 61616,
-			nginx: 80,
-			grafana: 3000,
-			prometheus: 9090,
-			keycloak: 8080,
-			minio: 9000,
-		};
-		return ports[serviceType] || 8080;
-	}
-
 	private getDefaultVersion(type: string): string {
 		const versions: Record<string, string> = {
 			postgresql: "16",
@@ -201,13 +192,13 @@ export class SettingsPanel {
 			elasticsearch: "8",
 			neo4j: "5",
 			h2: "latest",
-			kafka: "latest",
-			rabbitmq: "3",
-			activemq: "latest",
-			nginx: "latest",
-			grafana: "latest",
-			prometheus: "latest",
-			keycloak: "latest",
+			kafka: "7.7.0",
+			rabbitmq: "3.13",
+			activemq: "6.1.2",
+			nginx: "1.27",
+			grafana: "11.2.0",
+			prometheus: "v2.54.1",
+			keycloak: "25.0.4",
 			minio: "latest",
 		};
 		return versions[type] || "latest";
@@ -224,7 +215,8 @@ export class SettingsPanel {
 
 	private getHtml(config: any): string {
 		const dbTypes = ["postgresql", "mysql", "mariadb", "mongodb", "redis", "cassandra", "elasticsearch", "neo4j"];
-		const serviceTypes = ["kafka", "rabbitmq", "activemq", "nginx", "grafana", "prometheus", "keycloak", "minio"];
+		const serviceTypes = ["nginx", "grafana", "prometheus", "keycloak", "minio"];
+		const mqTypes = ["kafka", "rabbitmq", "activemq"];
 		const jdkVendors = ["eclipse-temurin", "amazon-corretto", "openjdk", "oracle-jdk", "graalvm", "liberica", "redhat-openjdk"];
 		const frameworks = ["spring-boot", "jakarta-ee", "quarkus", "micronaut", "vertx", "none"];
 		const outputTypes = ["jar", "war", "native"];
@@ -233,7 +225,153 @@ export class SettingsPanel {
 		const databases = config?.databases || [];
 		const services = config?.services || [];
 		const messageQueues = config?.messageQueues || [];
-		const profiles = config?.profiles || [];
+
+		// Build databases HTML
+		let databasesHtml = "";
+		if (databases.length > 0) {
+			for (let i = 0; i < databases.length; i++) {
+				const db = databases[i];
+				databasesHtml += `
+      <div class="config-item" data-index="${i}">
+        <div class="config-item-header">
+          <span class="config-item-title">🗄️ ${db.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeDatabase(${i})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="db-version-${i}" value="${db.version || "latest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="db-internal-port-${i}" value="${db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="db-external-port-${i}" value="${db.externalPort || db.port || this.getDefaultPort(db.type)}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Database Name</label>
+            <input type="text" id="db-name-${i}" value="${db.name || "appdb"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="db-username-${i}" value="${db.username || "admin"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="db-password-${i}" value="${db.password || "password"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Connection Mode</label>
+            <select id="db-connection-mode-${i}" onchange="toggleDbUrlMode(${i}); markDirty()">
+              <option value="standard" ${!db.customUrl ? "selected" : ""}>Standard (Local Docker)</option>
+              <option value="custom" ${db.customUrl ? "selected" : ""}>Custom URL (External Server)</option>
+            </select>
+          </div>
+          <div class="form-group" id="db-custom-url-group-${i}" style="${db.customUrl ? "" : "display: none;"}">
+            <label>Custom URL</label>
+            <input type="text" id="db-url-${i}" value="${db.customUrl || ""}" placeholder="jdbc:postgresql://host:port/db?user=admin&password=pass" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="db-alpine-${i}" ${db.useAlpine ? "checked" : ""} onchange="markDirty()">
+            <label for="db-alpine-${i}">Use Alpine</label>
+          </div>
+        </div>
+      </div>`;
+			}
+		} else {
+			databasesHtml = '<div class="empty-state">No databases configured</div>';
+		}
+
+		// Build message queues HTML
+		let messageQueuesHtml = "";
+		if (messageQueues.length > 0) {
+			for (let i = 0; i < messageQueues.length; i++) {
+				const mq = messageQueues[i];
+				messageQueuesHtml += `
+      <div class="config-item" data-index="${i}">
+        <div class="config-item-header">
+          <span class="config-item-title">📨 ${mq.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(${i})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="mq-version-${i}" value="${mq.version || "latest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="mq-internal-port-${i}" value="${mq.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="mq-external-port-${i}" value="${mq.externalPort || mq.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="mq-alpine-${i}" ${mq.useAlpine ? "checked" : ""} onchange="markDirty()">
+            <label for="mq-alpine-${i}">Use Alpine</label>
+          </div>
+          ${
+				mq.type === "rabbitmq"
+					? `
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="mq-username-${i}" value="${mq.username || "guest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="mq-password-${i}" value="${mq.password || "guest"}" onchange="markDirty()">
+          </div>`
+					: ""
+			}
+        </div>
+      </div>`;
+			}
+		} else {
+			messageQueuesHtml = '<div class="empty-state">No message queues configured</div>';
+		}
+
+		// Build services HTML
+		let servicesHtml = "";
+		if (services.length > 0) {
+			for (let i = 0; i < services.length; i++) {
+				const svc = services[i];
+				servicesHtml += `
+      <div class="config-item" data-index="${i}">
+        <div class="config-item-header">
+          <span class="config-item-title">🔧 ${svc.type.toUpperCase()}</span>
+          <div class="config-item-actions">
+            <button class="btn btn-danger btn-sm" onclick="removeService(${i})">✕ Remove</button>
+          </div>
+        </div>
+        <div class="config-item-details">
+          <div class="form-group">
+            <label>Version</label>
+            <input type="text" id="svc-version-${i}" value="${svc.version || "latest"}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>Internal Port</label>
+            <input type="number" id="svc-internal-port-${i}" value="${svc.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group">
+            <label>External Port</label>
+            <input type="number" id="svc-external-port-${i}" value="${svc.externalPort || svc.port || ""}" onchange="markDirty()">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="svc-alpine-${i}" ${svc.useAlpine ? "checked" : ""} onchange="markDirty()">
+            <label for="svc-alpine-${i}">Use Alpine</label>
+          </div>
+        </div>
+      </div>`;
+			}
+		} else {
+			servicesHtml = '<div class="empty-state">No additional services</div>';
+		}
 
 		return `<!DOCTYPE html>
 <html lang="en">
@@ -269,26 +407,34 @@ export class SettingsPanel {
       background: var(--bg);
       color: var(--text);
       padding: 20px;
+      padding-top: 80px;
       min-height: 100vh;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 0 auto;
       display: grid;
       gap: 20px;
     }
 
-    .header {
+    .floating-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 12px 20px;
+      z-index: 100;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 16px;
-      border-bottom: 2px solid var(--border);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     }
 
-    .header h1 {
-      font-size: 24px;
+    .floating-header h1 {
+      font-size: 20px;
       font-weight: 600;
       background: linear-gradient(135deg, var(--accent), var(--success));
       -webkit-background-clip: text;
@@ -388,64 +534,6 @@ export class SettingsPanel {
       cursor: pointer;
     }
 
-    .list-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .list-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: var(--transition);
-    }
-
-    .list-item:hover {
-      border-color: var(--accent);
-      background: var(--surface-hover);
-    }
-
-    .list-item-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex: 1;
-    }
-
-    .list-item-badge {
-      background: var(--accent);
-      color: var(--bg);
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .list-item-details {
-      flex: 1;
-    }
-
-    .list-item-details .db-name {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .list-item-details .db-connection {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .list-item-actions {
-      display: flex;
-      gap: 6px;
-    }
-
     .btn {
       padding: 8px 16px;
       border: none;
@@ -495,6 +583,37 @@ export class SettingsPanel {
       font-size: 12px;
     }
 
+    .config-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .config-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .config-item-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .config-item-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .config-item-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
     .add-buttons {
       display: flex;
       flex-wrap: wrap;
@@ -519,111 +638,61 @@ export class SettingsPanel {
       background: var(--surface);
     }
 
-    .footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      padding-top: 16px;
-      border-top: 2px solid var(--border);
-    }
-
     .empty-state {
       text-align: center;
       padding: 30px;
       color: var(--text-muted);
       font-size: 14px;
     }
-
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      width: 400px;
-      max-width: 90%;
-    }
-
-    .modal h2 {
-      margin-bottom: 16px;
-      font-size: 18px;
-    }
-
-    .modal .form-group {
-      margin-bottom: 12px;
-    }
-
-    .modal .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 16px;
-    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>🧢 Dockeryzen Settings</h1>
-      <div class="header-actions">
-        <button class="btn btn-primary" onclick="saveAndGenerate()">🚀 Generate</button>
-        <button class="btn btn-success" onclick="saveConfig()">💾 Save</button>
-      </div>
+  <div class="floating-header">
+    <h1>🧢 Dockeryzen Settings</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="saveAndGenerate()">🚀 Generate</button>
+      <button class="btn btn-success" onclick="saveConfig()">💾 Save</button>
     </div>
+  </div>
 
+  <div class="container">
     <!-- Project Section -->
     <div class="section">
       <div class="section-title">Project</div>
       <div class="form-grid">
         <div class="form-group">
           <label>Project Name</label>
-          <input type="text" id="projectName" value="${config?.project?.name || ""}">
+          <input type="text" id="projectName" value="${config?.project?.name || ""}" onchange="markDirty()">
         </div>
         <div class="form-group">
           <label>Build Tool</label>
-          <select id="buildTool">
+          <select id="buildTool" onchange="markDirty()">
             ${buildTools.map((t) => `<option value="${t}" ${config?.project?.type === t ? "selected" : ""}>${t}</option>`).join("")}
           </select>
         </div>
         <div class="form-group">
           <label>Framework</label>
-          <select id="framework" onchange="updateOutputType()">
+          <select id="framework" onchange="updateOutputType(); markDirty()">
             ${frameworks.map((f) => `<option value="${f}" ${config?.project?.framework === f ? "selected" : ""}>${f}</option>`).join("")}
           </select>
         </div>
         <div class="form-group">
           <label>JDK Version</label>
-          <input type="text" id="jdkVersion" value="${config?.project?.jdkVersion || "17"}">
+          <input type="text" id="jdkVersion" value="${config?.project?.jdkVersion || "17"}" onchange="markDirty()">
         </div>
         <div class="form-group">
           <label>JDK Vendor</label>
-          <select id="jdkVendor">
+          <select id="jdkVendor" onchange="markDirty()">
             ${jdkVendors.map((v) => `<option value="${v}" ${config?.project?.jdkVendor === v ? "selected" : ""}>${v}</option>`).join("")}
           </select>
         </div>
         <div class="form-group">
           <label>Port</label>
-          <input type="number" id="port" value="${config?.project?.port || 8080}">
+          <input type="number" id="port" value="${config?.project?.port || 8080}" onchange="markDirty()">
         </div>
         <div class="form-group">
           <label>Output Type</label>
-          <select id="outputType">
+          <select id="outputType" onchange="markDirty()">
             ${outputTypes.map((o) => `<option value="${o}" ${config?.project?.outputType === o ? "selected" : ""}>${o.toUpperCase()}</option>`).join("")}
           </select>
         </div>
@@ -636,26 +705,26 @@ export class SettingsPanel {
       <div class="form-grid">
         <div class="form-group">
           <label>JVM Options</label>
-          <input type="text" id="jvmOptions" value="${config?.docker?.jvmOptions || "-Xmx512m -Xms256m"}">
+          <input type="text" id="jvmOptions" value="${config?.docker?.jvmOptions || "-Xmx512m -Xms256m"}" onchange="markDirty()">
         </div>
         <div class="form-group">
           <label>Health Check Endpoint</label>
-          <input type="text" id="healthEndpoint" value="${config?.docker?.healthCheckEndpoint || "/actuator/health"}">
+          <input type="text" id="healthEndpoint" value="${config?.docker?.healthCheckEndpoint || "/actuator/health"}" onchange="markDirty()">
         </div>
         <div class="form-group">
           <label>Debug Port</label>
-          <input type="number" id="debugPort" value="${config?.docker?.debugPort || 5005}">
+          <input type="number" id="debugPort" value="${config?.docker?.debugPort || 5005}" onchange="markDirty()">
         </div>
         <div class="form-group checkbox-group">
-          <input type="checkbox" id="useAlpine" ${config?.docker?.useAlpine ? "checked" : ""}>
-          <label for="useAlpine">Use Alpine</label>
+          <input type="checkbox" id="useAlpine" ${config?.docker?.useAlpine ? "checked" : ""} onchange="markDirty()">
+          <label for="useAlpine">Use Alpine (Smaller Image)</label>
         </div>
         <div class="form-group checkbox-group">
-          <input type="checkbox" id="enableDebug" ${config?.docker?.enableDebug ? "checked" : ""}>
+          <input type="checkbox" id="enableDebug" ${config?.docker?.enableDebug ? "checked" : ""} onchange="markDirty()">
           <label for="enableDebug">Enable Debug</label>
         </div>
         <div class="form-group checkbox-group">
-          <input type="checkbox" id="enableHealthCheck" ${config?.docker?.enableHealthCheck !== false ? "checked" : ""}>
+          <input type="checkbox" id="enableHealthCheck" ${config?.docker?.enableHealthCheck !== false ? "checked" : ""} onchange="markDirty()">
           <label for="enableHealthCheck">Enable Health Check</label>
         </div>
       </div>
@@ -664,126 +733,27 @@ export class SettingsPanel {
     <!-- Databases Section -->
     <div class="section">
       <div class="section-title">Databases</div>
-      <div class="list-container" id="databases-list">
-        ${
-			databases.length > 0
-				? databases
-						.map(
-							(db: any, index: number) => `
-          <div class="list-item">
-            <div class="list-item-info">
-              <span class="list-item-badge">${db.type}</span>
-              <div class="list-item-details">
-                <div class="db-name">${db.name} v${db.version}</div>
-                <div class="db-connection">${db.username}:${db.password}@${db.host || db.type}:${db.port}</div>
-              </div>
-            </div>
-            <div class="list-item-actions">
-              <button class="btn btn-danger btn-sm" onclick="removeDatabase(${index})">✕</button>
-            </div>
-          </div>
-        `,
-						)
-						.join("")
-				: '<div class="empty-state">No databases configured</div>'
-		}
-      </div>
+      ${databasesHtml}
       <div class="add-buttons">
-        ${dbTypes.map((db) => `<button class="add-btn" onclick="showDatabaseModal('${db}')">+ ${db}</button>`).join("")}
+        ${dbTypes.map((db) => `<button class="add-btn" onclick="addDatabase('${db}')">+ ${db}</button>`).join("")}
       </div>
     </div>
 
     <!-- Message Queues Section -->
     <div class="section">
       <div class="section-title">Message Queues</div>
-      <div class="list-container" id="messagequeues-list">
-        ${
-			messageQueues.length > 0
-				? messageQueues
-						.map(
-							(mq: any, index: number) => `
-          <div class="list-item">
-            <div class="list-item-info">
-              <span class="list-item-badge">${mq.type}</span>
-              <div class="list-item-details">
-                <div class="db-name">${mq.type} v${mq.version}</div>
-                <div class="db-connection">Port: ${mq.port}</div>
-              </div>
-            </div>
-            <div class="list-item-actions">
-              <button class="btn btn-danger btn-sm" onclick="removeMessageQueue(${index})">✕</button>
-            </div>
-          </div>
-        `,
-						)
-						.join("")
-				: '<div class="empty-state">No message queues configured</div>'
-		}
-      </div>
+      ${messageQueuesHtml}
       <div class="add-buttons">
-        <button class="add-btn" onclick="addMessageQueue('kafka')">+ kafka</button>
-        <button class="add-btn" onclick="addMessageQueue('rabbitmq')">+ rabbitmq</button>
-        <button class="add-btn" onclick="addMessageQueue('activemq')">+ activemq</button>
+        ${mqTypes.map((mq) => `<button class="add-btn" onclick="addMessageQueue('${mq}')">+ ${mq}</button>`).join("")}
       </div>
     </div>
 
     <!-- Services Section -->
     <div class="section">
       <div class="section-title">Additional Services</div>
-      <div class="list-container" id="services-list">
-        ${
-			services.length > 0
-				? services
-						.map(
-							(svc: any, index: number) => `
-          <div class="list-item">
-            <div class="list-item-info">
-              <span class="list-item-badge">${svc.type}</span>
-              <div class="list-item-details">
-                <div class="db-name">${svc.type} v${svc.version}</div>
-                <div class="db-connection">Port: ${svc.port}</div>
-              </div>
-            </div>
-            <div class="list-item-actions">
-              <button class="btn btn-danger btn-sm" onclick="removeService(${index})">✕</button>
-            </div>
-          </div>
-        `,
-						)
-						.join("")
-				: '<div class="empty-state">No additional services</div>'
-		}
-      </div>
+      ${servicesHtml}
       <div class="add-buttons">
         ${serviceTypes.map((svc) => `<button class="add-btn" onclick="addService('${svc}')">+ ${svc}</button>`).join("")}
-      </div>
-    </div>
-
-    <!-- Profiles Section -->
-    <div class="section">
-      <div class="section-title">Spring Profiles</div>
-      <div class="list-container">
-        ${
-			profiles.length > 0
-				? profiles
-						.map(
-							(profile: string, index: number) => `
-          <div class="list-item">
-            <div class="list-item-info">
-              <span class="list-item-badge">${profile}</span>
-            </div>
-            <div class="list-item-actions">
-              <button class="btn btn-danger btn-sm" onclick="removeProfile(${index})">✕</button>
-            </div>
-          </div>
-        `,
-						)
-						.join("")
-				: '<div class="empty-state">No profiles configured</div>'
-		}
-      </div>
-      <div class="add-buttons">
-        <button class="add-btn" onclick="showProfileModal()">+ Add Profile</button>
       </div>
     </div>
 
@@ -792,98 +762,101 @@ export class SettingsPanel {
       <div class="section-title">Advanced</div>
       <div class="form-grid">
         <div class="form-group checkbox-group">
-          <input type="checkbox" id="envFile" ${config?.envFile !== false ? "checked" : ""}>
+          <input type="checkbox" id="envFile" ${config?.envFile !== false ? "checked" : ""} onchange="markDirty()">
           <label for="envFile">Generate .env file</label>
         </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="githubCi" ${config?.ciCd?.github ? "checked" : ""}>
-          <label for="githubCi">GitHub Actions</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="gitlabCi" ${config?.ciCd?.gitlab ? "checked" : ""}>
-          <label for="gitlabCi">GitLab CI</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="k8sEnabled" ${config?.kubernetes?.enabled ? "checked" : ""}>
-          <label for="k8sEnabled">Kubernetes</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="devContainerEnabled" ${config?.devContainer?.enabled ? "checked" : ""}>
-          <label for="devContainerEnabled">Dev Container</label>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <button class="btn btn-primary" onclick="saveAndGenerate()">🚀 Generate Docker Files</button>
-    </div>
-  </div>
-
-  <!-- Database Modal -->
-  <div class="modal-overlay" id="databaseModal">
-    <div class="modal">
-      <h2>Add Database</h2>
-      <div class="form-group">
-        <label>Database Type</label>
-        <input type="text" id="dbType" readonly>
-      </div>
-      <div class="form-group">
-        <label>Database Name</label>
-        <input type="text" id="dbName" value="appdb">
-      </div>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="dbUsername" value="admin">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="dbPassword" value="password">
-      </div>
-      <div class="form-group">
-        <label>Port</label>
-        <input type="number" id="dbPort">
-      </div>
-      <div class="form-group">
-        <label>Version</label>
-        <input type="text" id="dbVersion" value="latest">
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-danger" onclick="closeDatabaseModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="confirmAddDatabase()">Add Database</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Profile Modal -->
-  <div class="modal-overlay" id="profileModal">
-    <div class="modal">
-      <h2>Add Profile</h2>
-      <div class="form-group">
-        <label>Profile Name</label>
-        <input type="text" id="profileName" placeholder="e.g., dev, prod">
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-danger" onclick="closeProfileModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="confirmAddProfile()">Add Profile</button>
       </div>
     </div>
   </div>
 
   <script>
     const vscode = acquireVsCodeApi();
-    let currentDbType = '';
+
+    function markDirty() {
+      vscode.postMessage({ command: 'markDirty' });
+    }
 
     function updateOutputType() {
       const framework = document.getElementById('framework').value;
       const outputTypeSelect = document.getElementById('outputType');
       
-      // Auto-set output type based on framework
       if (framework === 'jakarta-ee' || framework === 'java-ee' || framework === 'spring-mvc') {
         outputTypeSelect.value = 'war';
+      }
+      markDirty();
+    }
+
+    function toggleDbUrlMode(index) {
+      const mode = document.getElementById('db-connection-mode-' + index).value;
+      const urlGroup = document.getElementById('db-custom-url-group-' + index);
+      
+      if (mode === 'custom') {
+        urlGroup.style.display = '';
+      } else {
+        urlGroup.style.display = 'none';
       }
     }
 
     function collectConfig() {
+      const databases = [];
+      const dbItems = document.querySelectorAll('[id^="db-version-"]');
+      dbItems.forEach((el) => {
+        const index = el.id.split('-').pop();
+        const dbType = el.closest('.config-item').querySelector('.config-item-title').textContent.replace('🗄️ ', '').toLowerCase();
+        const connectionMode = document.getElementById('db-connection-mode-' + index).value;
+        const customUrl = document.getElementById('db-url-' + index).value;
+        
+        databases.push({
+          type: dbType,
+          version: document.getElementById('db-version-' + index).value || 'latest',
+          port: parseInt(document.getElementById('db-internal-port-' + index).value) || 5432,
+          externalPort: parseInt(document.getElementById('db-external-port-' + index).value) || undefined,
+          name: document.getElementById('db-name-' + index).value || 'appdb',
+          username: document.getElementById('db-username-' + index).value || 'admin',
+          password: document.getElementById('db-password-' + index).value || 'password',
+          useAlpine: document.getElementById('db-alpine-' + index).checked,
+          connectionMode: connectionMode,
+          customUrl: connectionMode === 'custom' ? customUrl : undefined
+        });
+      });
+
+      const messageQueues = [];
+      const mqItems = document.querySelectorAll('[id^="mq-version-"]');
+      mqItems.forEach((el) => {
+        const index = el.id.split('-').pop();
+        const mqType = el.closest('.config-item').querySelector('.config-item-title').textContent.replace('📨 ', '').toLowerCase();
+        
+        const mqConfig = {
+          type: mqType,
+          version: document.getElementById('mq-version-' + index).value || 'latest',
+          port: parseInt(document.getElementById('mq-internal-port-' + index).value) || undefined,
+          externalPort: parseInt(document.getElementById('mq-external-port-' + index).value) || undefined,
+          useAlpine: document.getElementById('mq-alpine-' + index).checked
+        };
+        
+        if (mqType === 'rabbitmq') {
+          mqConfig.username = document.getElementById('mq-username-' + index).value || 'guest';
+          mqConfig.password = document.getElementById('mq-password-' + index).value || 'guest';
+        }
+        
+        messageQueues.push(mqConfig);
+      });
+
+      const services = [];
+      const svcItems = document.querySelectorAll('[id^="svc-version-"]');
+      svcItems.forEach((el) => {
+        const index = el.id.split('-').pop();
+        const svcType = el.closest('.config-item').querySelector('.config-item-title').textContent.replace('🔧 ', '').toLowerCase();
+        
+        services.push({
+          type: svcType,
+          version: document.getElementById('svc-version-' + index).value || 'latest',
+          port: parseInt(document.getElementById('svc-internal-port-' + index).value) || undefined,
+          externalPort: parseInt(document.getElementById('svc-external-port-' + index).value) || undefined,
+          useAlpine: document.getElementById('svc-alpine-' + index).checked
+        });
+      });
+
       return {
         version: "1.0.0",
         project: {
@@ -904,21 +877,21 @@ export class SettingsPanel {
           enableHealthCheck: document.getElementById('enableHealthCheck').checked,
           healthCheckEndpoint: document.getElementById('healthEndpoint').value
         },
-        databases: ${JSON.stringify(databases)},
-        messageQueues: ${JSON.stringify(messageQueues)},
-        services: ${JSON.stringify(services)},
+        databases: databases,
+        messageQueues: messageQueues,
+        services: services,
         envFile: document.getElementById('envFile').checked,
-        profiles: ${JSON.stringify(profiles)},
+        profiles: [],
         ciCd: {
-          github: document.getElementById('githubCi').checked,
-          gitlab: document.getElementById('gitlabCi').checked
+          github: false,
+          gitlab: false
         },
         kubernetes: {
-          enabled: document.getElementById('k8sEnabled').checked,
+          enabled: false,
           replicas: 3
         },
         devContainer: {
-          enabled: document.getElementById('devContainerEnabled').checked
+          enabled: false
         }
       };
     }
@@ -933,34 +906,19 @@ export class SettingsPanel {
       vscode.postMessage({ command: 'generate', config: config });
     }
 
-    function showDatabaseModal(type) {
-      currentDbType = type;
-      document.getElementById('dbType').value = type;
-      document.getElementById('dbPort').value = getDefaultPort(type);
-      document.getElementById('dbVersion').value = getDefaultVersion(type);
-      document.getElementById('databaseModal').classList.add('active');
-    }
-
-    function closeDatabaseModal() {
-      document.getElementById('databaseModal').classList.remove('active');
-    }
-
-    function confirmAddDatabase() {
+    function addDatabase(type) {
       const dbConfig = {
-        type: currentDbType,
-        name: document.getElementById('dbName').value,
-        username: document.getElementById('dbUsername').value,
-        password: document.getElementById('dbPassword').value,
-        port: parseInt(document.getElementById('dbPort').value),
-        version: document.getElementById('dbVersion').value
+        type: type,
+        version: getDefaultVersion(type),
+        port: getDefaultPort(type),
+        externalPort: getDefaultPort(type),
+        name: 'appdb',
+        username: 'admin',
+        password: 'password',
+        useAlpine: false,
+        connectionMode: 'standard'
       };
-      
-      vscode.postMessage({ 
-        command: 'addDatabase', 
-        dbConfig: dbConfig
-      });
-      
-      closeDatabaseModal();
+      vscode.postMessage({ command: 'addDatabase', dbConfig: dbConfig });
     }
 
     function removeDatabase(index) {
@@ -968,10 +926,14 @@ export class SettingsPanel {
     }
 
     function addService(type) {
-      vscode.postMessage({ 
-        command: 'addService', 
-        serviceConfig: { type: type }
-      });
+      const serviceConfig = {
+        type: type,
+        version: getDefaultVersion(type),
+        port: getDefaultServicePort(type),
+        externalPort: getDefaultServicePort(type),
+        useAlpine: false
+      };
+      vscode.postMessage({ command: 'addService', serviceConfig: serviceConfig });
     }
 
     function removeService(index) {
@@ -979,62 +941,51 @@ export class SettingsPanel {
     }
 
     function addMessageQueue(type) {
-      vscode.postMessage({ 
-        command: 'addMessageQueue', 
-        mqConfig: { type: type }
-      });
+      const mqConfig = {
+        type: type,
+        version: getDefaultVersion(type),
+        port: getDefaultMQPort(type),
+        externalPort: getDefaultMQPort(type),
+        useAlpine: false,
+        username: type === 'rabbitmq' ? 'guest' : undefined,
+        password: type === 'rabbitmq' ? 'guest' : undefined
+      };
+      vscode.postMessage({ command: 'addMessageQueue', mqConfig: mqConfig });
     }
 
     function removeMessageQueue(index) {
       vscode.postMessage({ command: 'removeMessageQueue', index: index });
     }
 
-    function showProfileModal() {
-      document.getElementById('profileModal').classList.add('active');
-    }
-
-    function closeProfileModal() {
-      document.getElementById('profileModal').classList.remove('active');
-    }
-
-    function confirmAddProfile() {
-      const name = document.getElementById('profileName').value;
-      if (name) {
-        vscode.postMessage({ command: 'addProfile', profileName: name });
-        closeProfileModal();
-      }
-    }
-
-    function removeProfile(index) {
-      vscode.postMessage({ command: 'removeProfile', index: index });
-    }
-
     function getDefaultPort(type) {
       const ports = {
-        postgresql: 5432,
-        mysql: 3306,
-        mariadb: 3306,
-        mongodb: 27017,
-        redis: 6379,
-        cassandra: 9042,
-        elasticsearch: 9200,
-        neo4j: 7687,
-        h2: 9092
+        postgresql: 5432, mysql: 3306, mariadb: 3306, mongodb: 27017,
+        redis: 6379, cassandra: 9042, elasticsearch: 9200, neo4j: 7687, h2: 9092
       };
       return ports[type] || 5432;
     }
 
+    function getDefaultServicePort(type) {
+      const ports = {
+        nginx: 80, grafana: 3000, prometheus: 9090, keycloak: 8080, minio: 9000
+      };
+      return ports[type] || 8080;
+    }
+
+    function getDefaultMQPort(type) {
+      const ports = {
+        kafka: 9092, rabbitmq: 5672, activemq: 61616
+      };
+      return ports[type] || 5672;
+    }
+
     function getDefaultVersion(type) {
       const versions = {
-        postgresql: "16",
-        mysql: "8.4",
-        mariadb: "11",
-        mongodb: "7",
-        redis: "7",
-        cassandra: "5",
-        elasticsearch: "8",
-        neo4j: "5",
-        h2: "latest"
+        postgresql: "16", mysql: "8.4", mariadb: "11", mongodb: "7",
+        redis: "7", cassandra: "5", elasticsearch: "8", neo4j: "5",
+        kafka: "7.7.0", rabbitmq: "3.13", activemq: "6.1.2",
+        nginx: "1.27", grafana: "11.2.0", prometheus: "v2.54.1",
+        keycloak: "25.0.4", minio: "latest"
       };
       return versions[type] || "latest";
     }

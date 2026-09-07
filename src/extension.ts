@@ -170,6 +170,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 
 			SettingsPanel.show(config);
+			// SettingsPanel.show(config, context);
+			// SettingsPanel.show(config, context.extensionUri);
 		}),
 
 		// Generate from config file
@@ -204,6 +206,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			const config = await configLoader.load(workspaceFolder);
 			if (config) {
 				SettingsPanel.show(config);
+				// SettingsPanel.show(config, context);
+				// SettingsPanel.show(config, context.extensionUri);
 			}
 		}),
 	);
