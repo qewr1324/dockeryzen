@@ -190,16 +190,21 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 		const jdkVersion = analysis.jdkVersion;
 		const vendor = config.baseImage || analysis.jdkVendor;
 
+		// GraalVM should not be used with Tomcat for WAR files
 		const tomcatVariants: Record<string, string> = {
 			"eclipse-temurin": "temurin",
 			"amazon-corretto": "corretto",
 			openjdk: "openjdk",
 			liberica: "liberica",
+			graalvm: "temurin", // Fallback to temurin for Tomcat
+			"oracle-jdk": "temurin", // Fallback to temurin for Tomcat
+			"redhat-openjdk": "temurin", // Fallback to temurin for Tomcat
 		};
 
 		const variant = tomcatVariants[vendor] || "temurin";
 
-		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
+		// Oracle JDK, Red Hat, and GraalVM don't have Alpine variants for Tomcat
+		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
 
 		if (canUseAlpine) {
 			return `tomcat:10.1-jdk${jdkVersion}-${variant}-alpine`;
@@ -279,14 +284,18 @@ LABEL org.opencontainers.image.vendor="Dockeryzen"
 			"amazon-corretto": "amazoncorretto",
 			openjdk: "openjdk",
 			"oracle-jdk": "oraclelinux",
-			graalvm: "ghcr.io/graalvm",
+			graalvm: "ghcr.io/graalvm/graalvm-community",
 			liberica: "bellsoft/liberica-openjdk",
 			"redhat-openjdk": "registry.access.redhat.com/ubi8/openjdk",
 		};
 
-		// Use config.baseImage if provided, otherwise use analysis.jdkVendor
-		const vendor = config.baseImage || analysis.jdkVendor || "eclipse-temurin";
+		const vendor = config.baseImage || analysis.jdkVendor;
 		const baseImage = baseImages[vendor] || baseImages["eclipse-temurin"];
+
+		// GraalVM has different image naming
+		if (vendor === "graalvm") {
+			return `${baseImage}:${analysis.jdkVersion}`;
+		}
 
 		return `${baseImage}:${analysis.jdkVersion}`;
 	}

@@ -36,13 +36,19 @@ export class DockerfileGenerator {
 			"amazon-corretto": "amazoncorretto",
 			openjdk: "openjdk",
 			"oracle-jdk": "oraclelinux",
-			graalvm: "ghcr.io/graalvm",
+			graalvm: "ghcr.io/graalvm/graalvm-community",
 			liberica: "bellsoft/liberica-openjdk",
 			"redhat-openjdk": "registry.access.redhat.com/ubi8/openjdk",
 		};
 
 		const baseImage = baseImages[jdkVendor] || baseImages["eclipse-temurin"];
 
+		// GraalVM has different image naming and doesn't support alpine
+		if (jdkVendor === "graalvm") {
+			return `${baseImage}:${version}`;
+		}
+
+		// Oracle JDK and Red Hat don't support alpine
 		if (optimization === "alpine" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
 			return `${baseImage}:${version}-alpine`;
 		} else if (optimization === "slim" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
@@ -198,18 +204,21 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 		const jdkVersion = analysis.jdkVersion;
 		const vendor = config.baseImage || analysis.jdkVendor;
 
-		// Map JDK vendor to Tomcat image variant
+		// GraalVM should not be used with Tomcat for WAR files
 		const tomcatVariants: Record<string, string> = {
 			"eclipse-temurin": "temurin",
 			"amazon-corretto": "corretto",
 			openjdk: "openjdk",
 			liberica: "liberica",
+			graalvm: "temurin", // Fallback to temurin for Tomcat
+			"oracle-jdk": "temurin", // Fallback to temurin for Tomcat
+			"redhat-openjdk": "temurin", // Fallback to temurin for Tomcat
 		};
 
 		const variant = tomcatVariants[vendor] || "temurin";
 
-		// Oracle JDK and Red Hat don't have Alpine variants
-		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk";
+		// Oracle JDK, Red Hat, and GraalVM don't have Alpine variants for Tomcat
+		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
 
 		if (canUseAlpine) {
 			return `tomcat:10.1-jdk${jdkVersion}-${variant}-alpine`;
