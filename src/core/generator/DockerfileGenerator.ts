@@ -33,16 +33,13 @@ export class DockerfileGenerator {
 
 		const baseImage = baseImages[jdkVendor] || baseImages["eclipse-temurin"];
 
-		// اصلاح نسخه برای Oracle JDK
 		if (jdkVendor === "oracle-jdk") {
-			// Oracle Linux فقط نسخه‌های 8، 11، 17، 21 رو داره
 			const supportedVersions = ["8", "11", "17", "21"];
 			if (!supportedVersions.includes(version)) {
 				version = "21";
 			}
 		}
 
-		// اصلاح نسخه برای RedHat OpenJDK
 		if (jdkVendor === "redhat-openjdk") {
 			const supportedVersions = ["8", "11", "17", "21"];
 			if (!supportedVersions.includes(version)) {
@@ -54,7 +51,6 @@ export class DockerfileGenerator {
 			return `${baseImage}:${version}`;
 		}
 
-		// Oracle JDK و RedHat OpenJDK تصویر Alpine/Slim ندارن
 		const supportsAlpine = jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk";
 		const supportsSlim = jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk" && jdkVendor !== "graalvm";
 
@@ -79,13 +75,13 @@ export class DockerfileGenerator {
 		const jvmOptions = cleanJvmOptions;
 
 		const debugPort = config.debugPort || 5005;
+		const debugJvmOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}` : "";
+
+		const fullJvmOptions = [jvmOptions, debugJvmOptions].filter(Boolean).join(" ");
 
 		const entrypointArgs = ["java"];
-		if (jvmOptions) {
-			entrypointArgs.push(...jvmOptions.split(" ").filter((arg) => arg.length > 0));
-		}
-		if (config.enableDebug) {
-			entrypointArgs.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}`);
+		if (fullJvmOptions) {
+			entrypointArgs.push(...fullJvmOptions.split(" ").filter((arg) => arg.length > 0));
 		}
 		entrypointArgs.push("-jar", "app.jar");
 
@@ -140,7 +136,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
 `
 				: ""
 		}# Set environment variables
-ENV JAVA_OPTS="${jvmOptions}"
+ENV JAVA_OPTS="${fullJvmOptions}"
 
 # Run as non-root user
 USER appuser
@@ -171,6 +167,9 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 		const jvmOptions = cleanJvmOptions;
 
 		const debugPort = config.debugPort || 5005;
+		const debugJvmOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}` : "";
+
+		const fullJvmOptions = [jvmOptions, debugJvmOptions].filter(Boolean).join(" ");
 
 		const tomcatImage = this.getTomcatImage(analysis, config, canUseAlpine);
 
@@ -223,8 +222,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
 `
 				: ""
 		}# Set environment variables
-ENV CATALINA_OPTS="${jvmOptions}"
-ENV JAVA_OPTS="${jvmOptions}"
+ENV CATALINA_OPTS="${fullJvmOptions}"
+ENV JAVA_OPTS="${fullJvmOptions}"
 
 # Add metadata
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Web Application"}"
@@ -252,7 +251,6 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 
 		const variant = tomcatVariants[vendor] || "temurin";
 
-		// اصلاح نسخه‌های نامعتبر برای Oracle و RedHat
 		if (vendor === "oracle-jdk" || vendor === "redhat-openjdk") {
 			const supportedVersions = ["8", "11", "17", "21"];
 			if (!supportedVersions.includes(jdkVersion)) {
