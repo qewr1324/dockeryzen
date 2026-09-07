@@ -3,13 +3,7 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import { DatabaseType } from "../../types/interfaces.js";
 
-/**
- * Add database service to existing docker-compose.yml
- */
 export class AddDatabaseCommand {
-	/**
-	 * Execute add database command
-	 */
 	public async execute(): Promise<void> {
 		try {
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -18,261 +12,262 @@ export class AddDatabaseCommand {
 				return;
 			}
 
-			// Find docker-compose.yml
 			const composePath = path.join(workspaceFolder.uri.fsPath, "docker-compose.yml");
 			if (!(await fs.pathExists(composePath))) {
-				vscode.window.showErrorMessage("docker-compose.yml not found. Please generate Docker files first.");
+				vscode.window.showErrorMessage("docker-compose.yml not found.");
 				return;
 			}
 
-			// Select database type
 			const dbTypeChoice = await vscode.window.showQuickPick(
 				[
-					{ label: "PostgreSQL", description: "Recommended", detail: DatabaseType.POSTGRESQL },
-					{ label: "MySQL", description: "Popular", detail: DatabaseType.MYSQL },
-					{ label: "MariaDB", description: "MySQL fork", detail: DatabaseType.MARIADB },
-					{ label: "MongoDB", description: "NoSQL", detail: DatabaseType.MONGODB },
-					{ label: "Redis", description: "Cache", detail: DatabaseType.REDIS },
-					{ label: "Cassandra", description: "Distributed", detail: DatabaseType.CASSANDRA },
-					{ label: "Elasticsearch", description: "Search", detail: DatabaseType.ELASTICSEARCH },
-					{ label: "Neo4j", description: "Graph", detail: DatabaseType.NEO4J },
+					{ label: "PostgreSQL", detail: DatabaseType.POSTGRESQL },
+					{ label: "MySQL", detail: DatabaseType.MYSQL },
+					{ label: "MariaDB", detail: DatabaseType.MARIADB },
+					{ label: "MongoDB", detail: DatabaseType.MONGODB },
+					{ label: "Redis", detail: DatabaseType.REDIS },
+					{ label: "Cassandra", detail: DatabaseType.CASSANDRA },
+					{ label: "Elasticsearch", detail: DatabaseType.ELASTICSEARCH },
+					{ label: "Neo4j", detail: DatabaseType.NEO4J },
 				],
-				{
-					placeHolder: "Select database type to add:",
-					title: "Dockeryzen - Add Database",
-				},
+				{ placeHolder: "Select database type to add:" },
 			);
 
-			if (!dbTypeChoice) {
-				return;
-			}
+			if (!dbTypeChoice) return;
 
-			// Get database configuration
-			const dbName = await vscode.window.showInputBox({
-				prompt: "Enter database name:",
-				value: "appdb",
-			});
+			const dbName = await vscode.window.showInputBox({ prompt: "Database name:", value: "appdb" });
+			if (!dbName) return;
 
-			if (!dbName) {
-				return;
-			}
+			const dbUser = await vscode.window.showInputBox({ prompt: "Username:", value: "admin" });
+			if (!dbUser) return;
 
-			const dbUser = await vscode.window.showInputBox({
-				prompt: "Enter database username:",
-				value: "admin",
-			});
-
-			if (!dbUser) {
-				return;
-			}
-
-			const dbPass = await vscode.window.showInputBox({
-				prompt: "Enter database password:",
-				value: "password",
-				password: true,
-			});
-
-			if (!dbPass) {
-				return;
-			}
+			const dbPass = await vscode.window.showInputBox({ prompt: "Password:", value: "password", password: true });
+			if (!dbPass) return;
 
 			const dbType = dbTypeChoice.detail as DatabaseType;
-			const dbPort = this.getDefaultDbPort(dbType);
-			const dbVersion = this.getDefaultVersion(dbType);
+			const dbPort = this.getPort(dbType);
+			const dbVersion = this.getVersion(dbType);
+			const dbTypeName = dbType.toString().toLowerCase();
 
-			// Generate database service
-			const dbService = this.generateDatabaseService(dbType, {
-				name: dbName,
-				username: dbUser,
-				password: dbPass,
-				version: dbVersion,
-				port: dbPort,
-			});
-
-			// Read existing compose file
 			const composeContent = await fs.readFile(composePath, "utf8");
 
-			// Add database service to compose
-			const updatedCompose = this.addServiceToCompose(composeContent, dbService);
-
-			// Write updated compose file
-			await fs.writeFile(composePath, updatedCompose, "utf8");
-
-			// Update .env if exists
-			const envPath = path.join(workspaceFolder.uri.fsPath, ".env");
-			if (await fs.pathExists(envPath)) {
-				let envContent = await fs.readFile(envPath, "utf8");
-
-				// Add database env vars to .env
-				const dbEnvVars = [`SPRING_DATASOURCE_URL=jdbc:${dbType}://${dbType}:${dbPort}/${dbName}`, `SPRING_DATASOURCE_USERNAME=${dbUser}`, `SPRING_DATASOURCE_PASSWORD=${dbPass}`].join("\n");
-
-				// Remove old database section if exists
-				envContent = envContent.replace(/# Database Configuration[\s\S]*?(?=# |$)/, "");
-
-				// Add new database section
-				envContent = `# Database Configuration\n${dbEnvVars}\n\n` + envContent;
-
-				await fs.writeFile(envPath, envContent, "utf8");
-			} else {
-				// Create .env if doesn't exist
-				const envContent = `# Database Configuration
-SPRING_DATASOURCE_URL=jdbc:${dbType}://${dbType}:${dbPort}/${dbName}
-SPRING_DATASOURCE_USERNAME=${dbUser}
-SPRING_DATASOURCE_PASSWORD=${dbPass}
-
-# SECURITY WARNING: Do not commit this file to version control!
-# Add .env to .gitignore immediately.`;
-
-				await fs.writeFile(envPath, envContent, "utf8");
+			if (composeContent.includes(`  ${dbTypeName}:`)) {
+				vscode.window.showErrorMessage(`${dbTypeName} already exists!`);
+				return;
 			}
 
-			vscode.window.showInformationMessage(`Dockeryzen: Added ${dbTypeChoice.label} to docker-compose.yml and .env`);
+			// Build the new service
+			const service = this.buildService(dbType, dbTypeName, dbName, dbUser, dbPass, dbPort, dbVersion);
+
+			// Parse existing compose and rebuild it
+			const updatedCompose = this.rebuildCompose(composeContent, service, dbTypeName);
+
+			await fs.writeFile(composePath, updatedCompose, "utf8");
+
+			// Update .env
+			await this.rebuildEnv(workspaceFolder.uri.fsPath, dbName, dbUser, dbPass);
+
+			vscode.window.showInformationMessage(`Added ${dbTypeChoice.label}!`);
 		} catch (error) {
-			vscode.window.showErrorMessage(`Failed to add database: ${error}`);
+			vscode.window.showErrorMessage(`Error: ${error}`);
 		}
 	}
 
 	/**
-	 * Generate database service YAML
+	 * Rebuild the entire docker-compose.yml cleanly
 	 */
-	private generateDatabaseService(dbType: DatabaseType, config: any): string {
-		const dbTypeName = dbType.toString().toLowerCase();
+	private rebuildCompose(composeContent: string, newService: string, newDbType: string): string {
+		// Extract app service
+		const appMatch = composeContent.match(/  app:[\s\S]*?(?=\n  \w+:|\n\w+:|\n$)/);
+		const appService = appMatch ? appMatch[0] : "";
 
-		const imageMap: Record<DatabaseType, string> = {
-			[DatabaseType.POSTGRESQL]: `postgres:${config.version}`,
-			[DatabaseType.MYSQL]: `mysql:${config.version}`,
-			[DatabaseType.MARIADB]: `mariadb:${config.version}`,
-			[DatabaseType.MONGODB]: `mongo:${config.version}`,
-			[DatabaseType.REDIS]: `redis:${config.version}`,
-			[DatabaseType.CASSANDRA]: `cassandra:${config.version}`,
-			[DatabaseType.ELASTICSEARCH]: `docker.elastic.co/elasticsearch/elasticsearch:${config.version}`,
-			[DatabaseType.NEO4J]: `neo4j:${config.version}`,
-			[DatabaseType.H2]: `h2:${config.version}`,
-			[DatabaseType.NONE]: "",
+		// Extract all existing database services
+		const dbTypes = ["postgresql", "mysql", "mariadb", "mongodb", "redis", "cassandra", "elasticsearch", "neo4j"];
+		const services: string[] = [];
+
+		for (const db of dbTypes) {
+			if (db === newDbType) continue; // Skip the new one, we'll add it separately
+
+			const regex = new RegExp(`  ${db}:\\n[\\s\\S]*?(?=\\n  \\w+:|\\n\\w+:|\\n$)`, "g");
+			const match = composeContent.match(regex);
+			if (match && match[0]) {
+				services.push(match[0]);
+			}
+		}
+
+		// Add the new service
+		services.push(newService);
+
+		// Build the compose file
+		let result = `version: '3.9'
+
+services:
+`;
+
+		// Add app service first if exists
+		if (appService) {
+			result += appService + "\n";
+		}
+
+		// Add all database services
+		for (const service of services) {
+			result += service + "\n";
+		}
+
+		// Add volumes section
+		result += `volumes:
+`;
+
+		// Add volumes for all databases found
+		const allServices = result;
+		for (const db of dbTypes) {
+			if (allServices.includes(`  ${db}:`)) {
+				result += `  ${db}-data:
+`;
+			}
+		}
+
+		// Add networks
+		result += `
+networks:
+  dockeryzen-network:
+    driver: bridge
+`;
+
+		return result;
+	}
+
+	/**
+	 * Rebuild .env file cleanly
+	 */
+	private async rebuildEnv(workspacePath: string, dbName: string, dbUser: string, dbPass: string): Promise<void> {
+		const composePath = path.join(workspacePath, "docker-compose.yml");
+		const composeContent = await fs.readFile(composePath, "utf8");
+
+		const dbTypes = ["postgresql", "mysql", "mariadb", "mongodb", "redis", "cassandra", "elasticsearch", "neo4j"];
+		const foundDbs = dbTypes.filter((db) => composeContent.includes(`  ${db}:`));
+
+		let envContent = "";
+
+		if (foundDbs.length > 0) {
+			envContent += "# Database Configuration\n";
+			for (const db of foundDbs) {
+				const dbTypeEnum = db.toUpperCase() as DatabaseType;
+				const port = this.getPort(dbTypeEnum);
+				envContent += `SPRING_DATASOURCE_URL=jdbc:${db}://${db}:${port}/${dbName}\n`;
+				envContent += `SPRING_DATASOURCE_USERNAME=${dbUser}\n`;
+				envContent += `SPRING_DATASOURCE_PASSWORD=${dbPass}\n`;
+				envContent += "\n";
+			}
+		}
+
+		envContent += "# SECURITY WARNING: Do not commit this file to version control!\n";
+		envContent += "# Add .env to .gitignore immediately.";
+
+		const envPath = path.join(workspacePath, ".env");
+		await fs.writeFile(envPath, envContent, "utf8");
+	}
+
+	private buildService(dbType: DatabaseType, name: string, dbName: string, dbUser: string, dbPass: string, port: number, version: string): string {
+		const images: Record<string, string> = {
+			postgresql: `postgres:${version}`,
+			mysql: `mysql:${version}`,
+			mariadb: `mariadb:${version}`,
+			mongodb: `mongo:${version}`,
+			redis: `redis:${version}`,
+			cassandra: `cassandra:${version}`,
+			elasticsearch: `docker.elastic.co/elasticsearch/elasticsearch:${version}`,
+			neo4j: `neo4j:${version}`,
 		};
 
-		const envMap: Record<DatabaseType, string> = {
-			[DatabaseType.POSTGRESQL]: `      POSTGRES_DB: ${config.name}\n      POSTGRES_USER: ${config.username}\n      POSTGRES_PASSWORD: ${config.password}`,
-			[DatabaseType.MYSQL]: `      MYSQL_DATABASE: ${config.name}\n      MYSQL_USER: ${config.username}\n      MYSQL_PASSWORD: ${config.password}\n      MYSQL_ROOT_PASSWORD: ${config.password}`,
-			[DatabaseType.MARIADB]: `      MARIADB_DATABASE: ${config.name}\n      MARIADB_USER: ${config.username}\n      MARIADB_PASSWORD: ${config.password}\n      MARIADB_ROOT_PASSWORD: ${config.password}`,
-			[DatabaseType.MONGODB]: `      MONGO_INITDB_DATABASE: ${config.name}\n      MONGO_INITDB_ROOT_USERNAME: ${config.username}\n      MONGO_INITDB_ROOT_PASSWORD: ${config.password}`,
-			[DatabaseType.REDIS]: ``,
-			[DatabaseType.CASSANDRA]: ``,
-			[DatabaseType.ELASTICSEARCH]: `      ES_JAVA_OPTS: "-Xms512m -Xmx512m"`,
-			[DatabaseType.NEO4J]: `      NEO4J_AUTH: ${config.username}/${config.password}`,
-			[DatabaseType.H2]: ``,
-			[DatabaseType.NONE]: ``,
+		const envs: Record<string, string> = {
+			postgresql: `      POSTGRES_DB: ${dbName}\n      POSTGRES_USER: ${dbUser}\n      POSTGRES_PASSWORD: ${dbPass}`,
+			mysql: `      MYSQL_DATABASE: ${dbName}\n      MYSQL_USER: ${dbUser}\n      MYSQL_PASSWORD: ${dbPass}\n      MYSQL_ROOT_PASSWORD: ${dbPass}`,
+			mariadb: `      MARIADB_DATABASE: ${dbName}\n      MARIADB_USER: ${dbUser}\n      MARIADB_PASSWORD: ${dbPass}\n      MARIADB_ROOT_PASSWORD: ${dbPass}`,
+			mongodb: `      MONGO_INITDB_DATABASE: ${dbName}\n      MONGO_INITDB_ROOT_USERNAME: ${dbUser}\n      MONGO_INITDB_ROOT_PASSWORD: ${dbPass}`,
+			redis: "",
+			cassandra: "",
+			elasticsearch: '      ES_JAVA_OPTS: "-Xms512m -Xmx512m"',
+			neo4j: `      NEO4J_AUTH: ${dbUser}/${dbPass}`,
 		};
 
-		const healthCheckMap: Record<DatabaseType, string> = {
-			[DatabaseType.POSTGRESQL]: `      test: ["CMD-SHELL", "pg_isready -U ${config.username}"]`,
-			[DatabaseType.MYSQL]: `      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]`,
-			[DatabaseType.MARIADB]: `      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]`,
-			[DatabaseType.MONGODB]: `      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]`,
-			[DatabaseType.REDIS]: `      test: ["CMD", "redis-cli", "ping"]`,
-			[DatabaseType.CASSANDRA]: `      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE system'"]`,
-			[DatabaseType.ELASTICSEARCH]: `      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]`,
-			[DatabaseType.NEO4J]: `      test: ["CMD-SHELL", "cypher-shell -u ${config.username} -p ${config.password} 'RETURN 1'"]`,
-			[DatabaseType.H2]: ``,
-			[DatabaseType.NONE]: ``,
+		const healthChecks: Record<string, string> = {
+			postgresql: `      test: ["CMD-SHELL", "pg_isready -U ${dbUser}"]`,
+			mysql: `      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]`,
+			mariadb: `      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]`,
+			mongodb: `      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]`,
+			redis: `      test: ["CMD", "redis-cli", "ping"]`,
+			cassandra: `      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE system'"]`,
+			elasticsearch: `      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]`,
+			neo4j: `      test: ["CMD-SHELL", "cypher-shell -u ${dbUser} -p ${dbPass} 'RETURN 1'"]`,
 		};
 
-		const volumeMap: Record<DatabaseType, string> = {
-			[DatabaseType.POSTGRESQL]: `/var/lib/postgresql/data`,
-			[DatabaseType.MYSQL]: `/var/lib/mysql`,
-			[DatabaseType.MARIADB]: `/var/lib/mysql`,
-			[DatabaseType.MONGODB]: `/data/db`,
-			[DatabaseType.REDIS]: `/data`,
-			[DatabaseType.CASSANDRA]: `/var/lib/cassandra`,
-			[DatabaseType.ELASTICSEARCH]: `/usr/share/elasticsearch/data`,
-			[DatabaseType.NEO4J]: `/data`,
-			[DatabaseType.H2]: `/opt/h2-data`,
-			[DatabaseType.NONE]: ``,
+		const volumes: Record<string, string> = {
+			postgresql: "/var/lib/postgresql/data",
+			mysql: "/var/lib/mysql",
+			mariadb: "/var/lib/mysql",
+			mongodb: "/data/db",
+			redis: "/data",
+			cassandra: "/var/lib/cassandra",
+			elasticsearch: "/usr/share/elasticsearch/data",
+			neo4j: "/data",
 		};
 
-		const image = imageMap[dbType] || `postgres:latest`;
-		const env = envMap[dbType] || "";
-		const healthCheck = healthCheckMap[dbType] || "";
-		const volumePath = volumeMap[dbType] || "/data";
+		const image = images[name] || `postgres:latest`;
+		const env = envs[name] || "";
+		const health = healthChecks[name] || "";
+		const volumePath = volumes[name] || "/data";
 
-		return `  ${dbTypeName}:
+		let result = `  ${name}:
     image: ${image}
     ports:
-      - "${config.port}:${config.port}"
-${env ? `    environment:\n${env}\n` : ""}    volumes:
-      - ${dbTypeName}-data:${volumePath}
-${healthCheck ? `    healthcheck:\n${healthCheck}\n      interval: 30s\n      timeout: 3s\n      retries: 5\n` : ""}    restart: unless-stopped
+      - "${port}:${port}"
+`;
+
+		if (env) {
+			result += `    environment:\n${env}\n`;
+		}
+
+		result += `    volumes:
+      - ${name}-data:${volumePath}
+`;
+
+		if (health) {
+			result += `    healthcheck:\n${health}\n      interval: 30s\n      timeout: 3s\n      retries: 5\n`;
+		}
+
+		result += `    restart: unless-stopped
     networks:
       - dockeryzen-network
 `;
+
+		return result;
 	}
 
-	/**
-	 * Add service to existing compose file
-	 */
-	private addServiceToCompose(composeContent: string, dbService: string): string {
-		const servicesMatch = composeContent.match(/services:\n/);
-		if (!servicesMatch) {
-			return composeContent;
-		}
-
-		const servicesIndex = servicesMatch.index! + servicesMatch[0].length;
-
-		let updatedContent = composeContent.slice(0, servicesIndex) + dbService + composeContent.slice(servicesIndex);
-
-		// Add volume if not exists
-		const dbTypeMatch = dbService.match(/  (\w+):/);
-		const dbType = dbTypeMatch?.[1] || "database";
-
-		if (!updatedContent.includes("volumes:")) {
-			updatedContent += `\nvolumes:\n  ${dbType}-data:\n`;
-		} else {
-			const volumeRegex = new RegExp(`  ${dbType}-data:`);
-			if (!volumeRegex.test(updatedContent)) {
-				updatedContent = updatedContent.replace(/volumes:\n/, `volumes:\n  ${dbType}-data:\n`);
-			}
-		}
-
-		return updatedContent;
-	}
-
-	/**
-	 * Get default database version
-	 */
-	private getDefaultVersion(dbType: DatabaseType): string {
-		const versions: Record<DatabaseType, string> = {
-			[DatabaseType.POSTGRESQL]: "16",
-			[DatabaseType.MYSQL]: "8.4",
-			[DatabaseType.MARIADB]: "11",
-			[DatabaseType.MONGODB]: "7",
-			[DatabaseType.REDIS]: "7",
-			[DatabaseType.CASSANDRA]: "5",
-			[DatabaseType.ELASTICSEARCH]: "8",
-			[DatabaseType.NEO4J]: "5",
-			[DatabaseType.H2]: "latest",
-			[DatabaseType.NONE]: "latest",
+	private getPort(dbType: DatabaseType): number {
+		const ports: Record<string, number> = {
+			postgresql: 5432,
+			mysql: 3306,
+			mariadb: 3306,
+			mongodb: 27017,
+			redis: 6379,
+			cassandra: 9042,
+			elasticsearch: 9200,
+			neo4j: 7687,
 		};
-
-		return versions[dbType] || "latest";
-	}
-
-	/**
-	 * Get default database port
-	 */
-	private getDefaultDbPort(dbType: DatabaseType): number {
-		const ports: Record<DatabaseType, number> = {
-			[DatabaseType.POSTGRESQL]: 5432,
-			[DatabaseType.MYSQL]: 3306,
-			[DatabaseType.MARIADB]: 3306,
-			[DatabaseType.MONGODB]: 27017,
-			[DatabaseType.REDIS]: 6379,
-			[DatabaseType.CASSANDRA]: 9042,
-			[DatabaseType.ELASTICSEARCH]: 9200,
-			[DatabaseType.NEO4J]: 7687,
-			[DatabaseType.H2]: 9092,
-			[DatabaseType.NONE]: 0,
-		};
-
 		return ports[dbType] || 5432;
+	}
+
+	private getVersion(dbType: DatabaseType): string {
+		const versions: Record<string, string> = {
+			postgresql: "16",
+			mysql: "8.4",
+			mariadb: "11",
+			mongodb: "7",
+			redis: "7",
+			cassandra: "5",
+			elasticsearch: "8",
+			neo4j: "5",
+		};
+		return versions[dbType] || "latest";
 	}
 }
