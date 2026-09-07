@@ -9,38 +9,63 @@ export class ComposeGenerator {
 		const services: ComposeService[] = [];
 		const volumes: Volume[] = [];
 		const networks: Network[] = [];
+		const usedServiceNames = new Set<string>();
 
 		// Check if .env should be used
 		const useEnvFile = config.generateEnvFile !== false;
 
 		// Add application service
-		services.push(this.generateAppService(analysis, config, useEnvFile));
+		const appService = this.generateAppService(analysis, config, useEnvFile);
+		services.push(appService);
+		usedServiceNames.add("app");
 
-		// Add database service if needed
-		if (config.database && config.database.type !== DatabaseType.NONE) {
-			services.push(this.generateDatabaseService(config.database));
-			volumes.push({
-				name: `${config.database.type}-data`,
-			});
+		// Add database services if needed
+		if (config.databases && config.databases.length > 0) {
+			for (const db of config.databases) {
+				if (!usedServiceNames.has(db.type)) {
+					services.push(this.generateDatabaseService(db));
+					volumes.push({
+						name: `${db.type}-data`,
+					});
+					usedServiceNames.add(db.type);
+				}
+			}
+		} else if (config.database && config.database.type !== DatabaseType.NONE) {
+			// Backward compatibility
+			if (!usedServiceNames.has(config.database.type)) {
+				services.push(this.generateDatabaseService(config.database));
+				volumes.push({
+					name: `${config.database.type}-data`,
+				});
+				usedServiceNames.add(config.database.type);
+			}
 		}
 
 		// Add message queue services
 		if (config.messageQueues && config.messageQueues.length > 0) {
 			for (const mq of config.messageQueues) {
-				services.push(this.generateMessageQueueService(mq));
-				volumes.push({
-					name: `${mq.type}-data`,
-				});
+				if (!usedServiceNames.has(mq.type)) {
+					services.push(this.generateMessageQueueService(mq));
+					volumes.push({
+						name: `${mq.type}-data`,
+					});
+					usedServiceNames.add(mq.type);
+				}
 			}
 		}
 
-		// Add additional services
+		// Add additional services (فقط سرویس‌های واقعی مثل nginx، grafana و...)
 		if (config.additionalServices && config.additionalServices.length > 0) {
 			for (const svc of config.additionalServices) {
-				services.push(this.generateAdditionalService(svc));
-				volumes.push({
-					name: `${svc.type}-data`,
-				});
+				// فقط سرویس‌های واقعی را اضافه کن، نه message queue ها
+				const realServices = ["nginx", "grafana", "prometheus", "keycloak", "minio"];
+				if (realServices.includes(svc.type) && !usedServiceNames.has(svc.type)) {
+					services.push(this.generateAdditionalService(svc));
+					volumes.push({
+						name: `${svc.type}-data`,
+					});
+					usedServiceNames.add(svc.type);
+				}
 			}
 		}
 
@@ -84,9 +109,16 @@ export class ComposeGenerator {
 			}
 
 			// Add database environment variables directly
-			if (config.database && config.database.type !== DatabaseType.NONE) {
-				const dbType = config.database.type;
-				service.environment[`SPRING_DATASOURCE_URL`] = `jdbc:${dbType}://${dbType}:${config.database.port}/${config.database.name}`;
+			if (config.databases && config.databases.length > 0) {
+				for (const db of config.databases) {
+					if (db.type !== DatabaseType.NONE) {
+						service.environment[`SPRING_DATASOURCE_URL`] = `jdbc:${db.type}://${db.type}:${db.port}/${db.name}`;
+						service.environment[`SPRING_DATASOURCE_USERNAME`] = db.username;
+						service.environment[`SPRING_DATASOURCE_PASSWORD`] = db.password;
+					}
+				}
+			} else if (config.database && config.database.type !== DatabaseType.NONE) {
+				service.environment[`SPRING_DATASOURCE_URL`] = `jdbc:${config.database.type}://${config.database.type}:${config.database.port}/${config.database.name}`;
 				service.environment[`SPRING_DATASOURCE_USERNAME`] = config.database.username;
 				service.environment[`SPRING_DATASOURCE_PASSWORD`] = config.database.password;
 			}
@@ -96,7 +128,13 @@ export class ComposeGenerator {
 		}
 
 		// Add dependencies
-		if (config.database && config.database.type !== DatabaseType.NONE) {
+		if (config.databases && config.databases.length > 0) {
+			for (const db of config.databases) {
+				if (db.type !== DatabaseType.NONE) {
+					service.depends_on.push(db.type);
+				}
+			}
+		} else if (config.database && config.database.type !== DatabaseType.NONE) {
 			service.depends_on.push(config.database.type);
 		}
 
@@ -130,7 +168,7 @@ export class ComposeGenerator {
 			image: this.getDatabaseImage(dbConfig),
 			ports: [`${dbConfig.port}:${dbConfig.port}`],
 			environment: {},
-			volumes: [`${dbConfig.type}-data:/var/lib/${dbConfig.type}`],
+			volumes: [`${dbConfig.type}-data:${this.getDatabaseVolumePath(dbConfig.type)}`],
 			depends_on: [],
 			restart: "unless-stopped",
 			networks: ["dockeryzen-network"],
@@ -139,6 +177,7 @@ export class ComposeGenerator {
 		// Set database-specific environment variables
 		switch (dbConfig.type) {
 			case DatabaseType.POSTGRESQL:
+			case "postgresql":
 				service.environment = {
 					POSTGRES_DB: dbConfig.name,
 					POSTGRES_USER: dbConfig.username,
@@ -146,6 +185,7 @@ export class ComposeGenerator {
 				};
 				break;
 			case DatabaseType.MYSQL:
+			case "mysql":
 				service.environment = {
 					MYSQL_DATABASE: dbConfig.name,
 					MYSQL_USER: dbConfig.username,
@@ -154,6 +194,7 @@ export class ComposeGenerator {
 				};
 				break;
 			case DatabaseType.MARIADB:
+			case "mariadb":
 				service.environment = {
 					MARIADB_DATABASE: dbConfig.name,
 					MARIADB_USER: dbConfig.username,
@@ -162,6 +203,7 @@ export class ComposeGenerator {
 				};
 				break;
 			case DatabaseType.MONGODB:
+			case "mongodb":
 				service.environment = {
 					MONGO_INITDB_DATABASE: dbConfig.name,
 					MONGO_INITDB_ROOT_USERNAME: dbConfig.username,
@@ -169,17 +211,22 @@ export class ComposeGenerator {
 				};
 				break;
 			case DatabaseType.REDIS:
+			case "redis":
 				service.environment = {};
 				break;
 			case DatabaseType.CASSANDRA:
+			case "cassandra":
 				service.environment = {};
 				break;
 			case DatabaseType.ELASTICSEARCH:
+			case "elasticsearch":
 				service.environment = {
 					ES_JAVA_OPTS: "-Xms512m -Xmx512m",
+					discovery_type: "single-node",
 				};
 				break;
 			case DatabaseType.NEO4J:
+			case "neo4j":
 				service.environment = {
 					NEO4J_AUTH: `${dbConfig.username}/${dbConfig.password}`,
 				};
@@ -206,11 +253,27 @@ export class ComposeGenerator {
 			image: this.getMessageQueueImage(mqConfig),
 			ports: [`${mqConfig.port}:${mqConfig.port}`],
 			environment: {},
-			volumes: [`${mqConfig.type}-data:/var/lib/${mqConfig.type}`],
+			volumes: [`${mqConfig.type}-data:${this.getMessageQueueVolumePath(mqConfig.type)}`],
 			depends_on: [],
 			restart: "unless-stopped",
 			networks: ["dockeryzen-network"],
 		};
+
+		// Add specific environment variables
+		switch (mqConfig.type) {
+			case "kafka":
+				service.environment = {
+					KAFKA_ADVERTISED_LISTENERS: `PLAINTEXT://kafka:${mqConfig.port}`,
+					KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1",
+				};
+				break;
+			case "rabbitmq":
+				service.environment = {
+					RABBITMQ_DEFAULT_USER: "guest",
+					RABBITMQ_DEFAULT_PASS: "guest",
+				};
+				break;
+		}
 
 		// Add health check
 		service.healthcheck = {
@@ -249,24 +312,49 @@ export class ComposeGenerator {
 
 		switch (dbConfig.type) {
 			case DatabaseType.POSTGRESQL:
+			case "postgresql":
 				return `postgres:${version}`;
 			case DatabaseType.MYSQL:
+			case "mysql":
 				return `mysql:${version}`;
 			case DatabaseType.MARIADB:
+			case "mariadb":
 				return `mariadb:${version}`;
 			case DatabaseType.MONGODB:
+			case "mongodb":
 				return `mongo:${version}`;
 			case DatabaseType.REDIS:
+			case "redis":
 				return `redis:${version}`;
 			case DatabaseType.CASSANDRA:
+			case "cassandra":
 				return `cassandra:${version}`;
 			case DatabaseType.ELASTICSEARCH:
+			case "elasticsearch":
 				return `docker.elastic.co/elasticsearch/elasticsearch:${version}`;
 			case DatabaseType.NEO4J:
+			case "neo4j":
 				return `neo4j:${version}`;
 			default:
 				return `postgres:latest`;
 		}
+	}
+
+	/**
+	 * Get database volume path
+	 */
+	private getDatabaseVolumePath(dbType: string): string {
+		const paths: Record<string, string> = {
+			postgresql: "/var/lib/postgresql/data",
+			mysql: "/var/lib/mysql",
+			mariadb: "/var/lib/mysql",
+			mongodb: "/data/db",
+			redis: "/data",
+			cassandra: "/var/lib/cassandra",
+			elasticsearch: "/usr/share/elasticsearch/data",
+			neo4j: "/data",
+		};
+		return paths[dbType] || "/data";
 	}
 
 	/**
@@ -285,6 +373,18 @@ export class ComposeGenerator {
 			default:
 				return `rabbitmq:latest`;
 		}
+	}
+
+	/**
+	 * Get message queue volume path
+	 */
+	private getMessageQueueVolumePath(mqType: string): string {
+		const paths: Record<string, string> = {
+			kafka: "/var/lib/kafka/data",
+			rabbitmq: "/var/lib/rabbitmq",
+			activemq: "/opt/activemq/data",
+		};
+		return paths[mqType] || "/data";
 	}
 
 	/**
@@ -312,25 +412,31 @@ export class ComposeGenerator {
 	/**
 	 * Get database health check command
 	 */
-	private getDatabaseHealthCheck(dbType: DatabaseType): string[] {
+	private getDatabaseHealthCheck(dbType: string): string[] {
 		switch (dbType) {
+			case "postgresql":
 			case DatabaseType.POSTGRESQL:
 				return ["CMD-SHELL", "pg_isready -U admin"];
+			case "mysql":
+			case "mariadb":
 			case DatabaseType.MYSQL:
 			case DatabaseType.MARIADB:
 				return ["CMD-SHELL", "mysqladmin ping -h localhost"];
+			case "mongodb":
 			case DatabaseType.MONGODB:
 				return ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"];
+			case "redis":
 			case DatabaseType.REDIS:
 				return ["CMD", "redis-cli", "ping"];
+			case "cassandra":
 			case DatabaseType.CASSANDRA:
 				return ["CMD-SHELL", "cqlsh -e 'DESCRIBE system'"];
+			case "elasticsearch":
 			case DatabaseType.ELASTICSEARCH:
 				return ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"];
+			case "neo4j":
 			case DatabaseType.NEO4J:
 				return ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j 'RETURN 1'"];
-			case DatabaseType.H2:
-				return ["CMD-SHELL", 'echo "healthy"'];
 			default:
 				return ["CMD-SHELL", 'echo "healthy"'];
 		}
@@ -360,6 +466,9 @@ export class ComposeGenerator {
 
 services:
 `;
+
+		// Remove duplicate volumes
+		const uniqueVolumes = volumes.filter((vol, index, self) => index === self.findIndex((v) => v.name === vol.name));
 
 		// Add services
 		for (const service of services) {
@@ -447,10 +556,10 @@ services:
 		}
 
 		// Add volumes
-		if (volumes.length > 0) {
+		if (uniqueVolumes.length > 0) {
 			content += `volumes:
 `;
-			for (const volume of volumes) {
+			for (const volume of uniqueVolumes) {
 				content += `  ${volume.name}:
 `;
 			}

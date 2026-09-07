@@ -267,6 +267,10 @@ async function generateDevContainer(workspaceFolder: vscode.WorkspaceFolder | un
 /**
  * Generate from config file
  */
+// در تابع generateFromConfig، این بخش را تغییر دهید:
+
+// در تابع generateFromConfig، این بخش را تغییر دهید:
+
 async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, config: any, outputChannel: vscode.OutputChannel): Promise<void> {
 	const progress = new ProgressReporter();
 
@@ -278,11 +282,10 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 		const messageQueues = config.messageQueues || [];
 		const services = config.services || [];
 
-		// Convert database config to DatabaseConfig format
-		let databaseConfig: DatabaseConfig | undefined;
-		if (databases.length > 0) {
-			const db = databases[0];
-			databaseConfig = {
+		// Convert all databases to DatabaseConfig format
+		const databaseConfigs: DatabaseConfig[] = [];
+		for (const db of databases) {
+			databaseConfigs.push({
 				type: db.type as DatabaseType,
 				version: db.version || "latest",
 				port: db.port || getDefaultPort(db.type),
@@ -290,8 +293,31 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 				username: db.username || "admin",
 				password: db.password || "password",
 				host: db.host || db.type,
-			};
+			});
 		}
+
+		// Determine output type - check if pom.xml has WAR packaging
+		let outputType = config.project?.outputType as OutputType;
+
+		// Check pom.xml for packaging type
+		const pomPath = path.join(workspaceFolder.uri.fsPath, "pom.xml");
+		if (await fs.pathExists(pomPath)) {
+			const pomContent = await fs.readFile(pomPath, "utf8");
+			if (/<packaging>\s*war\s*<\/packaging>/.test(pomContent)) {
+				outputType = OutputType.WAR;
+			}
+		}
+
+		// If no output type specified, detect based on framework
+		if (!outputType || outputType === "jar") {
+			const framework = config.project?.framework;
+			if (framework === "jakarta-ee" || framework === "java-ee" || framework === "spring-mvc") {
+				outputType = OutputType.WAR;
+			}
+		}
+
+		// Filter services to only include real services (not message queues)
+		const realServices = services.filter((svc: any) => ["nginx", "grafana", "prometheus", "keycloak", "minio"].includes(svc.type));
 
 		// Map config to DockerConfig
 		const dockerConfig: DockerConfig = {
@@ -303,15 +329,16 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 			debugPort: config.docker?.debugPort || 5005,
 			enableHealthCheck: config.docker?.enableHealthCheck ?? true,
 			healthCheckEndpoint: config.docker?.healthCheckEndpoint || "/actuator/health",
-			outputType: (config.project?.outputType as OutputType) || OutputType.JAR,
-			database: databaseConfig,
+			outputType: outputType,
+			databases: databaseConfigs.length > 0 ? databaseConfigs : undefined,
+			database: databaseConfigs.length > 0 ? databaseConfigs[0] : undefined,
 			envVariables: {},
 			composeServices: [],
 			volumes: [],
 			networks: [],
 			generateEnvFile: config.envFile !== false,
 			messageQueues: messageQueues as MessageQueueConfig[],
-			additionalServices: services as AdditionalServiceConfig[],
+			additionalServices: realServices as AdditionalServiceConfig[],
 		};
 
 		reporter.report({ message: "Analyzing project...", increment: 30 });
@@ -326,11 +353,12 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 		if (config.project?.jdkVersion) {
 			analysis.jdkVersion = config.project.jdkVersion;
 		}
-		if (config.project?.outputType) {
-			analysis.outputType = config.project.outputType as any;
-		}
-		if (databaseConfig) {
-			analysis.database = databaseConfig;
+
+		// Set output type based on config
+		analysis.outputType = outputType;
+
+		if (databaseConfigs.length > 0) {
+			analysis.database = databaseConfigs[0];
 		}
 
 		reporter.report({ message: "Generating Docker files...", increment: 40 });
@@ -338,7 +366,7 @@ async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, confi
 		const outputPath = workspaceFolder.uri.fsPath;
 		const generatedFiles: string[] = [];
 
-		// Generate Dockerfile - بر اساس outputType
+		// Generate Dockerfile
 		const dockerfileGenerator = new DockerfileGenerator();
 		const dockerfile = dockerfileGenerator.generate(analysis, dockerConfig);
 		await fs.writeFile(path.join(outputPath, "Dockerfile"), dockerfile, "utf8");

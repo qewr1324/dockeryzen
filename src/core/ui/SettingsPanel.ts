@@ -30,14 +30,14 @@ export class SettingsPanel {
 						vscode.commands.executeCommand("dockeryzen.generateFromConfig");
 						break;
 					case "addDatabase":
-						this.addDatabase(message.dbType, message.dbName, message.dbUsername, message.dbPassword);
+						this.addDatabase(message.dbConfig);
 						break;
 					case "removeDatabase":
 						this.removeDatabase(message.index);
 						await this.saveConfigToFile();
 						break;
 					case "addService":
-						this.addService(message.serviceType);
+						this.addService(message.serviceConfig);
 						await this.saveConfigToFile();
 						break;
 					case "removeService":
@@ -45,7 +45,7 @@ export class SettingsPanel {
 						await this.saveConfigToFile();
 						break;
 					case "addMessageQueue":
-						this.addMessageQueue(message.mqType);
+						this.addMessageQueue(message.mqConfig);
 						await this.saveConfigToFile();
 						break;
 					case "removeMessageQueue":
@@ -75,15 +75,15 @@ export class SettingsPanel {
 		await configLoader.save(workspaceFolder, this._config, this._configFormat);
 	}
 
-	private addDatabase(dbType: string, dbName?: string, dbUsername?: string, dbPassword?: string): void {
+	private addDatabase(dbConfig: any): void {
 		const db = {
-			type: dbType,
-			version: this.getDefaultVersion(dbType),
-			port: this.getDefaultPort(dbType),
-			name: dbName || "appdb",
-			username: dbUsername || "admin",
-			password: dbPassword || "password",
-			host: dbType,
+			type: dbConfig.type,
+			version: dbConfig.version || this.getDefaultVersion(dbConfig.type),
+			port: dbConfig.port || this.getDefaultPort(dbConfig.type),
+			name: dbConfig.name || "appdb",
+			username: dbConfig.username || "admin",
+			password: dbConfig.password || "password",
+			host: dbConfig.type,
 		};
 
 		if (!this._config.databases) {
@@ -104,18 +104,11 @@ export class SettingsPanel {
 		}
 	}
 
-	private updateDatabase(index: number, field: string, value: string): void {
-		if (this._config.databases && this._config.databases[index]) {
-			this._config.databases[index][field] = value;
-			this._panel.webview.html = this.getHtml(this._config);
-		}
-	}
-
-	private addService(serviceType: string): void {
+	private addService(serviceConfig: any): void {
 		const service = {
-			type: serviceType,
-			version: this.getDefaultVersion(serviceType),
-			port: this.getDefaultServicePort(serviceType),
+			type: serviceConfig.type,
+			version: serviceConfig.version || this.getDefaultVersion(serviceConfig.type),
+			port: serviceConfig.port || this.getDefaultServicePort(serviceConfig.type),
 		};
 
 		if (!this._config.services) {
@@ -132,11 +125,11 @@ export class SettingsPanel {
 		}
 	}
 
-	private addMessageQueue(mqType: string): void {
+	private addMessageQueue(mqConfig: any): void {
 		const mq = {
-			type: mqType,
-			version: this.getDefaultVersion(mqType),
-			port: this.getDefaultServicePort(mqType),
+			type: mqConfig.type,
+			version: mqConfig.version || this.getDefaultVersion(mqConfig.type),
+			port: mqConfig.port || this.getDefaultServicePort(mqConfig.type),
 		};
 
 		if (!this._config.messageQueues) {
@@ -540,6 +533,48 @@ export class SettingsPanel {
       color: var(--text-muted);
       font-size: 14px;
     }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 400px;
+      max-width: 90%;
+    }
+
+    .modal h2 {
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+
+    .modal .form-group {
+      margin-bottom: 12px;
+    }
+
+    .modal .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body>
@@ -568,7 +603,7 @@ export class SettingsPanel {
         </div>
         <div class="form-group">
           <label>Framework</label>
-          <select id="framework">
+          <select id="framework" onchange="updateOutputType()">
             ${frameworks.map((f) => `<option value="${f}" ${config?.project?.framework === f ? "selected" : ""}>${f}</option>`).join("")}
           </select>
         </div>
@@ -629,7 +664,7 @@ export class SettingsPanel {
     <!-- Databases Section -->
     <div class="section">
       <div class="section-title">Databases</div>
-      <div class="list-container">
+      <div class="list-container" id="databases-list">
         ${
 			databases.length > 0
 				? databases
@@ -654,14 +689,14 @@ export class SettingsPanel {
 		}
       </div>
       <div class="add-buttons">
-        ${dbTypes.map((db) => `<button class="add-btn" onclick="addDatabase('${db}')">+ ${db}</button>`).join("")}
+        ${dbTypes.map((db) => `<button class="add-btn" onclick="showDatabaseModal('${db}')">+ ${db}</button>`).join("")}
       </div>
     </div>
 
     <!-- Message Queues Section -->
     <div class="section">
       <div class="section-title">Message Queues</div>
-      <div class="list-container">
+      <div class="list-container" id="messagequeues-list">
         ${
 			messageQueues.length > 0
 				? messageQueues
@@ -695,7 +730,7 @@ export class SettingsPanel {
     <!-- Services Section -->
     <div class="section">
       <div class="section-title">Additional Services</div>
-      <div class="list-container">
+      <div class="list-container" id="services-list">
         ${
 			services.length > 0
 				? services
@@ -748,7 +783,7 @@ export class SettingsPanel {
 		}
       </div>
       <div class="add-buttons">
-        <button class="add-btn" onclick="addProfileFromInput()">+ Add Profile</button>
+        <button class="add-btn" onclick="showProfileModal()">+ Add Profile</button>
       </div>
     </div>
 
@@ -784,8 +819,69 @@ export class SettingsPanel {
     </div>
   </div>
 
+  <!-- Database Modal -->
+  <div class="modal-overlay" id="databaseModal">
+    <div class="modal">
+      <h2>Add Database</h2>
+      <div class="form-group">
+        <label>Database Type</label>
+        <input type="text" id="dbType" readonly>
+      </div>
+      <div class="form-group">
+        <label>Database Name</label>
+        <input type="text" id="dbName" value="appdb">
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="dbUsername" value="admin">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="dbPassword" value="password">
+      </div>
+      <div class="form-group">
+        <label>Port</label>
+        <input type="number" id="dbPort">
+      </div>
+      <div class="form-group">
+        <label>Version</label>
+        <input type="text" id="dbVersion" value="latest">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="closeDatabaseModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmAddDatabase()">Add Database</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal">
+      <h2>Add Profile</h2>
+      <div class="form-group">
+        <label>Profile Name</label>
+        <input type="text" id="profileName" placeholder="e.g., dev, prod">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="closeProfileModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmAddProfile()">Add Profile</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const vscode = acquireVsCodeApi();
+    let currentDbType = '';
+
+    function updateOutputType() {
+      const framework = document.getElementById('framework').value;
+      const outputTypeSelect = document.getElementById('outputType');
+      
+      // Auto-set output type based on framework
+      if (framework === 'jakarta-ee' || framework === 'java-ee' || framework === 'spring-mvc') {
+        outputTypeSelect.value = 'war';
+      }
+    }
 
     function collectConfig() {
       return {
@@ -837,23 +933,34 @@ export class SettingsPanel {
       vscode.postMessage({ command: 'generate', config: config });
     }
 
-    function addDatabase(type) {
-      const name = prompt('Database name:', 'appdb');
-      if (!name) return;
-      
-      const username = prompt('Username:', 'admin');
-      if (!username) return;
-      
-      const password = prompt('Password:', 'password');
-      if (!password) return;
+    function showDatabaseModal(type) {
+      currentDbType = type;
+      document.getElementById('dbType').value = type;
+      document.getElementById('dbPort').value = getDefaultPort(type);
+      document.getElementById('dbVersion').value = getDefaultVersion(type);
+      document.getElementById('databaseModal').classList.add('active');
+    }
+
+    function closeDatabaseModal() {
+      document.getElementById('databaseModal').classList.remove('active');
+    }
+
+    function confirmAddDatabase() {
+      const dbConfig = {
+        type: currentDbType,
+        name: document.getElementById('dbName').value,
+        username: document.getElementById('dbUsername').value,
+        password: document.getElementById('dbPassword').value,
+        port: parseInt(document.getElementById('dbPort').value),
+        version: document.getElementById('dbVersion').value
+      };
       
       vscode.postMessage({ 
         command: 'addDatabase', 
-        dbType: type,
-        dbName: name,
-        dbUsername: username,
-        dbPassword: password
+        dbConfig: dbConfig
       });
+      
+      closeDatabaseModal();
     }
 
     function removeDatabase(index) {
@@ -861,7 +968,10 @@ export class SettingsPanel {
     }
 
     function addService(type) {
-      vscode.postMessage({ command: 'addService', serviceType: type });
+      vscode.postMessage({ 
+        command: 'addService', 
+        serviceConfig: { type: type }
+      });
     }
 
     function removeService(index) {
@@ -869,22 +979,64 @@ export class SettingsPanel {
     }
 
     function addMessageQueue(type) {
-      vscode.postMessage({ command: 'addMessageQueue', mqType: type });
+      vscode.postMessage({ 
+        command: 'addMessageQueue', 
+        mqConfig: { type: type }
+      });
     }
 
     function removeMessageQueue(index) {
       vscode.postMessage({ command: 'removeMessageQueue', index: index });
     }
 
-    function addProfileFromInput() {
-      const name = prompt('Enter profile name:');
+    function showProfileModal() {
+      document.getElementById('profileModal').classList.add('active');
+    }
+
+    function closeProfileModal() {
+      document.getElementById('profileModal').classList.remove('active');
+    }
+
+    function confirmAddProfile() {
+      const name = document.getElementById('profileName').value;
       if (name) {
         vscode.postMessage({ command: 'addProfile', profileName: name });
+        closeProfileModal();
       }
     }
 
     function removeProfile(index) {
       vscode.postMessage({ command: 'removeProfile', index: index });
+    }
+
+    function getDefaultPort(type) {
+      const ports = {
+        postgresql: 5432,
+        mysql: 3306,
+        mariadb: 3306,
+        mongodb: 27017,
+        redis: 6379,
+        cassandra: 9042,
+        elasticsearch: 9200,
+        neo4j: 7687,
+        h2: 9092
+      };
+      return ports[type] || 5432;
+    }
+
+    function getDefaultVersion(type) {
+      const versions = {
+        postgresql: "16",
+        mysql: "8.4",
+        mariadb: "11",
+        mongodb: "7",
+        redis: "7",
+        cassandra: "5",
+        elasticsearch: "8",
+        neo4j: "5",
+        h2: "latest"
+      };
+      return versions[type] || "latest";
     }
   </script>
 </body>

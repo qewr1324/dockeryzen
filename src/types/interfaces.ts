@@ -278,3 +278,45 @@ export interface UserPreferences {
 	enableCiCd: boolean;
 	enableKubernetes: boolean;
 }
+
+/** Docker configuration */
+export interface DockerConfig {
+	/** Base image */
+	baseImage: string;
+	/** JDK version */
+	jdkVersion: string;
+	/** Application port */
+	port: number;
+	/** JVM options */
+	jvmOptions: string;
+	/** Enable debug */
+	enableDebug: boolean;
+	/** Debug port */
+	debugPort: number;
+	/** Enable health check */
+	enableHealthCheck: boolean;
+	/** Health check endpoint */
+	healthCheckEndpoint: string;
+	/** Output type */
+	outputType: OutputType;
+	/** Database config (single, for backward compatibility) */
+	database?: DatabaseConfig;
+	/** Multiple databases */
+	databases?: DatabaseConfig[];
+	/** Environment variables */
+	envVariables: Record<string, string>;
+	/** Docker compose services */
+	composeServices: ComposeService[];
+	/** Volumes */
+	volumes: Volume[];
+	/** Networks */
+	networks: Network[];
+	/** Resource limits */
+	resourceLimits?: ResourceLimits;
+	/** Generate .env file */
+	generateEnvFile?: boolean;
+	/** Message queues */
+	messageQueues?: MessageQueueConfig[];
+	/** Additional services */
+	additionalServices?: AdditionalServiceConfig[];
+}
