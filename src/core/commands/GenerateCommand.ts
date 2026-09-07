@@ -32,7 +32,6 @@ export class GenerateCommand {
 			await progress.run("Analyzing project...", async (reporter) => {
 				reporter.report({ message: "Detecting build tool...", increment: 10 });
 
-				// const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
 				const analyzer = await AnalyzerFactory.createAnalyzer(workspaceFolder);
 
 				reporter.report({ message: "Analyzing project structure...", increment: 30 });
@@ -40,7 +39,6 @@ export class GenerateCommand {
 
 				reporter.report({ message: "Configuring Docker settings...", increment: 20 });
 
-				// Run wizard
 				const wizard = new Wizard(analysis);
 				const config = await wizard.run();
 

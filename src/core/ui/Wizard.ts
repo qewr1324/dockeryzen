@@ -92,8 +92,8 @@ export class Wizard {
 	private async showWelcome(): Promise<boolean> {
 		const choice = await vscode.window.showQuickPick(
 			[
-				{ label: "$(rocket) Start Wizard", description: "Generate Docker files with interactive configuration" },
-				{ label: "$(zap) Quick Generate", description: "Use default settings and generate immediately" },
+				{ label: "$(list-ordered) Start Wizard", description: "Step-by-step configuration" },
+				{ label: "$(zap) Quick Generate", description: "Use defaults from VS Code settings" },
 				{ label: "$(x) Cancel", description: "Cancel the wizard" },
 			],
 			{
@@ -107,8 +107,8 @@ export class Wizard {
 		}
 
 		if (choice.label.includes("Quick Generate")) {
-			// Skip wizard and use defaults
-			return true;
+			vscode.commands.executeCommand("dockeryzen.quick-generate");
+			return false;
 		}
 
 		return true;
@@ -356,10 +356,8 @@ export class Wizard {
 		this.preferences.enableHealthCheck = enableHealthCheck;
 		this.preferences.imageOptimization = useAlpine ? "alpine" : "slim";
 
-		// اینجا jvmOptions رو تغییر بده که alpine رو شامل بشه
 		let jvmOptions = this.preferences.jvmOptions;
 		if (useAlpine) {
-			// اگه alpine انتخاب شده، اضافه کن
 			if (!jvmOptions.includes("alpine")) {
 				jvmOptions = jvmOptions ? `${jvmOptions} alpine` : "alpine";
 			}

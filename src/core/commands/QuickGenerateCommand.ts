@@ -32,17 +32,18 @@ export class QuickGenerateCommand {
 			await progress.run("Quick generating Docker files...", async (reporter) => {
 				reporter.report({ message: "Analyzing project...", increment: 30 });
 
-				// const analyzer = await ProjectAnalyzer.createAnalyzer(workspaceFolder);
 				const analyzer = await AnalyzerFactory.createAnalyzer(workspaceFolder);
 				const analysis = await analyzer.analyze();
 
-				reporter.report({ message: "Generating files...", increment: 50 });
+				reporter.report({ message: "Generating files with default settings...", increment: 50 });
+
+				const useAlpine = preferences.imageOptimization === "alpine";
 
 				const config: DockerConfig = {
 					baseImage: preferences.jdkImage,
 					jdkVersion: analysis.jdkVersion,
 					port: analysis.port || preferences.port,
-					jvmOptions: preferences.imageOptimization === "alpine" ? `${preferences.jvmOptions} alpine` : preferences.jvmOptions,
+					jvmOptions: useAlpine ? `${preferences.jvmOptions} alpine` : preferences.jvmOptions,
 					enableDebug: preferences.enableDebug,
 					debugPort: 5005,
 					enableHealthCheck: preferences.enableHealthCheck,
@@ -77,7 +78,7 @@ export class QuickGenerateCommand {
 
 				reporter.report({ message: "Files generated!", increment: 20 });
 
-				vscode.window.showInformationMessage("Dockeryzen: Docker files generated successfully!", "Open Files").then((choice) => {
+				vscode.window.showInformationMessage("Dockeryzen: Docker files generated with default settings!", "Open Files").then((choice) => {
 					if (choice === "Open Files") {
 						vscode.workspace.openTextDocument(path.join(outputPath, "Dockerfile")).then((doc) => vscode.window.showTextDocument(doc));
 					}
