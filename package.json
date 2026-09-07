@@ -3,7 +3,7 @@
 	"type": "module",
 	"displayName": "Dockeryzen",
 	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for Java projects for 💠 VSCode.",
-	"version": "0.62.96",
+	"version": "0.66.102",
 	"private": false,
 	"publisher": "GhurbeSABZI",
 	"packageManager": "bun@1.3.14",
@@ -53,6 +53,9 @@
 		"onCommand:dockeryzen.show-logs",
 		"onCommand:dockeryzen.health-check",
 		"onCommand:dockeryzen.generate-dev-container",
+		"onCommand:dockeryzen.openSettings",
+		"onCommand:dockeryzen.generateFromConfig",
+		"onCommand:dockeryzen.openConfigSettings",
 		"onView:dockeryzen.dockerExplorer"
 	],
 	"main": "./dist/extension.cjs",
@@ -111,6 +114,24 @@
 				"title": "Generate Dev Container",
 				"category": "Dockeryzen",
 				"icon": "$(container)"
+			},
+			{
+				"command": "dockeryzen.openSettings",
+				"title": "Open Dockeryzen Settings",
+				"category": "Dockeryzen",
+				"icon": "$(settings)"
+			},
+			{
+				"command": "dockeryzen.generateFromConfig",
+				"title": "Generate from Config File",
+				"category": "Dockeryzen",
+				"icon": "$(file-code)"
+			},
+			{
+				"command": "dockeryzen.openConfigSettings",
+				"title": "Open Config Settings",
+				"category": "Dockeryzen",
+				"icon": "$(settings)"
 			}
 		],
 		"menus": {
@@ -129,6 +150,21 @@
 					"command": "dockeryzen.add-database",
 					"when": "resourceFilename =~ /docker-compose\\.ya?ml/",
 					"group": "dockeryzen@3"
+				},
+				{
+					"command": "dockeryzen.openConfigSettings",
+					"when": "resourceFilename =~ /dockeryzen\\.config\\.(json|yaml|yml|toml)/",
+					"group": "dockeryzen@4"
+				},
+				{
+					"command": "dockeryzen.generateFromConfig",
+					"when": "resourceFilename =~ /dockeryzen\\.config\\.(json|yaml|yml|toml)/",
+					"group": "dockeryzen@5"
+				},
+				{
+					"command": "dockeryzen.openSettings",
+					"when": "explorerResourceIsFolder",
+					"group": "dockeryzen@6"
 				}
 			],
 			"editor/title/context": [
@@ -161,8 +197,14 @@
 		"viewsWelcome": [
 			{
 				"view": "dockeryzen.dockerExplorer",
-				"contents": "No Docker containers found.\n[Generate Docker Files](command:dockeryzen.generate)\n[Analyze Project](command:dockeryzen.analyze)",
+				"contents": "No Docker containers found.\n[Generate Docker Files](command:dockeryzen.generate)\n[Analyze Project](command:dockeryzen.analyze)\n[Open Settings](command:dockeryzen.openSettings)",
 				"when": "!dockeryzen.hasContainers"
+			}
+		],
+		"jsonValidation": [
+			{
+				"fileMatch": "dockeryzen.config.json",
+				"url": "./schemas/dockeryzen-config.schema.json"
 			}
 		],
 		"configuration": {
@@ -265,18 +307,20 @@
 		"ext:publish": "vsce publish --no-dependencies"
 	},
 	"dependencies": {
+		"@iarna/toml": "^2.2.5",
+		"dockerode": "^4.0.2",
 		"fs-extra": "^11.2.0",
-		"xml2js": "^0.6.2",
 		"handlebars": "^4.7.8",
-		"dockerode": "^4.0.2"
+		"js-yaml": "^5.4.1",
+		"xml2js": "^0.6.2"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.85.0",
-		"@types/node": "^20.0.0",
-		"@types/fs-extra": "^11.0.4",
-		"typescript": "^5.3.0",
 		"@antfu/eslint-config": "^6.7.3",
 		"@antfu/ni": "^28.0.0",
+		"@types/fs-extra": "^11.0.4",
+		"@types/js-yaml": "^4.0.9",
+		"@types/node": "^20.0.0",
+		"@types/vscode": "^1.85.0",
 		"@vscode/vsce": "^3.7.1",
 		"bumpp": "^10.3.2",
 		"eslint": "^9.39.2",
@@ -284,6 +328,7 @@
 		"reactive-vscode": "^1.0.0-beta.2",
 		"taze": "^19.9.2",
 		"tsdown": "^0.19.0-beta.3",
+		"typescript": "^5.3.0",
 		"vite": "^7.3.0",
 		"vitest": "^4.0.16",
 		"vscode-ext-gen": "^1.5.1",

@@ -151,8 +151,18 @@ networks:
 		if (foundDbs.length > 0) {
 			envContent += "# Database Configuration\n";
 			for (const db of foundDbs) {
-				const dbTypeEnum = db.toUpperCase() as DatabaseType;
-				const port = this.getPort(dbTypeEnum);
+				const portMap: Record<string, number> = {
+					postgresql: 5432,
+					mysql: 3306,
+					mariadb: 3306,
+					mongodb: 27017,
+					redis: 6379,
+					cassandra: 9042,
+					elasticsearch: 9200,
+					neo4j: 7687,
+				};
+				const port = portMap[db] || 5432;
+
 				envContent += `SPRING_DATASOURCE_URL=jdbc:${db}://${db}:${port}/${dbName}\n`;
 				envContent += `SPRING_DATASOURCE_USERNAME=${dbUser}\n`;
 				envContent += `SPRING_DATASOURCE_PASSWORD=${dbPass}\n`;

@@ -1,0 +1,229 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Dockeryzen Configuration",
+	"type": "object",
+	"properties": {
+		"version": {
+			"type": "string",
+			"default": "1.0.0"
+		},
+		"project": {
+			"type": "object",
+			"properties": {
+				"name": {
+					"type": "string",
+					"description": "Project name"
+				},
+				"type": {
+					"type": "string",
+					"enum": ["maven", "gradle"],
+					"description": "Build tool"
+				},
+				"framework": {
+					"type": "string",
+					"enum": ["spring-boot", "jakarta-ee", "quarkus", "micronaut", "vertx", "none"],
+					"description": "Framework"
+				},
+				"jdkVersion": {
+					"type": "string",
+					"description": "JDK version"
+				},
+				"jdkVendor": {
+					"type": "string",
+					"enum": ["eclipse-temurin", "amazon-corretto", "openjdk", "oracle-jdk", "graalvm", "liberica", "redhat-openjdk"],
+					"description": "JDK vendor"
+				},
+				"port": {
+					"type": "number",
+					"description": "Application port"
+				},
+				"outputType": {
+					"type": "string",
+					"enum": ["jar", "war", "native"],
+					"description": "Output type"
+				}
+			}
+		},
+		"docker": {
+			"type": "object",
+			"properties": {
+				"baseImage": {
+					"type": "string",
+					"description": "Base image"
+				},
+				"useAlpine": {
+					"type": "boolean",
+					"default": false,
+					"description": "Use Alpine variant"
+				},
+				"jvmOptions": {
+					"type": "string",
+					"description": "JVM options"
+				},
+				"enableDebug": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable debug mode"
+				},
+				"debugPort": {
+					"type": "number",
+					"default": 5005,
+					"description": "Debug port"
+				},
+				"enableHealthCheck": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable health check"
+				},
+				"healthCheckEndpoint": {
+					"type": "string",
+					"default": "/actuator/health",
+					"description": "Health check endpoint"
+				},
+				"resourceLimits": {
+					"type": "object",
+					"properties": {
+						"cpus": {
+							"type": "string",
+							"description": "CPU limit (e.g., '0.5')"
+						},
+						"memory": {
+							"type": "string",
+							"description": "Memory limit (e.g., '512M')"
+						}
+					}
+				}
+			}
+		},
+		"databases": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"type": "string",
+						"enum": ["postgresql", "mysql", "mariadb", "mongodb", "redis", "cassandra", "elasticsearch", "neo4j", "h2"],
+						"description": "Database type"
+					},
+					"version": {
+						"type": "string",
+						"description": "Database version"
+					},
+					"port": {
+						"type": "number",
+						"description": "Database port"
+					},
+					"name": {
+						"type": "string",
+						"description": "Database name"
+					},
+					"username": {
+						"type": "string",
+						"description": "Database username"
+					},
+					"password": {
+						"type": "string",
+						"description": "Database password"
+					}
+				},
+				"required": ["type"]
+			}
+		},
+		"messageQueues": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"type": "string",
+						"enum": ["kafka", "rabbitmq", "activemq"],
+						"description": "Message queue type"
+					},
+					"version": {
+						"type": "string",
+						"description": "Version"
+					},
+					"port": {
+						"type": "number",
+						"description": "Port"
+					}
+				},
+				"required": ["type"]
+			}
+		},
+		"services": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"type": "string",
+						"enum": ["nginx", "grafana", "prometheus", "keycloak", "minio"],
+						"description": "Service type"
+					},
+					"version": {
+						"type": "string",
+						"description": "Version"
+					},
+					"port": {
+						"type": "number",
+						"description": "Port"
+					}
+				},
+				"required": ["type"]
+			}
+		},
+		"envFile": {
+			"type": "boolean",
+			"default": true,
+			"description": "Generate .env file"
+		},
+		"profiles": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"description": "Spring profiles"
+		},
+		"ciCd": {
+			"type": "object",
+			"properties": {
+				"github": {
+					"type": "boolean",
+					"default": false,
+					"description": "Generate GitHub Actions"
+				},
+				"gitlab": {
+					"type": "boolean",
+					"default": false,
+					"description": "Generate GitLab CI"
+				}
+			}
+		},
+		"kubernetes": {
+			"type": "object",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Generate Kubernetes manifests"
+				},
+				"replicas": {
+					"type": "number",
+					"default": 3,
+					"description": "Number of replicas"
+				}
+			}
+		},
+		"devContainer": {
+			"type": "object",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Generate dev container"
+				}
+			}
+		}
+	}
+}
