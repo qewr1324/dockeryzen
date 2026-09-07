@@ -16,69 +16,115 @@ export class FrameworkDetector {
 		const gradleKtsPath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle.kts");
 
 		let buildContent = "";
+		let isPom = false;
 
 		if (await fs.pathExists(pomPath)) {
 			buildContent = await fs.readFile(pomPath, "utf8");
+			isPom = true;
 		} else if (await fs.pathExists(gradlePath)) {
 			buildContent = await fs.readFile(gradlePath, "utf8");
 		} else if (await fs.pathExists(gradleKtsPath)) {
 			buildContent = await fs.readFile(gradleKtsPath, "utf8");
 		}
 
-		if (buildContent.includes("spring-boot") || buildContent.includes("spring-boot-starter") || buildContent.includes("SpringBootApplication")) {
+		buildContent = this.removeComments(buildContent, isPom);
+
+		const dependencies = this.extractDependencies(buildContent, isPom);
+
+		return this.detectFrameworkFromDependencies(dependencies, buildContent);
+	}
+
+	private removeComments(content: string, isPom: boolean): string {
+		if (isPom) {
+			content = content.replace(/<!--[\s\S]*?-->/g, "");
+		} else {
+			content = content.replace(/\/\/.*$/gm, "");
+			content = content.replace(/\/\*[\s\S]*?\*\//g, "");
+		}
+		return content;
+	}
+
+	private extractDependencies(content: string, isPom: boolean): string[] {
+		const dependencies: string[] = [];
+
+		if (isPom) {
+			const dependencyRegex = /<dependency>[\s\S]*?<groupId>([^<]+)<\/groupId>[\s\S]*?<artifactId>([^<]+)<\/artifactId>[\s\S]*?<\/dependency>/g;
+			let match;
+			while ((match = dependencyRegex.exec(content)) !== null) {
+				dependencies.push(`${match[1]}:${match[2]}`);
+			}
+
+			const pluginRegex = /<plugin>[\s\S]*?<groupId>([^<]+)<\/groupId>[\s\S]*?<artifactId>([^<]+)<\/artifactId>[\s\S]*?<\/plugin>/g;
+			while ((match = pluginRegex.exec(content)) !== null) {
+				dependencies.push(`plugin:${match[1]}:${match[2]}`);
+			}
+		} else {
+			const dependencyRegex = /(?:implementation|api|compileOnly|runtimeOnly|testImplementation|compile|runtime)\s*\(?\s*['"]([^'"]+)['"]/g;
+			let match;
+			while ((match = dependencyRegex.exec(content)) !== null) {
+				dependencies.push(match[1]);
+			}
+
+			const pluginRegex = /(?:id|apply\s+plugin)\s*[\(\s]*['"]([^'"]+)['"]/g;
+			while ((match = pluginRegex.exec(content)) !== null) {
+				dependencies.push(`plugin:${match[1]}`);
+			}
+		}
+
+		return dependencies;
+	}
+
+	private detectFrameworkFromDependencies(dependencies: string[], buildContent: string): Framework {
+		if (dependencies.some((dep) => dep.includes("spring-boot") || dep.includes("spring-boot-starter") || dep.includes("spring-boot-maven-plugin") || dep.includes("org.springframework.boot"))) {
 			return Framework.SPRING_BOOT;
 		}
 
-		if (buildContent.includes("quarkus")) {
+		if (dependencies.some((dep) => dep.includes("quarkus") || dep.includes("io.quarkus"))) {
 			return Framework.QUARKUS;
 		}
 
-		if (buildContent.includes("micronaut")) {
+		if (dependencies.some((dep) => dep.includes("micronaut") || dep.includes("io.micronaut"))) {
 			return Framework.MICRONAUT;
 		}
 
-		if (buildContent.includes("vertx")) {
+		if (dependencies.some((dep) => dep.includes("vertx") || dep.includes("io.vertx"))) {
 			return Framework.VERTX;
 		}
 
-		if (buildContent.includes("play-framework") || buildContent.includes("com.typesafe.play")) {
+		if (dependencies.some((dep) => dep.includes("play-framework") || dep.includes("com.typesafe.play"))) {
 			return Framework.PLAY;
 		}
 
-		if (buildContent.includes("dropwizard")) {
+		if (dependencies.some((dep) => dep.includes("dropwizard") || dep.includes("io.dropwizard"))) {
 			return Framework.DROPWIZARD;
 		}
 
-		if (buildContent.includes("spring-webmvc") || buildContent.includes("spring-web")) {
+		if (dependencies.some((dep) => dep.includes("spring-webmvc") || dep.includes("spring-web") || dep.includes("org.springframework:spring-webmvc"))) {
 			return Framework.SPRING_MVC;
 		}
 
-		if (buildContent.includes("jakarta") || buildContent.includes("jakarta-ee")) {
+		if (dependencies.some((dep) => dep.includes("jakarta") || dep.includes("jakarta-ee") || dep.includes("jakarta.servlet"))) {
 			return Framework.JAKARTA_EE;
 		}
 
-		if (buildContent.includes("javax") || buildContent.includes("java-ee")) {
+		if (dependencies.some((dep) => dep.includes("javax") || dep.includes("java-ee") || dep.includes("javax.servlet"))) {
 			return Framework.JAVA_EE;
 		}
 
-		if (buildContent.includes("hibernate") || buildContent.includes("jpa") || buildContent.includes("spring-data-jpa")) {
+		if (dependencies.some((dep) => dep.includes("hibernate") || dep.includes("jpa") || dep.includes("spring-data-jpa"))) {
 			return Framework.JPA_HIBERNATE;
 		}
 
-		if (buildContent.includes("struts")) {
+		if (dependencies.some((dep) => dep.includes("struts") || dep.includes("org.apache.struts"))) {
 			return Framework.STRUTS;
 		}
 
-		if (buildContent.includes("jsf") || buildContent.includes("faces")) {
+		if (dependencies.some((dep) => dep.includes("jsf") || dep.includes("faces") || dep.includes("javax.faces"))) {
 			return Framework.JSF;
 		}
 
-		if (buildContent.includes("jax-rs") || buildContent.includes("jersey") || buildContent.includes("resteasy")) {
+		if (dependencies.some((dep) => dep.includes("jax-rs") || dep.includes("jersey") || dep.includes("resteasy") || dep.includes("javax.ws.rs"))) {
 			return Framework.JAX_RS;
-		}
-
-		if (buildContent.includes("servlet") || buildContent.includes("web.xml")) {
-			return Framework.JAKARTA_EE;
 		}
 
 		return Framework.NONE;

@@ -9,20 +9,15 @@ export class EnvGenerator {
 
 		if (config.databases && config.databases.length > 0) {
 			envVars.push(`# Database Configuration`);
-			for (const db of config.databases) {
+			for (let i = 0; i < config.databases.length; i++) {
+				const db = config.databases[i];
 				if (db.type !== DatabaseType.NONE) {
+					const serviceName = i === 0 ? db.type : `${db.type}-${i + 1}`;
 					envVars.push(`# ${db.type.toUpperCase()} Database`);
-					envVars.push(`SPRING_DATASOURCE_URL_${db.type.toUpperCase()}=jdbc:${db.type}://${db.type}:${db.port}/${db.name}`);
-					envVars.push(`SPRING_DATASOURCE_USERNAME_${db.type.toUpperCase()}=${db.username}`);
-					envVars.push(`SPRING_DATASOURCE_PASSWORD_${db.type.toUpperCase()}=${db.password}`);
 
-					if (config.databases && config.databases[0] === db) {
-						envVars.push(`SPRING_DATASOURCE_URL=jdbc:${db.type}://${db.type}:${db.port}/${db.name}`);
-						envVars.push(`SPRING_DATASOURCE_USERNAME=${db.username}`);
-						envVars.push(`SPRING_DATASOURCE_PASSWORD=${db.password}`);
-					}
+					this.generateDatabaseEnvVars(envVars, db, i === 0, serviceName);
 
-					envVars.push(`${db.type.toUpperCase()}_HOST=${db.type}`);
+					envVars.push(`${db.type.toUpperCase()}_HOST=${serviceName}`);
 					envVars.push(`${db.type.toUpperCase()}_PORT=${db.port}`);
 					envVars.push(`${db.type.toUpperCase()}_DB=${db.name}`);
 					envVars.push(`${db.type.toUpperCase()}_USER=${db.username}`);
@@ -32,27 +27,28 @@ export class EnvGenerator {
 			}
 		} else if (config.database && config.database.type !== DatabaseType.NONE) {
 			envVars.push(`# Database Configuration`);
-			envVars.push(`SPRING_DATASOURCE_URL=jdbc:${config.database.type}://${config.database.type}:${config.database.port}/${config.database.name}`);
-			envVars.push(`SPRING_DATASOURCE_USERNAME=${config.database.username}`);
-			envVars.push(`SPRING_DATASOURCE_PASSWORD=${config.database.password}`);
+			this.generateDatabaseEnvVars(envVars, config.database, true, config.database.type);
 			envVars.push(``);
 		}
 
 		if (config.messageQueues && config.messageQueues.length > 0) {
 			envVars.push(`# Message Queue Configuration`);
-			for (const mq of config.messageQueues) {
+			for (let i = 0; i < config.messageQueues.length; i++) {
+				const mq = config.messageQueues[i];
+				const serviceName = i === 0 ? mq.type : `${mq.type}-${i + 1}`;
+
 				switch (mq.type) {
 					case "rabbitmq":
-						envVars.push(`SPRING_RABBITMQ_HOST=rabbitmq`);
+						envVars.push(`SPRING_RABBITMQ_HOST=${serviceName}`);
 						envVars.push(`SPRING_RABBITMQ_PORT=${mq.port || 5672}`);
-						envVars.push(`SPRING_RABBITMQ_USERNAME=guest`);
-						envVars.push(`SPRING_RABBITMQ_PASSWORD=guest`);
+						envVars.push(`SPRING_RABBITMQ_USERNAME=${mq.username || "guest"}`);
+						envVars.push(`SPRING_RABBITMQ_PASSWORD=${mq.password || "guest"}`);
 						break;
 					case "kafka":
-						envVars.push(`SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:${mq.port || 9092}`);
+						envVars.push(`SPRING_KAFKA_BOOTSTRAP_SERVERS=${serviceName}:${mq.port || 9092}`);
 						break;
 					case "activemq":
-						envVars.push(`SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:${mq.port || 61616}`);
+						envVars.push(`SPRING_ACTIVEMQ_BROKER_URL=tcp://${serviceName}:${mq.port || 61616}`);
 						break;
 				}
 			}
@@ -85,5 +81,70 @@ export class EnvGenerator {
 		envVars.push(`# Add .env to .gitignore immediately.`);
 
 		return envVars.join("\n");
+	}
+
+	private generateDatabaseEnvVars(envVars: string[], db: any, isPrimary: boolean, serviceName: string): void {
+		const host = serviceName;
+
+		switch (db.type) {
+			case "postgresql":
+				envVars.push(`SPRING_DATASOURCE_URL=jdbc:postgresql://${host}:${db.port}/${db.name}`);
+				envVars.push(`SPRING_DATASOURCE_USERNAME=${db.username}`);
+				envVars.push(`SPRING_DATASOURCE_PASSWORD=${db.password}`);
+				if (isPrimary) {
+					envVars.push(`SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver`);
+				}
+				break;
+			case "mysql":
+				envVars.push(`SPRING_DATASOURCE_URL=jdbc:mysql://${host}:${db.port}/${db.name}?useSSL=false&serverTimezone=UTC`);
+				envVars.push(`SPRING_DATASOURCE_USERNAME=${db.username}`);
+				envVars.push(`SPRING_DATASOURCE_PASSWORD=${db.password}`);
+				if (isPrimary) {
+					envVars.push(`SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`);
+				}
+				break;
+			case "mariadb":
+				envVars.push(`SPRING_DATASOURCE_URL=jdbc:mariadb://${host}:${db.port}/${db.name}`);
+				envVars.push(`SPRING_DATASOURCE_USERNAME=${db.username}`);
+				envVars.push(`SPRING_DATASOURCE_PASSWORD=${db.password}`);
+				if (isPrimary) {
+					envVars.push(`SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.mariadb.jdbc.Driver`);
+				}
+				break;
+			case "mongodb":
+				envVars.push(`SPRING_DATA_MONGODB_URI=mongodb://${db.username}:${db.password}@${host}:${db.port}/${db.name}?authSource=admin`);
+				envVars.push(`SPRING_DATA_MONGODB_DATABASE=${db.name}`);
+				break;
+			case "redis":
+				envVars.push(`SPRING_DATA_REDIS_HOST=${host}`);
+				envVars.push(`SPRING_DATA_REDIS_PORT=${db.port}`);
+				if (db.password && db.password !== "password") {
+					envVars.push(`SPRING_DATA_REDIS_PASSWORD=${db.password}`);
+				}
+				break;
+			case "cassandra":
+				envVars.push(`SPRING_DATA_CASSANDRA_CONTACT_POINTS=${host}`);
+				envVars.push(`SPRING_DATA_CASSANDRA_PORT=${db.port}`);
+				envVars.push(`SPRING_DATA_CASSANDRA_KEYSPACE_NAME=${db.name}`);
+				envVars.push(`SPRING_DATA_CASSANDRA_USERNAME=${db.username}`);
+				envVars.push(`SPRING_DATA_CASSANDRA_PASSWORD=${db.password}`);
+				break;
+			case "elasticsearch":
+				envVars.push(`SPRING_ELASTICSEARCH_URIS=http://${host}:${db.port}`);
+				envVars.push(`SPRING_ELASTICSEARCH_USERNAME=${db.username}`);
+				envVars.push(`SPRING_ELASTICSEARCH_PASSWORD=${db.password}`);
+				break;
+			case "neo4j":
+				envVars.push(`SPRING_NEO4J_URI=bolt://${host}:${db.port}`);
+				envVars.push(`SPRING_NEO4J_AUTHENTICATION_USERNAME=${db.username}`);
+				envVars.push(`SPRING_NEO4J_AUTHENTICATION_PASSWORD=${db.password}`);
+				break;
+			case "h2":
+				envVars.push(`SPRING_DATASOURCE_URL=jdbc:h2:mem:${db.name}`);
+				envVars.push(`SPRING_DATASOURCE_USERNAME=${db.username}`);
+				envVars.push(`SPRING_DATASOURCE_PASSWORD=${db.password}`);
+				envVars.push(`SPRING_H2_CONSOLE_ENABLED=true`);
+				break;
+		}
 	}
 }

@@ -7,7 +7,7 @@ import { ComposeGenerator } from "./ComposeGenerator.js";
 import { IgnoreGenerator } from "./IgnoreGenerator.js";
 import { EnvGenerator } from "./EnvGenerator.js";
 import { DevContainerGenerator } from "./DevContainerGenerator.js";
-import type { DockerConfig, DatabaseConfig } from "../../types/interfaces.js";
+import type { DockerConfig, DatabaseConfig, AdditionalServiceConfig } from "../../types/interfaces.js";
 import { DatabaseType, OutputType } from "../../types/interfaces.js";
 
 export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder, config: any): Promise<void> {
@@ -22,11 +22,14 @@ export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder
 				type: db.type as DatabaseType,
 				version: db.version || "latest",
 				port: db.port || getDefaultPort(db.type),
+				externalPort: db.externalPort,
 				name: db.name || "appdb",
 				username: db.username || "admin",
 				password: db.password || "password",
 				host: db.host || db.type,
 				useAlpine: db.useAlpine || false,
+				connectionMode: db.connectionMode || "standard",
+				customUrl: db.customUrl,
 			});
 		}
 
@@ -40,7 +43,35 @@ export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder
 			}
 		}
 
-		const realServices = services.filter((svc: any) => ["nginx", "grafana", "prometheus", "keycloak", "minio"].includes(svc.type));
+		const additionalServices: AdditionalServiceConfig[] = [];
+		for (const svc of services) {
+			if (["nginx", "grafana", "prometheus", "keycloak", "minio"].includes(svc.type)) {
+				const serviceConfig: AdditionalServiceConfig = {
+					type: svc.type,
+					version: svc.version || getDefaultServiceVersion(svc.type),
+					port: svc.port || getDefaultServicePort(svc.type),
+					externalPort: svc.externalPort || svc.port || getDefaultServicePort(svc.type),
+					useAlpine: svc.useAlpine || false,
+				};
+
+				switch (svc.type) {
+					case "keycloak":
+						serviceConfig.username = svc.username || "admin";
+						serviceConfig.password = svc.password || "admin";
+						break;
+					case "minio":
+						serviceConfig.username = svc.username || "minioadmin";
+						serviceConfig.password = svc.password || "minioadmin";
+						break;
+					case "grafana":
+						serviceConfig.username = svc.username || "admin";
+						serviceConfig.password = svc.password || "admin";
+						break;
+				}
+
+				additionalServices.push(serviceConfig);
+			}
+		}
 
 		const dockerConfig: DockerConfig = {
 			baseImage: config.docker?.baseImage || config.project?.jdkVendor || "eclipse-temurin",
@@ -60,7 +91,7 @@ export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder
 			networks: [],
 			generateEnvFile: config.envFile !== false,
 			messageQueues: messageQueues,
-			additionalServices: realServices,
+			additionalServices: additionalServices.length > 0 ? additionalServices : undefined,
 			useAlpine: config.docker?.useAlpine || false,
 		};
 
@@ -110,6 +141,28 @@ export async function generateFromConfig(workspaceFolder: vscode.WorkspaceFolder
 	} catch (error) {
 		vscode.window.showErrorMessage(`❌ Failed to generate from config: ${error}`);
 	}
+}
+
+function getDefaultServicePort(type: string): number {
+	const ports: Record<string, number> = {
+		nginx: 80,
+		grafana: 3000,
+		prometheus: 9090,
+		keycloak: 8080,
+		minio: 9000,
+	};
+	return ports[type] || 8080;
+}
+
+function getDefaultServiceVersion(type: string): string {
+	const versions: Record<string, string> = {
+		nginx: "1.27",
+		grafana: "11.2.0",
+		prometheus: "v2.54.1",
+		keycloak: "25.0.4",
+		minio: "latest",
+	};
+	return versions[type] || "latest";
 }
 
 function getDefaultPort(dbType: string): number {

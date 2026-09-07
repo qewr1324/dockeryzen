@@ -34,23 +34,71 @@ export abstract class ProjectAnalyzer {
 			const pomPath = path.join(this.workspaceFolder.uri.fsPath, "pom.xml");
 			if (await fs.pathExists(pomPath)) {
 				const content = await fs.readFile(pomPath, "utf8");
-				const versionMatch = content.match(/<java.version>([^<]+)<\/java.version>|<maven.compiler.source>([^<]+)<\/maven.compiler.source>/);
-				if (versionMatch) {
-					jdkVersion = versionMatch[1] || versionMatch[2];
+
+				const patterns = [/<java\.version>([^<]+)<\/java\.version>/, /<maven\.compiler\.source>([^<]+)<\/maven\.compiler\.source>/, /<maven\.compiler\.release>([^<]+)<\/maven\.compiler\.release>/, /<source>([^<]+)<\/source>/, /<jdk\.version>([^<]+)<\/jdk\.version>/];
+
+				for (const pattern of patterns) {
+					const match = content.match(pattern);
+					if (match && match[1]) {
+						jdkVersion = this.normalizeJdkVersion(match[1].trim());
+						break;
+					}
+				}
+
+				if (jdkVersion === "17") {
+					const propertiesMatch = content.match(/<properties>([\s\S]*?)<\/properties>/);
+					if (propertiesMatch) {
+						const propertiesContent = propertiesMatch[1];
+						const versionMatch = propertiesContent.match(/<([^>]*version[^>]*)>([^<]+)<\//);
+						if (versionMatch && versionMatch[2]) {
+							jdkVersion = this.normalizeJdkVersion(versionMatch[2].trim());
+						}
+					}
 				}
 			}
 		} else if (buildTool === BuildTool.GRADLE) {
 			const gradlePath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle");
+			const gradleKtsPath = path.join(this.workspaceFolder.uri.fsPath, "build.gradle.kts");
+
+			let content = "";
 			if (await fs.pathExists(gradlePath)) {
-				const content = await fs.readFile(gradlePath, "utf8");
-				const versionMatch = content.match(/sourceCompatibility\s*=\s*['"]?(\d+)['"]?|JavaVersion\.VERSION_(\d+)/);
-				if (versionMatch) {
-					jdkVersion = versionMatch[1] || versionMatch[2];
+				content = await fs.readFile(gradlePath, "utf8");
+			} else if (await fs.pathExists(gradleKtsPath)) {
+				content = await fs.readFile(gradleKtsPath, "utf8");
+			}
+
+			if (content) {
+				const patterns = [/sourceCompatibility\s*=\s*['"]?(\d+)['"]?/, /JavaVersion\.VERSION_(\d+)/, /targetCompatibility\s*=\s*['"]?(\d+)['"]?/, /jvmTarget\s*=\s*JavaVersion\.VERSION_(\d+)/];
+
+				for (const pattern of patterns) {
+					const match = content.match(pattern);
+					if (match && match[1]) {
+						jdkVersion = this.normalizeJdkVersion(match[1].trim());
+						break;
+					}
 				}
 			}
 		}
 
 		return jdkVersion;
+	}
+
+	private normalizeJdkVersion(version: string): string {
+		version = version.trim();
+
+		if (version.startsWith("1.")) {
+			version = version.substring(2);
+		}
+
+		version = version.split(".")[0];
+
+		version = version.replace(/[^0-9]/g, "");
+
+		if (!version || version === "") {
+			return "17";
+		}
+
+		return version;
 	}
 
 	protected async detectPort(): Promise<number> {

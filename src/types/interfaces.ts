@@ -214,6 +214,10 @@ export interface AdditionalServiceConfig {
 	externalPort?: number;
 	/** Use Alpine variant */
 	useAlpine?: boolean;
+	/** Username (for services that require it) */
+	username?: string;
+	/** Password (for services that require it) */
+	password?: string;
 }
 
 /** Docker Compose service */

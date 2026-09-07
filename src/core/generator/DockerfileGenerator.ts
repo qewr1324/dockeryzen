@@ -33,6 +33,16 @@ export class DockerfileGenerator {
 
 		const baseImage = baseImages[jdkVendor] || baseImages["eclipse-temurin"];
 
+		// اصلاح نسخه برای Oracle JDK
+		if (jdkVendor === "oracle-jdk") {
+			// Oracle Linux فقط نسخه‌های 8، 11، 17، 21 رو داره
+			const supportedVersions = ["8", "11", "17", "21"];
+			if (!supportedVersions.includes(version)) {
+				version = "21";
+			}
+		}
+
+		// اصلاح نسخه برای RedHat OpenJDK
 		if (jdkVendor === "redhat-openjdk") {
 			const supportedVersions = ["8", "11", "17", "21"];
 			if (!supportedVersions.includes(version)) {
@@ -44,9 +54,13 @@ export class DockerfileGenerator {
 			return `${baseImage}:${version}`;
 		}
 
-		if (optimization === "alpine" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
+		// Oracle JDK و RedHat OpenJDK تصویر Alpine/Slim ندارن
+		const supportsAlpine = jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk";
+		const supportsSlim = jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk" && jdkVendor !== "graalvm";
+
+		if (optimization === "alpine" && supportsAlpine) {
 			return `${baseImage}:${version}-alpine`;
-		} else if (optimization === "slim" && jdkVendor !== "oracle-jdk" && jdkVendor !== "redhat-openjdk") {
+		} else if (optimization === "slim" && supportsSlim) {
 			return `${baseImage}:${version}-slim`;
 		}
 
@@ -65,7 +79,17 @@ export class DockerfileGenerator {
 		const jvmOptions = cleanJvmOptions;
 
 		const debugPort = config.debugPort || 5005;
-		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort} ` : "";
+
+		const entrypointArgs = ["java"];
+		if (jvmOptions) {
+			entrypointArgs.push(...jvmOptions.split(" ").filter((arg) => arg.length > 0));
+		}
+		if (config.enableDebug) {
+			entrypointArgs.push(`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}`);
+		}
+		entrypointArgs.push("-jar", "app.jar");
+
+		const entrypointString = entrypointArgs.map((arg) => `"${arg}"`).join(", ");
 
 		let dockerfile = `# Build stage
 FROM ${buildImage} AS build
@@ -108,7 +132,7 @@ EXPOSE ${debugPort}
 `
 		: ""
 }${
-			config.enableHealthCheck
+			config.enableHealthCheck !== false
 				? `# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD wget --no-verbose --tries=1 --spider http://localhost:${port}${config.healthCheckEndpoint || "/actuator/health"} || exit 1
@@ -122,7 +146,7 @@ ENV JAVA_OPTS="${jvmOptions}"
 USER appuser
 
 # Start the application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS ${debugOptions}-jar app.jar"]
+ENTRYPOINT [${entrypointString}]
 
 # Add metadata
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Application"}"
@@ -147,11 +171,10 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 		const jvmOptions = cleanJvmOptions;
 
 		const debugPort = config.debugPort || 5005;
-		const debugOptions = config.enableDebug ? `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort} ` : "";
 
 		const tomcatImage = this.getTomcatImage(analysis, config, canUseAlpine);
 
-		return `# Build stage
+		let dockerfile = `# Build stage
 FROM ${buildImage} AS build
 
 WORKDIR /app
@@ -175,6 +198,9 @@ FROM ${tomcatImage}
 
 WORKDIR /usr/local/tomcat/webapps
 
+# Remove default applications
+RUN rm -rf /usr/local/tomcat/webapps/*
+
 # Copy WAR file
 COPY --from=build /app/target/*.war ROOT.war
 
@@ -188,13 +214,17 @@ EXPOSE ${debugPort}
 
 `
 		: ""
-}# Health check
+}${
+			config.enableHealthCheck !== false
+				? `# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD wget --no-verbose --tries=1 --spider http://localhost:${port}/ || exit 1
 
-# Set environment variables
-ENV CATALINA_OPTS="${jvmOptions} ${debugOptions}"
-ENV JAVA_OPTS="${jvmOptions} ${debugOptions}"
+`
+				: ""
+		}# Set environment variables
+ENV CATALINA_OPTS="${jvmOptions}"
+ENV JAVA_OPTS="${jvmOptions}"
 
 # Add metadata
 LABEL org.opencontainers.image.title="${analysis.mainClass || "Java Web Application"}"
@@ -202,6 +232,8 @@ LABEL org.opencontainers.image.description="Dockerized Java web application"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 `;
+
+		return dockerfile;
 	}
 
 	private getTomcatImage(analysis: ProjectAnalysis, config: DockerConfig, useAlpine: boolean): string {
@@ -220,8 +252,12 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 
 		const variant = tomcatVariants[vendor] || "temurin";
 
-		if (vendor === "redhat-openjdk" && ["25", "24", "23", "22"].includes(jdkVersion)) {
-			jdkVersion = "21";
+		// اصلاح نسخه‌های نامعتبر برای Oracle و RedHat
+		if (vendor === "oracle-jdk" || vendor === "redhat-openjdk") {
+			const supportedVersions = ["8", "11", "17", "21"];
+			if (!supportedVersions.includes(jdkVersion)) {
+				jdkVersion = "21";
+			}
 		}
 
 		const canUseAlpine = useAlpine && vendor !== "oracle-jdk" && vendor !== "redhat-openjdk" && vendor !== "graalvm";
@@ -236,7 +272,7 @@ LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 	public generateNativeDockerfile(analysis: ProjectAnalysis, config: DockerConfig): string {
 		const port = config.port || analysis.port || 8080;
 
-		return `# Build stage - GraalVM Native Image
+		let dockerfile = `# Build stage - GraalVM Native Image
 FROM ghcr.io/graalvm/native-image:${analysis.jdkVersion} AS build
 
 WORKDIR /app
@@ -272,11 +308,15 @@ COPY --from=build --chown=appuser:appuser /app/target/*-runner app
 # Expose port
 EXPOSE ${port}
 
-# Health check
+${
+	config.enableHealthCheck !== false
+		? `# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \\
   CMD wget --no-verbose --tries=1 --spider http://localhost:${port}/ || exit 1
 
-# Run as non-root user
+`
+		: ""
+}# Run as non-root user
 USER appuser
 
 # Start the application
@@ -288,5 +328,7 @@ LABEL org.opencontainers.image.description="Dockerized Java native application"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.created="${new Date().toISOString()}"
 `;
+
+		return dockerfile;
 	}
 }
