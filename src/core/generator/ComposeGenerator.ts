@@ -165,8 +165,16 @@ export class ComposeGenerator {
 				return ["CMD-SHELL", "mongosh --eval \"db.adminCommand('ping')\""];
 			case DatabaseType.REDIS:
 				return ["CMD", "redis-cli", "ping"];
+			case DatabaseType.CASSANDRA:
+				return ["CMD-SHELL", "cqlsh -e 'DESCRIBE system'"];
+			case DatabaseType.ELASTICSEARCH:
+				return ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"];
+			case DatabaseType.NEO4J:
+				return ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j 'RETURN 1'"];
+			case DatabaseType.H2:
+				return ["CMD-SHELL", "echo 'healthy'"];
 			default:
-				return ["CMD-SHELL", 'echo "healthy"'];
+				return ["CMD-SHELL", "echo 'healthy'"];
 		}
 	}
 
