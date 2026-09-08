@@ -212,6 +212,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
 		const server = this.config.server || "tomcat";
 		const serverImage = this.getServerImage(server);
 		const healthCheck = this.config.enableHealthCheck ? this.getJavaHealthCheck() : "";
+		const debugPort = this.config.enableDebug ? "# Expose debug port\nEXPOSE 5005\n" : "";
+		const startCommand = server === "jetty" ? '["jetty.sh", "run"]' : '["catalina.sh", "run"]';
 
 		return `# Build stage
 ${this.getJavaBuildStage()}
@@ -220,16 +222,17 @@ ${this.getJavaBuildStage()}
 FROM ${serverImage}
 
 # Remove default applications
-RUN rm -rf /usr/local/tomcat/webapps/*
+${server === "jetty" ? "RUN rm -rf /var/lib/jetty/webapps/*" : "RUN rm -rf /usr/local/tomcat/webapps/*"}
 
 # Copy WAR file
-COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
+COPY --from=build /app/target/*.war ${server === "jetty" ? "/var/lib/jetty/webapps/ROOT.war" : "/usr/local/tomcat/webapps/ROOT.war"}
 
 # Expose port
 EXPOSE ${this.config.port}
-${healthCheck}
+
+${debugPort}${healthCheck}
 # Start server
-CMD ["catalina.sh", "run"]`;
+CMD ${startCommand}`;
 	}
 
 	private getServerImage(server: string): string {

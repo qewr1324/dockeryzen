@@ -7,6 +7,7 @@ export class DockerComposeGenerator {
 		const services: string[] = [];
 		const volumes: string[] = [];
 		const usedPorts = new Set<number>();
+		const usedServiceNames = new Set<string>();
 
 		// Check for port conflicts
 		this.checkPortConflicts();
@@ -22,9 +23,16 @@ export class DockerComposeGenerator {
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
 				if (!db.useExternalUrl) {
-					services.push(this.generateDatabaseService(db));
-					const volumeName = `${this.config.projectName}-${db.type}-data`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
-					volumes.push(`  ${volumeName}:\n    driver: local`);
+					const service = this.generateDatabaseService(db);
+					const serviceName = this.getServiceName(db.type);
+
+					if (!usedServiceNames.has(serviceName)) {
+						services.push(service);
+						usedServiceNames.add(serviceName);
+
+						const volumeName = `${this.config.projectName}-${db.type}-data`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+						volumes.push(`  ${volumeName}:\n    driver: local`);
+					}
 				}
 			}
 		}
@@ -32,14 +40,26 @@ export class DockerComposeGenerator {
 		// Message queue services
 		if (this.config.messageQueues.length > 0) {
 			for (const mq of this.config.messageQueues) {
-				services.push(this.generateMessageQueueService(mq));
+				const service = this.generateMessageQueueService(mq);
+				const serviceName = this.getServiceName(mq.type);
+
+				if (!usedServiceNames.has(serviceName)) {
+					services.push(service);
+					usedServiceNames.add(serviceName);
+				}
 			}
 		}
 
 		// Additional services
 		if (this.config.services.length > 0) {
 			for (const service of this.config.services) {
-				services.push(this.generateAdditionalService(service));
+				const serviceConfig = this.generateAdditionalService(service);
+				const serviceName = this.getServiceName(service.type);
+
+				if (!usedServiceNames.has(serviceName)) {
+					services.push(serviceConfig);
+					usedServiceNames.add(serviceName);
+				}
 			}
 		}
 
@@ -54,6 +74,10 @@ networks:
 
 volumes:
 ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
+	}
+
+	private getServiceName(type: string): string {
+		return `${this.config.projectName}-${type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 	}
 
 	private checkPortConflicts(): void {
@@ -128,6 +152,12 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 			envVars = `
       - PYTHONUNBUFFERED=1
       - PORT=${this.config.port}`;
+		} else if (this.config.language === "go") {
+			envVars = `
+      - GIN_MODE=release`;
+		} else if (this.config.language === "rust") {
+			envVars = `
+      - RUST_LOG=info`;
 		}
 
 		return `  ${serviceName}:
@@ -149,7 +179,7 @@ ${ports.join("\n")}
   # URL: ${db.url}`;
 		}
 
-		const serviceName = `${this.config.projectName}-${db.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+		const serviceName = this.getServiceName(db.type);
 
 		// Use image from config
 		let image = db.image;
@@ -181,6 +211,25 @@ ${ports.join("\n")}
 				oracle: "container-registry.oracle.com/database/enterprise",
 				mssql: "mcr.microsoft.com/mssql/server",
 				db2: "ibmcom/db2",
+				couchbase: "couchbase/server",
+				ravendb: "ravendb/ravendb",
+				memcached: "memcached",
+				etcd: "bitnami/etcd",
+				aerospike: "aerospike/aerospike-server",
+				scylladb: "scylladb/scylla",
+				hbase: "apache/hbase",
+				bigtable: "google/cloud-sdk",
+				arangodb: "arangodb",
+				janusgraph: "janusgraph/janusgraph",
+				dgraph: "dgraph/dgraph",
+				timescaledb: "timescale/timescaledb",
+				prometheus: "prom/prometheus",
+				opentsdb: "petergrace/opentsdb-docker",
+				typesense: "typesense/typesense",
+				tidb: "pingcap/tidb",
+				yugabytedb: "yugabytedb/yugabyte",
+				weaviate: "semitechnologies/weaviate",
+				chroma: "chromadb/chroma",
 			};
 			const baseImage = imageMap[db.type] || db.type;
 			image = `${baseImage}:${db.version}`;
@@ -194,6 +243,7 @@ ${ports.join("\n")}
       - "${db.externalPort}:${db.internalPort}"
     environment:`;
 
+		// Add environment variables based on database type
 		if (db.type === "postgresql" || db.type === "timescaledb") {
 			service += `
       - POSTGRES_DB=${db.databaseName || "postgres"}
@@ -215,14 +265,15 @@ ${ports.join("\n")}
 		} else if (db.type === "mssql") {
 			service += `
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=${db.password || "Root1234!"}`;
+      - MSSQL_SA_PASSWORD=${db.password || "Root1234!"}`;
 		} else if (db.type === "neo4j") {
 			service += `
       - NEO4J_AUTH=${db.username || "neo4j"}/${db.password || "password"}`;
 		} else if (db.type === "elasticsearch") {
 			service += `
       - discovery.type=single-node
-      - xpack.security.enabled=false`;
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m`;
 		} else if (db.type === "cassandra") {
 			service += `
       - CASSANDRA_USER=${db.username || "cassandra"}
@@ -231,9 +282,109 @@ ${ports.join("\n")}
 			service += `
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=${db.username || "admin"}
-      - DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "password"}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "root"}
       - DOCKER_INFLUXDB_INIT_ORG=my-org
       - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket`;
+		} else if (db.type === "oracle") {
+			service += `
+      - ORACLE_PWD=${db.password || "root"}
+      - ORACLE_CHARACTERSET=AL32UTF8`;
+		} else if (db.type === "db2") {
+			service += `
+      - LICENSE=accept
+      - DB2INST1_PASSWORD=${db.password || "root"}
+      - DBNAME=${db.databaseName || "sample"}`;
+		} else if (db.type === "couchdb") {
+			service += `
+      - COUCHDB_USER=${db.username || "admin"}
+      - COUCHDB_PASSWORD=${db.password || "root"}`;
+		} else if (db.type === "couchbase") {
+			service += `
+      - CB_USERNAME=${db.username || "admin"}
+      - CB_PASSWORD=${db.password || "root"}`;
+		} else if (db.type === "dynamodb") {
+			service += `
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_DEFAULT_REGION=us-east-1`;
+		} else if (db.type === "ravendb") {
+			service += `
+      - RAVEN_Security_UnsecuredAccessAllowed=PrivateNetwork
+      - RAVEN_Setup_Mode=None`;
+		} else if (db.type === "memcached") {
+			service += `
+      - MEMCACHED_CACHE_SIZE=64`;
+		} else if (db.type === "etcd") {
+			service += `
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISE_CLIENT_URLS=http://${serviceName}:2379`;
+		} else if (db.type === "aerospike") {
+			service += `
+      - NAMESPACE=test`;
+		} else if (db.type === "scylladb") {
+			service += `
+      - SCYLLA_USER=${db.username || "root"}
+      - SCYLLA_PASS=${db.password || "root"}`;
+		} else if (db.type === "hbase") {
+			service += `
+      - HBASE_STANDALONE=true`;
+		} else if (db.type === "bigtable") {
+			service += `
+      - BIGTABLE_EMULATOR_HOST=0.0.0.0:8080`;
+		} else if (db.type === "arangodb") {
+			service += `
+      - ARANGO_ROOT_PASSWORD=${db.password || "root"}`;
+		} else if (db.type === "janusgraph") {
+			service += `
+      - JANUS_PROPS_TEMPLATE=berkeleyje
+      - janusgraph.storage.backend=berkeleyje`;
+		} else if (db.type === "dgraph") {
+			service += `
+      - DGRAPH_ALPHA_WHITELIST=0.0.0.0/0`;
+		} else if (db.type === "prometheus") {
+			service += `
+      - PROMETHEUS_CONFIG=/etc/prometheus/prometheus.yml`;
+		} else if (db.type === "opentsdb") {
+			service += `
+      - TSDB_CONF=/etc/opentsdb/opentsdb.conf`;
+		} else if (db.type === "solr") {
+			service += `
+      - SOLR_HEAP=512m`;
+		} else if (db.type === "meilisearch") {
+			service += `
+      - MEILI_MASTER_KEY=${db.password || "root"}
+      - MEILI_ENV=development`;
+		} else if (db.type === "typesense") {
+			service += `
+      - TYPESENSE_API_KEY=${db.password || "root"}
+      - TYPESENSE_DATA_DIR=/data`;
+		} else if (db.type === "tidb") {
+			service += `
+      - TIDB_SERVER_PORT=4000
+      - TIDB_STATUS_PORT=10080`;
+		} else if (db.type === "yugabytedb") {
+			service += `
+      - YB_MASTER_ADDRESS=${serviceName}:7100
+      - YB_TSERVER_ADDRESS=${serviceName}:9000`;
+		} else if (db.type === "weaviate") {
+			service += `
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate`;
+		} else if (db.type === "qdrant") {
+			service += `
+      - QDRANT__SERVICE__GRPC_PORT=6334`;
+		} else if (db.type === "cockroachdb") {
+			service += `
+      - COCKROACH_DATABASE=${db.databaseName || "defaultdb"}
+      - COCKROACH_USER=${db.username || "root"}`;
+		} else if (db.type === "milvus") {
+			service += `
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - MILVUS_ETCD_ENDPOINTS=${serviceName}:2379`;
+		} else if (db.type === "chroma") {
+			service += `
+      - CHROMA_SERVER_AUTH_CREDENTIALS=${db.password || "root"}
+      - CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider`;
 		}
 
 		service += `
@@ -246,7 +397,7 @@ ${ports.join("\n")}
 	}
 
 	private generateMessageQueueService(mq: any): string {
-		const serviceName = `${this.config.projectName}-${mq.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+		const serviceName = this.getServiceName(mq.type);
 
 		// Use image from config
 		let image = mq.image;
@@ -279,7 +430,9 @@ ${ports.join("\n")}
 		if (mq.type === "kafka") {
 			service += `
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${serviceName}:${mq.internalPort}
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1`;
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1`;
 		} else if (mq.type === "rabbitmq") {
 			service += `
       - RABBITMQ_DEFAULT_USER=guest
@@ -298,7 +451,7 @@ ${ports.join("\n")}
 	}
 
 	private generateAdditionalService(service: any): string {
-		const serviceName = `${this.config.projectName}-${service.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+		const serviceName = this.getServiceName(service.type);
 
 		// Use image from config
 		let image = service.image;
@@ -338,6 +491,11 @@ ${ports.join("\n")}
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin`;
+		} else if (service.type === "grafana") {
+			serviceConfig += `
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin`;
 		}
 
 		serviceConfig += `
