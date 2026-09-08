@@ -2,8 +2,8 @@
 	"name": "dockeryzen",
 	"type": "module",
 	"displayName": "Dockeryzen",
-	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for Java projects for 💠 VSCode.",
-	"version": "0.107.191",
+	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for multiple languages and frameworks for 💠 VSCode.",
+	"version": "0.137.192",
 	"private": false,
 	"publisher": "GhurbeSABZI",
 	"packageManager": "bun@1.3.14",
@@ -26,12 +26,36 @@
 		"docker",
 		"dockerfile",
 		"docker-compose",
+		"dockerignore",
 		"java",
 		"spring-boot",
+		"quarkus",
+		"micronaut",
 		"maven",
 		"gradle",
+		"python",
+		"django",
+		"flask",
+		"fastapi",
+		"nodejs",
+		"nextjs",
+		"angular",
+		"nuxtjs",
+		"golang",
+		"rust",
+		"dotnet",
+		"laravel",
+		"rails",
+		"postgresql",
+		"mysql",
+		"mongodb",
+		"redis",
+		"kafka",
+		"rabbitmq",
 		"vscode-extension",
-		"config"
+		"config",
+		"generator",
+		"wizard"
 	],
 	"categories": [
 		"Programming Languages",
@@ -53,155 +77,150 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "dockeryzen.openSettings",
-				"title": "Open Dockeryzen Settings",
-				"category": "Dockeryzen",
-				"icon": "$(settings-gear)"
+				"command": "dockeryzen.generateFromConfig",
+				"title": "Dockeryzen: Generate Docker Configuration",
+				"category": "Dockeryzen"
 			},
 			{
-				"command": "dockeryzen.generateFromConfig",
-				"title": "Generate from Config File",
-				"category": "Dockeryzen",
-				"icon": "$(file-code)"
+				"command": "dockeryzen.openSettings",
+				"title": "Dockeryzen: Open Settings",
+				"category": "Dockeryzen"
 			},
 			{
 				"command": "dockeryzen.openConfigSettings",
-				"title": "Open Config Settings",
-				"category": "Dockeryzen",
-				"icon": "$(settings)"
+				"title": "Dockeryzen: Open Configuration Settings",
+				"category": "Dockeryzen"
 			}
 		],
 		"menus": {
-			"explorer/context": [
-				{
-					"command": "dockeryzen.openConfigSettings",
-					"when": "resourceFilename =~ /dockeryzen\\.config\\.(json|yaml|yml|toml)/",
-					"group": "dockeryzen@1"
-				},
+			"commandPalette": [
 				{
 					"command": "dockeryzen.generateFromConfig",
-					"when": "resourceFilename =~ /dockeryzen\\.config\\.(json|yaml|yml|toml)/",
-					"group": "dockeryzen@2"
+					"when": "workspaceFolderCount > 0"
 				},
 				{
 					"command": "dockeryzen.openSettings",
+					"when": "workspaceFolderCount > 0"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "dockeryzen.generateFromConfig",
 					"when": "explorerResourceIsFolder",
-					"group": "dockeryzen@3"
+					"group": "dockeryzen@1"
 				}
-			]
-		},
-		"viewsContainers": {
-			"activitybar": [
+			],
+			"editor/context": [
 				{
-					"id": "dockeryzen",
-					"title": "Dockeryzen",
-					"icon": "$(cloud-upload)"
+					"command": "dockeryzen.generateFromConfig",
+					"when": "editorTextFocus",
+					"group": "dockeryzen@1"
 				}
 			]
 		},
-		"views": {
-			"dockeryzen": [
-				{
-					"id": "dockeryzen.dockerExplorer",
-					"name": "Docker Explorer",
-					"icon": "res/dockeryzen-icon.svg",
-					"contextualTitle": "Dockeryzen"
-				}
-			]
-		},
-		"viewsWelcome": [
+		"keybindings": [
 			{
-				"view": "dockeryzen.dockerExplorer",
-				"contents": "No Docker containers found.\n[Generate from Config](command:dockeryzen.generateFromConfig)\n[Open Settings](command:dockeryzen.openSettings)",
-				"when": "!dockeryzen.hasContainers"
-			}
-		],
-		"jsonValidation": [
-			{
-				"fileMatch": "dockeryzen.config.json",
-				"url": "./schemas/dockeryzen-config.schema.json"
+				"command": "dockeryzen.generateFromConfig",
+				"key": "ctrl+shift+d",
+				"mac": "cmd+shift+d",
+				"when": "editorTextFocus && workspaceFolderCount > 0"
 			}
 		],
 		"configuration": {
 			"title": "Dockeryzen",
 			"properties": {
-				"dockeryzen.enable": {
-					"type": "boolean",
-					"default": true,
-					"description": "Enable/disable Dockeryzen extension"
+				"dockeryzen.defaultPort": {
+					"type": "number",
+					"default": 8080,
+					"description": "Default port for the application"
 				},
-				"dockeryzen.defaultJdkImage": {
+				"dockeryzen.defaultJDKVersion": {
+					"type": "string",
+					"default": "17",
+					"enum": [
+						"8",
+						"11",
+						"17",
+						"21",
+						"25"
+					],
+					"description": "Default JDK version"
+				},
+				"dockeryzen.defaultJDKVendor": {
 					"type": "string",
 					"default": "eclipse-temurin",
 					"enum": [
 						"eclipse-temurin",
-						"amazon-corretto",
+						"amazoncorretto",
 						"openjdk",
-						"oracle-jdk",
-						"graalvm",
-						"liberica",
-						"redhat-openjdk"
+						"oracle-jdk"
 					],
-					"description": "Default JDK base image for Docker"
+					"description": "Default JDK vendor"
 				},
-				"dockeryzen.defaultPort": {
-					"type": "number",
-					"default": 8080,
-					"description": "Default application port"
+				"dockeryzen.defaultBuildTool": {
+					"type": "string",
+					"default": "maven",
+					"enum": [
+						"maven",
+						"gradle"
+					],
+					"description": "Default build tool for Java projects"
 				},
-				"dockeryzen.enableHealthCheck": {
-					"type": "boolean",
-					"default": true,
-					"description": "Enable health check in Dockerfile"
+				"dockeryzen.defaultNodeVersion": {
+					"type": "string",
+					"default": "18",
+					"enum": [
+						"18",
+						"20",
+						"22"
+					],
+					"description": "Default Node.js version"
 				},
-				"dockeryzen.enableDebug": {
+				"dockeryzen.defaultPythonVersion": {
+					"type": "string",
+					"default": "3.11",
+					"enum": [
+						"3.9",
+						"3.10",
+						"3.11",
+						"3.12"
+					],
+					"description": "Default Python version"
+				},
+				"dockeryzen.useAlpineByDefault": {
 					"type": "boolean",
 					"default": false,
-					"description": "Enable debug mode (port 5005)"
+					"description": "Use Alpine-based images by default"
 				},
-				"dockeryzen.jvmOptions": {
-					"type": "string",
-					"default": "-Xmx512m -Xms256m",
-					"description": "Default JVM options"
+				"dockeryzen.enableHealthCheckByDefault": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable health check by default"
 				},
-				"dockeryzen.databaseType": {
-					"type": "string",
-					"default": "auto",
-					"enum": [
-						"auto",
-						"postgresql",
-						"mysql",
-						"mariadb",
-						"mongodb",
-						"redis",
-						"none"
-					],
-					"description": "Database type for docker-compose"
+				"dockeryzen.enableDebugByDefault": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable debug mode by default"
 				},
-				"dockeryzen.outputPath": {
-					"type": "string",
-					"default": "",
-					"description": "Output path for generated files (empty = project root)"
+				"dockeryzen.debugPort": {
+					"type": "number",
+					"default": 5005,
+					"description": "Debug port for applications"
 				},
-				"dockeryzen.cacheAnalysis": {
+				"dockeryzen.generateDockerignore": {
 					"type": "boolean",
 					"default": true,
-					"description": "Cache project analysis results"
+					"description": "Generate .dockerignore file"
 				},
-				"dockeryzen.cacheTimeout": {
-					"type": "number",
-					"default": 300,
-					"description": "Cache timeout in seconds"
+				"dockeryzen.generateDockerCompose": {
+					"type": "boolean",
+					"default": true,
+					"description": "Generate docker-compose.yml file"
 				},
-				"dockeryzen.imageOptimization": {
-					"type": "string",
-					"default": "alpine",
-					"enum": [
-						"alpine",
-						"full",
-						"slim"
-					],
-					"description": "Docker image size optimization"
+				"dockeryzen.showSuccessNotification": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show success notification after generation"
 				}
 			}
 		}
