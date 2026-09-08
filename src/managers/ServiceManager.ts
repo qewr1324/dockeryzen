@@ -67,6 +67,7 @@ export class ServiceManager {
 	}
 
 	private async askServiceConfig(service: any): Promise<ServiceConfig | undefined> {
+		// Version
 		const version = await vscode.window.showQuickPick(
 			service.versions.map((v: string) => ({ label: `$(tag) ${v}`, value: v })),
 			{ placeHolder: `Select ${service.label} version` },
@@ -74,6 +75,7 @@ export class ServiceManager {
 
 		if (!version) return undefined;
 
+		// Internal port
 		const internalPort = await vscode.window.showInputBox({
 			prompt: `Enter ${service.label} internal port`,
 			value: service.defaultPort.toString(),
@@ -88,6 +90,7 @@ export class ServiceManager {
 
 		if (!internalPort) return undefined;
 
+		// External port
 		const externalPort = await vscode.window.showInputBox({
 			prompt: `Enter ${service.label} external port`,
 			value: internalPort,
@@ -102,12 +105,13 @@ export class ServiceManager {
 
 		if (!externalPort) return undefined;
 
+		// Alpine option
 		const useAlpine = await vscode.window.showQuickPick(
 			[
 				{ label: "$(check) Yes", description: "Use Alpine-based image", value: "yes" },
 				{ label: "$(x) No", description: "Use standard image", value: "no" },
 			],
-			{ placeHolder: "Use Alpine version?", matchOnDescription: true },
+			{ placeHolder: "Use Alpine version?" },
 		);
 
 		return {

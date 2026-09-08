@@ -51,6 +51,7 @@ export class MessageQueueManager {
 	}
 
 	private async askQueueConfig(queue: any): Promise<MessageQueueConfig | undefined> {
+		// Version
 		const version = await vscode.window.showQuickPick(
 			queue.versions.map((v: string) => ({ label: `$(tag) ${v}`, value: v })),
 			{ placeHolder: `Select ${queue.label} version` },
@@ -58,6 +59,7 @@ export class MessageQueueManager {
 
 		if (!version) return undefined;
 
+		// Internal port
 		const internalPort = await vscode.window.showInputBox({
 			prompt: `Enter ${queue.label} internal port`,
 			value: queue.defaultPort.toString(),
@@ -72,6 +74,7 @@ export class MessageQueueManager {
 
 		if (!internalPort) return undefined;
 
+		// External port
 		const externalPort = await vscode.window.showInputBox({
 			prompt: `Enter ${queue.label} external port`,
 			value: internalPort,
@@ -86,12 +89,13 @@ export class MessageQueueManager {
 
 		if (!externalPort) return undefined;
 
+		// Alpine option
 		const useAlpine = await vscode.window.showQuickPick(
 			[
 				{ label: "$(check) Yes", description: "Use Alpine-based image", value: "yes" },
 				{ label: "$(x) No", description: "Use standard image", value: "no" },
 			],
-			{ placeHolder: "Use Alpine version?", matchOnDescription: true },
+			{ placeHolder: "Use Alpine version?" },
 		);
 
 		return {

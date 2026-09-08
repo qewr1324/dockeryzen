@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DatabaseConfig, DatabaseDefinition } from "../types/index.js";
+import { DatabaseConfig } from "../types/index.js";
 
 export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];
@@ -41,7 +41,7 @@ export class DatabaseManager {
 		return this.databases;
 	}
 
-	private getDatabaseDefinitions(): DatabaseDefinition[] {
+	private getDatabaseDefinitions() {
 		return [
 			// SQL Databases
 			{
@@ -69,7 +69,7 @@ export class DatabaseManager {
 				defaultUser: "root",
 				defaultDatabase: "mysql",
 				category: "SQL Database",
-				versions: ["11.2", "11.1", "10.11", "10.6"],
+				versions: ["11.2", "11.1", "10.11"],
 			},
 			{
 				label: "Oracle",
@@ -124,7 +124,7 @@ export class DatabaseManager {
 				versions: ["7.2", "7.1", "7.0"],
 			},
 			{
-				label: "Amazon DynamoDB",
+				label: "DynamoDB",
 				value: "dynamodb",
 				defaultPort: 8000,
 				defaultUser: "root",
@@ -198,7 +198,7 @@ export class DatabaseManager {
 				versions: ["2.5", "2.4", "2.3"],
 			},
 			{
-				label: "Google Bigtable",
+				label: "Bigtable",
 				value: "bigtable",
 				defaultPort: 8080,
 				defaultUser: "root",
@@ -239,13 +239,13 @@ export class DatabaseManager {
 				category: "Graph Database",
 				versions: ["23.0", "22.0", "21.12"],
 			},
-			// Time Series Databases
+			// Time Series
 			{
 				label: "InfluxDB",
 				value: "influxdb",
 				defaultPort: 8086,
 				defaultUser: "admin",
-				category: "Time Series Database",
+				category: "Time Series",
 				versions: ["2.7", "2.6", "2.5"],
 			},
 			{
@@ -254,7 +254,7 @@ export class DatabaseManager {
 				defaultPort: 5432,
 				defaultUser: "postgres",
 				defaultDatabase: "postgres",
-				category: "Time Series Database",
+				category: "Time Series",
 				versions: ["2.13", "2.12", "2.11"],
 			},
 			{
@@ -262,7 +262,7 @@ export class DatabaseManager {
 				value: "prometheus",
 				defaultPort: 9090,
 				defaultUser: "root",
-				category: "Time Series Database",
+				category: "Time Series",
 				versions: ["2.48", "2.47", "2.46"],
 			},
 			{
@@ -270,7 +270,7 @@ export class DatabaseManager {
 				value: "opentsdb",
 				defaultPort: 4242,
 				defaultUser: "root",
-				category: "Time Series Database",
+				category: "Time Series",
 				versions: ["2.4", "2.3"],
 			},
 			// Search Engines
@@ -306,14 +306,14 @@ export class DatabaseManager {
 				category: "Search Engine",
 				versions: ["0.25", "0.24", "0.23"],
 			},
-			// NewSQL Databases
+			// NewSQL
 			{
 				label: "CockroachDB",
 				value: "cockroachdb",
 				defaultPort: 26257,
 				defaultUser: "root",
 				defaultDatabase: "defaultdb",
-				category: "NewSQL Database",
+				category: "NewSQL",
 				versions: ["23.2", "23.1", "22.2"],
 			},
 			{
@@ -321,7 +321,7 @@ export class DatabaseManager {
 				value: "tidb",
 				defaultPort: 4000,
 				defaultUser: "root",
-				category: "NewSQL Database",
+				category: "NewSQL",
 				versions: ["7.5", "7.4", "7.3"],
 			},
 			{
@@ -330,7 +330,7 @@ export class DatabaseManager {
 				defaultPort: 5433,
 				defaultUser: "yugabyte",
 				defaultDatabase: "yugabyte",
-				category: "NewSQL Database",
+				category: "NewSQL",
 				versions: ["2.20", "2.19", "2.18"],
 			},
 			// Vector Databases
@@ -381,20 +381,11 @@ export class DatabaseManager {
 		// Ask for configuration method
 		const configMethod = await vscode.window.showQuickPick(
 			[
-				{
-					label: "$(settings-gear) Edit Part",
-					description: "Configure individual settings for this database",
-					value: "part",
-				},
-				{
-					label: "$(link) Edit URL",
-					description: "Use external connection URL",
-					value: "url",
-				},
+				{ label: "$(settings-gear) Edit Part", description: "Configure individual settings", value: "part" },
+				{ label: "$(link) Edit URL", description: "Use external URL", value: "url" },
 			],
 			{
 				placeHolder: `How to configure ${db.label}?`,
-				matchOnDescription: true,
 			},
 		);
 
@@ -457,7 +448,7 @@ export class DatabaseManager {
 
 		if (!externalPort) return undefined;
 
-		// Database name (for SQL databases)
+		// Database name
 		let databaseName: string | undefined;
 		if (db.defaultDatabase) {
 			databaseName = await vscode.window.showInputBox({
@@ -487,7 +478,7 @@ export class DatabaseManager {
 				{ label: "$(check) Yes", description: "Use Alpine-based image", value: "yes" },
 				{ label: "$(x) No", description: "Use standard image", value: "no" },
 			],
-			{ placeHolder: "Use Alpine version?", matchOnDescription: true },
+			{ placeHolder: "Use Alpine version?" },
 		);
 
 		return {

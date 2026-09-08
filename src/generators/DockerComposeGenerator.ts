@@ -5,6 +5,7 @@ export class DockerComposeGenerator {
 
 	generate(): string {
 		const services: string[] = [];
+		const volumes: string[] = [];
 
 		// Main application service
 		services.push(this.generateMainService());
@@ -13,6 +14,10 @@ export class DockerComposeGenerator {
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
 				services.push(this.generateDatabaseService(db));
+				if (!db.useExternalUrl) {
+					const volumeName = `${this.config.projectName}-${db.type}-data`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+					volumes.push(`  ${volumeName}:\n    driver: local`);
+				}
 			}
 		}
 
@@ -40,8 +45,7 @@ networks:
     driver: bridge
 
 volumes:
-  data:
-    driver: local`;
+${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 	}
 
 	private generateMainService(): string {
@@ -52,6 +56,21 @@ volumes:
 			ports.push(`      - "5005:5005"`);
 		}
 
+		let envVars = "";
+		if (this.config.language.startsWith("java")) {
+			envVars = `
+      - SPRING_PROFILES_ACTIVE=production
+      - JAVA_OPTS=-Xms512m -Xmx1024m`;
+		} else if (this.config.language.startsWith("js")) {
+			envVars = `
+      - NODE_ENV=production
+      - PORT=${this.config.port}`;
+		} else if (this.config.language === "python") {
+			envVars = `
+      - PYTHONUNBUFFERED=1
+      - PORT=${this.config.port}`;
+		}
+
 		return `  ${serviceName}:
     build:
       context: .
@@ -60,55 +79,39 @@ volumes:
     restart: unless-stopped
     ports:
 ${ports.join("\n")}
-    environment:
-      - NODE_ENV=production
-      - PORT=${this.config.port}
+    environment:${envVars}
     networks:
       - dockeryzen-network`;
 	}
 
 	private generateDatabaseService(db: any): string {
+		if (db.useExternalUrl) {
+			return `  # External ${db.type} database
+  # URL: ${db.url}`;
+		}
+
 		const serviceName = `${this.config.projectName}-${db.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+
 		const imageMap: Record<string, string> = {
 			postgresql: "postgres",
 			mysql: "mysql",
 			mariadb: "mariadb",
+			mongodb: "mongo",
+			redis: "redis",
+			elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch",
+			cassandra: "cassandra",
+			neo4j: "neo4j",
+			influxdb: "influxdb",
+			qdrant: "qdrant/qdrant",
+			cockroachdb: "cockroachdb/cockroach",
+			couchdb: "couchdb",
+			dynamodb: "amazon/dynamodb-local",
+			solr: "solr",
+			meilisearch: "getmeili/meilisearch",
+			milvus: "milvusdb/milvus",
 			oracle: "oraclelinux",
 			mssql: "mcr.microsoft.com/mssql/server",
 			db2: "ibmcom/db2",
-			mongodb: "mongo",
-			couchdb: "couchdb",
-			couchbase: "couchbase",
-			dynamodb: "amazon/dynamodb-local",
-			ravendb: "ravendb/ravendb",
-			redis: "redis",
-			memcached: "memcached",
-			etcd: "quay.io/coreos/etcd",
-			aerospike: "aerospike/aerospike-server",
-			cassandra: "cassandra",
-			scylladb: "scylladb/scylla",
-			hbase: "harisekhon/hbase",
-			bigtable: "google/cloud-sdk",
-			neo4j: "neo4j",
-			arangodb: "arangodb",
-			janusgraph: "janusgraph/janusgraph",
-			dgraph: "dgraph/dgraph",
-			influxdb: "influxdb",
-			timescaledb: "timescale/timescaledb",
-			prometheus: "prom/prometheus",
-			opentsdb: "opentsdb/opentsdb",
-			elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch",
-			solr: "solr",
-			meilisearch: "getmeili/meilisearch",
-			typesense: "typesense/typesense",
-			cockroachdb: "cockroachdb/cockroach",
-			tidb: "pingcap/tidb",
-			yugabytedb: "yugabytedb/yugabyte",
-			pinecone: "pinecone/pinecone",
-			weaviate: "semitechnologies/weaviate",
-			qdrant: "qdrant/qdrant",
-			milvus: "milvusdb/milvus",
-			chroma: "chromadb/chroma",
 		};
 
 		const image = imageMap[db.type] || db.type;
@@ -122,15 +125,14 @@ ${ports.join("\n")}
       - "${db.externalPort}:${db.internalPort}"
     environment:`;
 
-		// Add environment variables based on database type
 		if (db.type === "postgresql" || db.type === "timescaledb") {
 			service += `
-      - POSTGRES_DB=${db.databaseName || "mydb"}
+      - POSTGRES_DB=${db.databaseName || "postgres"}
       - POSTGRES_USER=${db.username || "postgres"}
       - POSTGRES_PASSWORD=${db.password || "root"}`;
 		} else if (db.type === "mysql" || db.type === "mariadb") {
 			service += `
-      - MYSQL_DATABASE=${db.databaseName || "mydb"}
+      - MYSQL_DATABASE=${db.databaseName || "mysql"}
       - MYSQL_USER=${db.username || "root"}
       - MYSQL_PASSWORD=${db.password || "root"}
       - MYSQL_ROOT_PASSWORD=${db.password || "root"}`;
@@ -148,11 +150,19 @@ ${ports.join("\n")}
 		} else if (db.type === "neo4j") {
 			service += `
       - NEO4J_AUTH=${db.username || "neo4j"}/${db.password || "password"}`;
+		} else if (db.type === "elasticsearch") {
+			service += `
+      - discovery.type=single-node
+      - xpack.security.enabled=false`;
+		} else if (db.type === "cassandra") {
+			service += `
+      - CASSANDRA_USER=${db.username || "cassandra"}
+      - CASSANDRA_PASSWORD=${db.password || "cassandra"}`;
 		}
 
 		service += `
     volumes:
-      - ${serviceName}-data:/var/lib/${db.type}
+      - ${serviceName}-data:/var/lib/${db.type === "postgresql" ? "postgresql" : db.type}
     networks:
       - dockeryzen-network`;
 
@@ -161,6 +171,7 @@ ${ports.join("\n")}
 
 	private generateMessageQueueService(mq: any): string {
 		const serviceName = `${this.config.projectName}-${mq.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+
 		const imageMap: Record<string, string> = {
 			kafka: "confluentinc/cp-kafka",
 			rabbitmq: "rabbitmq",
@@ -170,20 +181,34 @@ ${ports.join("\n")}
 		const image = imageMap[mq.type] || mq.type;
 		const imageTag = mq.useAlpine ? `${mq.version}-alpine` : mq.version;
 
-		return `  ${serviceName}:
+		let service = `  ${serviceName}:
     image: ${image}:${imageTag}
     container_name: ${serviceName}
     restart: unless-stopped
     ports:
       - "${mq.externalPort}:${mq.internalPort}"
-    environment:
+    environment:`;
+
+		if (mq.type === "kafka") {
+			service += `
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${serviceName}:${mq.internalPort}
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1`;
+		} else if (mq.type === "rabbitmq") {
+			service += `
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest`;
+		}
+
+		service += `
     networks:
       - dockeryzen-network`;
+
+		return service;
 	}
 
 	private generateAdditionalService(service: any): string {
 		const serviceName = `${this.config.projectName}-${service.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+
 		const imageMap: Record<string, string> = {
 			nginx: "nginx",
 			grafana: "grafana/grafana",
@@ -195,13 +220,29 @@ ${ports.join("\n")}
 		const image = imageMap[service.type] || service.type;
 		const imageTag = service.useAlpine ? `${service.version}-alpine` : service.version;
 
-		return `  ${serviceName}:
+		let serviceConfig = `  ${serviceName}:
     image: ${image}:${imageTag}
     container_name: ${serviceName}
     restart: unless-stopped
     ports:
-      - "${service.externalPort}:${service.internalPort}"
+      - "${service.externalPort}:${service.internalPort}"`;
+
+		if (service.type === "keycloak") {
+			serviceConfig += `
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin`;
+		} else if (service.type === "minio") {
+			serviceConfig += `
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin`;
+		}
+
+		serviceConfig += `
     networks:
       - dockeryzen-network`;
+
+		return serviceConfig;
 	}
 }

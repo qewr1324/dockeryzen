@@ -25,10 +25,6 @@ export class DockerfileGenerator {
 				return this.generateLaravelDockerfile();
 			case "rails":
 				return this.generateRailsDockerfile();
-			case "cpp":
-				return this.generateCppDockerfile();
-			case "c":
-				return this.generateCDockerfile();
 			default:
 				return this.generateGenericDockerfile();
 		}
@@ -81,9 +77,10 @@ ENTRYPOINT ["java", "-jar", "app.jar"]`;
 	}
 
 	private getJavaBuildStage(): string {
+		const version = this.config.jdkVersion || "17";
+
 		if (this.config.buildTool === "gradle") {
-			const baseImage = `gradle:${this.config.jdkVersion || "17"}-jdk${this.config.useAlpine ? "-alpine" : ""}`;
-			return `FROM ${baseImage} AS build
+			return `FROM gradle:${version}-jdk${this.config.useAlpine ? "-alpine" : ""} AS build
 WORKDIR /app
 
 # Copy build files
@@ -94,8 +91,7 @@ COPY src ./src
 # Build application
 RUN gradle build -x test --no-daemon`;
 		} else {
-			const baseImage = `maven:${this.config.jdkVersion || "17"}-${this.config.useAlpine ? "alpine" : "slim"}`;
-			return `FROM ${baseImage} AS build
+			return `FROM maven:${version}-${this.config.useAlpine ? "alpine" : "slim"} AS build
 WORKDIR /app
 
 # Copy POM and download dependencies
@@ -118,10 +114,19 @@ ENTRYPOINT ["java", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,addre
 	}
 
 	private getJavaHealthCheck(): string {
-		return `
+		if (!this.config.enableHealthCheck) return "";
+
+		if (this.config.framework === "spring-boot") {
+			return `
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD wget -q --spider http://localhost:${this.config.port}/actuator/health || exit 1`;
+		}
+
+		return `
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
+  CMD wget -q --spider http://localhost:${this.config.port}/health || exit 1`;
 	}
 
 	private generateJavaWarDockerfile(): string {
@@ -130,6 +135,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
 			tomcat: `tomcat:${this.getTomcatVersion()}${this.config.useAlpine ? "-alpine" : ""}`,
 			jetty: `jetty:${this.getJettyVersion()}${this.config.useAlpine ? "-alpine" : ""}`,
 		};
+
+		const healthCheck = this.config.enableHealthCheck ? this.getJavaHealthCheck() : "";
 
 		return `# Build stage
 ${this.getJavaBuildStage()}
@@ -145,23 +152,27 @@ COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 # Expose port
 EXPOSE ${this.config.port}
-
+${healthCheck}
 # Start server
 CMD ["catalina.sh", "run"]`;
 	}
 
 	private getTomcatVersion(): string {
+		const version = this.config.jdkVersion || "17";
+
 		const versions: Record<string, string> = {
 			"8": "8.5-jre8",
 			"11": "9.0-jre11",
 			"17": "10.1-jre17",
 			"21": "10.1-jre21",
-			"25": "10.1-jre21",
+			"25": "11.0-jre21",
 		};
-		return versions[this.config.jdkVersion || "17"] || "10.1-jre17";
+		return versions[version] || "10.1-jre17";
 	}
 
 	private getJettyVersion(): string {
+		const version = this.config.jdkVersion || "17";
+
 		const versions: Record<string, string> = {
 			"8": "9.4-jre8",
 			"11": "11.0-jre11",
@@ -169,12 +180,11 @@ CMD ["catalina.sh", "run"]`;
 			"21": "12.0-jre21",
 			"25": "12.0-jre21",
 		};
-		return versions[this.config.jdkVersion || "17"] || "11.0-jre17";
+		return versions[version] || "11.0-jre17";
 	}
 
 	private generateJSFrontendDockerfile(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
-		const framework = this.config.framework || "nextjs";
 
 		return `# Build stage
 FROM node:${nodeVersion}${this.config.useAlpine ? "-alpine" : ""} AS build
@@ -225,7 +235,6 @@ CMD ["npm", "start"]`;
 
 	private generateJSBackendDockerfile(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
-		const framework = this.config.framework || "express";
 
 		return `FROM node:${nodeVersion}${this.config.useAlpine ? "-alpine" : ""}
 
@@ -260,7 +269,6 @@ CMD ["node", "index.js"]`;
 
 	private generatePythonDockerfile(): string {
 		const pythonVersion = this.config.pythonVersion || "3.11";
-		const framework = this.config.framework || "flask";
 
 		return `FROM python:${pythonVersion}${this.config.useAlpine ? "-alpine" : "-slim"}
 
@@ -492,70 +500,6 @@ EXPOSE ${this.config.port}
 
 # Start Rails server
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "${this.config.port}"]`;
-	}
-
-	private generateCppDockerfile(): string {
-		return `# Build stage
-FROM gcc:latest AS build
-
-WORKDIR /app
-
-# Copy source code
-COPY . .
-
-# Build application
-RUN g++ -o app main.cpp
-
-# Runtime stage
-FROM ${this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim"}
-
-WORKDIR /app
-
-# Install runtime dependencies
-${this.config.useAlpine ? "RUN apk --no-cache add libstdc++\n" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*\n"}
-# Copy binary
-COPY --from=build /app/app .
-
-# Create non-root user
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
-
-# Expose port
-EXPOSE ${this.config.port}
-
-# Run application
-CMD ["./app"]`;
-	}
-
-	private generateCDockerfile(): string {
-		return `# Build stage
-FROM gcc:latest AS build
-
-WORKDIR /app
-
-# Copy source code
-COPY . .
-
-# Build application
-RUN gcc -o app main.c
-
-# Runtime stage
-FROM ${this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim"}
-
-WORKDIR /app
-
-# Install runtime dependencies
-${this.config.useAlpine ? "RUN apk --no-cache add musl\n" : "RUN apt-get update && apt-get install -y --no-install-recommends libc6 && rm -rf /var/lib/apt/lists/*\n"}
-# Copy binary
-COPY --from=build /app/app .
-
-# Create non-root user
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
-
-# Expose port
-EXPOSE ${this.config.port}
-
-# Run application
-CMD ["./app"]`;
 	}
 
 	private generateGenericDockerfile(): string {
