@@ -40,8 +40,8 @@ export class DockerfileGenerator {
 	private generateJavaJarDockerfile(): string {
 		const baseImage = this.getJavaBaseImage();
 		const buildStage = this.getJavaBuildStage();
-		const debugConfig = this.config.enableDebug ? this.getJavaDebugConfig() : "";
-		const healthCheck = this.config.enableHealthCheck ? this.getJavaHealthCheck() : "";
+		const debugExpose = this.config.enableDebug ? "\n# Debug port\nEXPOSE 5005" : "";
+		const healthCheck = this.config.enableHealthCheck ? this.getHealthCheck() : "";
 
 		return `# Build stage
 ${buildStage}
@@ -62,17 +62,43 @@ RUN useradd -r -u 1001 -g root appuser && \\
 USER appuser
 
 # Expose application port
-EXPOSE ${this.config.port}
-${debugConfig}${healthCheck}
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 # Run application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
+	}
+
+	private generateJavaWarDockerfile(): string {
+		const server = this.config.server || "tomcat";
+		const serverImage = this.getServerImage(server);
+		const debugExpose = this.config.enableDebug ? "\n# Debug port\nEXPOSE 5005" : "";
+		const healthCheck = this.config.enableHealthCheck ? this.getHealthCheck() : "";
+
+		const isJetty = server === "jetty";
+		const webappsPath = isJetty ? "/var/lib/jetty/webapps" : "/usr/local/tomcat/webapps";
+		const startCommand = isJetty ? '["jetty.sh", "run"]' : '["catalina.sh", "run"]';
+
+		return `# Build stage
+${this.getJavaBuildStage()}
+
+# Runtime stage
+FROM ${serverImage}
+
+# Remove default applications
+RUN rm -rf ${webappsPath}/*
+
+# Copy WAR file
+COPY --from=build /app/target/*.war ${webappsPath}/ROOT.war
+
+# Expose application port
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+# Start server
+CMD ${startCommand}`;
 	}
 
 	private getJavaBaseImage(): string {
 		const vendor = this.config.jdkVendor || "eclipse-temurin";
 		const version = this.config.jdkVersion || "17";
 
-		// Try to get image from langConfig
 		if (this.langConfig?.jdkVendors) {
 			const vendorConfig = this.langConfig.jdkVendors.find((v: any) => v.value === vendor);
 			if (vendorConfig) {
@@ -91,7 +117,6 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 			}
 		}
 
-		// Fallback
 		const variant = this.config.useAlpine ? "-alpine" : "";
 		const imageMap: Record<string, string> = {
 			"eclipse-temurin": `eclipse-temurin:${version}-jre${variant}`,
@@ -105,38 +130,13 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 
 	private getJavaBuildStage(): string {
 		const version = this.config.jdkVersion || "17";
+		const useAlpine = this.config.useAlpine;
 
 		if (this.config.buildTool === "gradle") {
-			// Try to get from langConfig
-			if (this.langConfig?.gradleAlpineImages && this.config.useAlpine) {
-				return `FROM ${this.langConfig.gradleAlpineImages[version] || `gradle:8-jdk${version}-alpine`} AS build
-WORKDIR /app
+			const gradleImages = useAlpine ? this.langConfig?.gradleAlpineImages : this.langConfig?.gradleImages;
+			const image = gradleImages?.[version] || `gradle:8-jdk${version}${useAlpine ? "-alpine" : ""}`;
 
-# Copy build files
-COPY build.gradle settings.gradle gradlew ./
-COPY gradle ./gradle
-COPY src ./src
-
-# Build application
-RUN gradle build -x test --no-daemon && \\
-    rm -rf /root/.gradle/caches`;
-			}
-
-			if (this.langConfig?.gradleImages) {
-				return `FROM ${this.langConfig.gradleImages[version] || `gradle:8-jdk${version}`} AS build
-WORKDIR /app
-
-# Copy build files
-COPY build.gradle settings.gradle gradlew ./
-COPY gradle ./gradle
-COPY src ./src
-
-# Build application
-RUN gradle build -x test --no-daemon && \\
-    rm -rf /root/.gradle/caches`;
-			}
-
-			return `FROM gradle:8-jdk${version} AS build
+			return `FROM ${image} AS build
 WORKDIR /app
 
 # Copy build files
@@ -148,36 +148,10 @@ COPY src ./src
 RUN gradle build -x test --no-daemon && \\
     rm -rf /root/.gradle/caches`;
 		} else {
-			// Maven
-			if (this.langConfig?.mavenAlpineImages && this.config.useAlpine) {
-				return `FROM ${this.langConfig.mavenAlpineImages[version] || `maven:3.9-jdk-${version}-alpine`} AS build
-WORKDIR /app
+			const mavenImages = useAlpine ? this.langConfig?.mavenAlpineImages : this.langConfig?.mavenImages;
+			const image = mavenImages?.[version] || `maven:3.9-jdk-${version}${useAlpine ? "-alpine" : ""}`;
 
-# Copy POM and download dependencies in one layer
-COPY pom.xml .
-RUN mvn dependency:go-offline
-
-# Copy source code and build
-COPY src ./src
-RUN mvn package -DskipTests && \\
-    rm -rf /root/.m2/repository`;
-			}
-
-			if (this.langConfig?.mavenImages) {
-				return `FROM ${this.langConfig.mavenImages[version] || `maven:3.9-jdk-${version}`} AS build
-WORKDIR /app
-
-# Copy POM and download dependencies in one layer
-COPY pom.xml .
-RUN mvn dependency:go-offline
-
-# Copy source code and build
-COPY src ./src
-RUN mvn package -DskipTests && \\
-    rm -rf /root/.m2/repository`;
-			}
-
-			return `FROM maven:3.9-jdk-${version} AS build
+			return `FROM ${image} AS build
 WORKDIR /app
 
 # Copy POM and download dependencies in one layer
@@ -191,55 +165,10 @@ RUN mvn package -DskipTests && \\
 		}
 	}
 
-	private getJavaDebugConfig(): string {
-		return `
-# Debug port
-EXPOSE 5005`;
-	}
-
-	private getJavaHealthCheck(): string {
-		if (!this.config.enableHealthCheck) return "";
-
-		const healthPath = this.config.healthCheckPath || "/health";
-
-		return `
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
-  CMD wget -q --spider http://localhost:${this.config.port}${healthPath} || exit 1`;
-	}
-
-	private generateJavaWarDockerfile(): string {
-		const server = this.config.server || "tomcat";
-		const serverImage = this.getServerImage(server);
-		const healthCheck = this.config.enableHealthCheck ? this.getJavaHealthCheck() : "";
-		const debugPort = this.config.enableDebug ? "# Expose debug port\nEXPOSE 5005\n" : "";
-		const startCommand = server === "jetty" ? '["jetty.sh", "run"]' : '["catalina.sh", "run"]';
-
-		return `# Build stage
-${this.getJavaBuildStage()}
-
-# Runtime stage
-FROM ${serverImage}
-
-# Remove default applications
-${server === "jetty" ? "RUN rm -rf /var/lib/jetty/webapps/*" : "RUN rm -rf /usr/local/tomcat/webapps/*"}
-
-# Copy WAR file
-COPY --from=build /app/target/*.war ${server === "jetty" ? "/var/lib/jetty/webapps/ROOT.war" : "/usr/local/tomcat/webapps/ROOT.war"}
-
-# Expose port
-EXPOSE ${this.config.port}
-
-${debugPort}${healthCheck}
-# Start server
-CMD ${startCommand}`;
-	}
-
 	private getServerImage(server: string): string {
 		const version = this.config.jdkVersion || "17";
 		const useAlpine = this.config.useAlpine;
 
-		// Try to get from langConfig
 		if (this.langConfig?.types) {
 			const warConfig = this.langConfig.types.find((t: any) => t.type === "java-war");
 			if (warConfig?.servers) {
@@ -255,7 +184,6 @@ CMD ${startCommand}`;
 			}
 		}
 
-		// Fallback
 		const variant = useAlpine ? "-alpine" : "";
 		if (server === "tomcat") {
 			const tomcatVersions: Record<string, string> = {
@@ -265,8 +193,7 @@ CMD ${startCommand}`;
 				"21": "11.0-jre21",
 				"25": "11.0-jre21",
 			};
-			const tomcatTag = tomcatVersions[version] || "10.1-jre17";
-			return `tomcat:${tomcatTag}${variant}`;
+			return `tomcat:${tomcatVersions[version] || "10.1-jre17"}${variant}`;
 		} else {
 			const jettyVersions: Record<string, string> = {
 				"8": "9.4-jre8",
@@ -275,9 +202,17 @@ CMD ${startCommand}`;
 				"21": "12.0-jre21",
 				"25": "12.0-jre21",
 			};
-			const jettyTag = jettyVersions[version] || "11.0-jre17";
-			return `jetty:${jettyTag}${variant}`;
+			return `jetty:${jettyVersions[version] || "11.0-jre17"}${variant}`;
 		}
+	}
+
+	private getHealthCheck(): string {
+		const healthPath = this.config.healthCheckPath || "/health";
+
+		return `
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
+  CMD wget -q --spider http://localhost:${this.config.port}${healthPath} || exit 1`;
 	}
 
 	private generateJSFrontendDockerfile(): string {
@@ -331,24 +266,6 @@ EXPOSE ${this.config.port}
 CMD ["npm", "start"]`;
 	}
 
-	private getNodeImage(version: string): string {
-		// Try to get from langConfig
-		if (this.langConfig?.versions) {
-			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);
-			if (versionConfig?.images) {
-				if (this.config.useAlpine && versionConfig.images.alpine) {
-					return versionConfig.images.alpine;
-				}
-				if (versionConfig.images.standard) {
-					return versionConfig.images.standard;
-				}
-			}
-		}
-
-		// Fallback
-		return `node:${version}${this.config.useAlpine ? "-alpine" : ""}`;
-	}
-
 	private generateJSBackendDockerfile(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
 		const image = this.getNodeImage(nodeVersion);
@@ -382,6 +299,22 @@ EXPOSE ${this.config.port}
 
 # Start application
 CMD ["node", "index.js"]`;
+	}
+
+	private getNodeImage(version: string): string {
+		if (this.langConfig?.versions) {
+			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);
+			if (versionConfig?.images) {
+				if (this.config.useAlpine && versionConfig.images.alpine) {
+					return versionConfig.images.alpine;
+				}
+				if (versionConfig.images.standard) {
+					return versionConfig.images.standard;
+				}
+			}
+		}
+
+		return `node:${version}${this.config.useAlpine ? "-alpine" : ""}`;
 	}
 
 	private generatePythonDockerfile(): string {
@@ -424,7 +357,6 @@ CMD ["python", "app.py"]`;
 	}
 
 	private getPythonImage(version: string): string {
-		// Try to get from langConfig
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);
 			if (versionConfig?.images) {
@@ -440,14 +372,12 @@ CMD ["python", "app.py"]`;
 			}
 		}
 
-		// Fallback
 		return `python:${version}${this.config.useAlpine ? "-alpine" : "-slim"}`;
 	}
 
 	private generateGoDockerfile(): string {
 		const goVersion = this.config.framework || "1.21";
 
-		// Get image from langConfig
 		let buildImage = `golang:${goVersion}`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === goVersion);
@@ -476,18 +406,10 @@ FROM ${this.config.useAlpine ? "alpine:latest" : "scratch"}
 
 WORKDIR /app
 
-# Install CA certificates (for Alpine)
 ${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates\n" : ""}
-# Copy binary
 COPY --from=build /app/main .
 
-# Create non-root user
-${
-	this.config.useAlpine
-		? `RUN adduser -D -u 1001 appuser
-USER appuser`
-		: "USER 1001"
-}
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "USER 1001"}
 
 # Expose port
 EXPOSE ${this.config.port}
@@ -499,7 +421,6 @@ CMD ["./main"]`;
 	private generateRustDockerfile(): string {
 		const rustVersion = this.config.framework || "latest";
 
-		// Get build image from langConfig
 		let buildImage = `rust:${rustVersion}`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === rustVersion);
@@ -511,6 +432,8 @@ CMD ["./main"]`;
 				}
 			}
 		}
+
+		const runtimeImage = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
 
 		return `# Build stage
 FROM ${buildImage} AS build
@@ -532,16 +455,13 @@ COPY . .
 RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
-FROM ${this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim"}
+FROM ${runtimeImage}
 
 WORKDIR /app
 
-# Install CA certificates
 ${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates\n" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*\n"}
-# Copy binary
 COPY --from=build /app/target/release/${this.config.projectName} .
 
-# Create non-root user
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
 
 # Expose port
@@ -554,7 +474,6 @@ CMD ["./${this.config.projectName}"]`;
 	private generateDotNetDockerfile(): string {
 		const dotnetVersion = this.config.framework || "8.0";
 
-		// Get images from langConfig
 		let sdkImage = `mcr.microsoft.com/dotnet/sdk:${dotnetVersion}`;
 		let aspnetImage = `mcr.microsoft.com/dotnet/aspnet:${dotnetVersion}`;
 
@@ -605,7 +524,6 @@ ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
 	private generateLaravelDockerfile(): string {
 		const phpVersion = this.config.framework || "8.3";
 
-		// Get image from langConfig
 		let phpImage = `php:${phpVersion}-fpm`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === phpVersion);
@@ -618,7 +536,6 @@ ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
 
 WORKDIR /var/www/html
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \\
     git \\
     curl \\
@@ -629,34 +546,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     unzip \\
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy application files
 COPY . .
 
-# Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions
 RUN chown -R www-data:www-data /var/www/html \\
     && chmod -R 755 /var/www/html/storage \\
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# Expose port
 EXPOSE 9000
 
-# Start PHP-FPM
 CMD ["php-fpm"]`;
 	}
 
 	private generateRailsDockerfile(): string {
 		const rubyVersion = this.config.framework || "3.3";
 
-		// Get image from langConfig
 		let rubyImage = `ruby:${rubyVersion}`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === rubyVersion);
@@ -675,34 +584,25 @@ CMD ["php-fpm"]`;
 
 WORKDIR /app
 
-# Install system dependencies
 ${this.config.useAlpine ? "RUN apk add --no-cache build-base postgresql-dev nodejs yarn tzdata\n" : "RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev nodejs yarn tzdata && rm -rf /var/lib/apt/lists/*\n"}
-# Copy Gemfile
 COPY Gemfile Gemfile.lock ./
 
-# Install gems
 RUN gem install bundler && bundle install --without development test
 
-# Copy application
 COPY . .
 
-# Precompile assets
 RUN RAILS_ENV=production bundle exec rake assets:precompile
 
-# Create non-root user
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app\nUSER appuser"}
 
-# Expose port
 EXPOSE ${this.config.port}
 
-# Start Rails server
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "${this.config.port}"]`;
 	}
 
 	private generateCppDockerfile(): string {
 		const gccVersion = this.config.framework || "13";
 
-		// Get image from langConfig
 		let gccImage = `gcc:${gccVersion}`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === gccVersion);
@@ -715,41 +615,35 @@ CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "${this.config.
 			}
 		}
 
+		const runtimeImage = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
+
 		return `# Build stage
 FROM ${gccImage} AS build
 
 WORKDIR /app
 
-# Copy source code
 COPY . .
 
-# Build application
 RUN g++ -o app main.cpp
 
 # Runtime stage
-FROM ${this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim"}
+FROM ${runtimeImage}
 
 WORKDIR /app
 
-# Install runtime dependencies
 ${this.config.useAlpine ? "RUN apk --no-cache add libstdc++\n" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*\n"}
-# Copy binary
 COPY --from=build /app/app .
 
-# Create non-root user
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
 
-# Expose port
 EXPOSE ${this.config.port}
 
-# Run application
 CMD ["./app"]`;
 	}
 
 	private generateCDockerfile(): string {
 		const gccVersion = this.config.framework || "13";
 
-		// Get image from langConfig
 		let gccImage = `gcc:${gccVersion}`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === gccVersion);
@@ -762,34 +656,29 @@ CMD ["./app"]`;
 			}
 		}
 
+		const runtimeImage = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
+
 		return `# Build stage
 FROM ${gccImage} AS build
 
 WORKDIR /app
 
-# Copy source code
 COPY . .
 
-# Build application
 RUN gcc -o app main.c
 
 # Runtime stage
-FROM ${this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim"}
+FROM ${runtimeImage}
 
 WORKDIR /app
 
-# Install runtime dependencies
 ${this.config.useAlpine ? "RUN apk --no-cache add musl\n" : "RUN apt-get update && apt-get install -y --no-install-recommends libc6 && rm -rf /var/lib/apt/lists/*\n"}
-# Copy binary
 COPY --from=build /app/app .
 
-# Create non-root user
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
 
-# Expose port
 EXPOSE ${this.config.port}
 
-# Run application
 CMD ["./app"]`;
 	}
 
@@ -798,13 +687,10 @@ CMD ["./app"]`;
 
 WORKDIR /app
 
-# Copy application
 COPY . .
 
-# Expose port
 EXPOSE ${this.config.port}
 
-# Run application
 CMD ["sh", "-c", "echo 'Please configure your application startup command'"]`;
 	}
 }

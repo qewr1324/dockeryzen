@@ -6,20 +6,12 @@ export class DockerComposeGenerator {
 	generate(): string {
 		const services: string[] = [];
 		const volumes: string[] = [];
-		const usedPorts = new Set<number>();
 		const usedServiceNames = new Set<string>();
 
-		// Check for port conflicts
 		this.checkPortConflicts();
 
-		// Main application service
 		services.push(this.generateMainService());
-		usedPorts.add(this.config.port);
-		if (this.config.enableDebug) {
-			usedPorts.add(5005);
-		}
 
-		// Database services
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
 				if (!db.useExternalUrl) {
@@ -29,15 +21,12 @@ export class DockerComposeGenerator {
 					if (!usedServiceNames.has(serviceName)) {
 						services.push(service);
 						usedServiceNames.add(serviceName);
-
-						const volumeName = `${this.config.projectName}-${db.type}-data`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
-						volumes.push(`  ${volumeName}:\n    driver: local`);
+						volumes.push(`  ${serviceName}-data:\n    driver: local`);
 					}
 				}
 			}
 		}
 
-		// Message queue services
 		if (this.config.messageQueues.length > 0) {
 			for (const mq of this.config.messageQueues) {
 				const service = this.generateMessageQueueService(mq);
@@ -50,7 +39,6 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Additional services
 		if (this.config.services.length > 0) {
 			for (const service of this.config.services) {
 				const serviceConfig = this.generateAdditionalService(service);
@@ -83,36 +71,29 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 	private checkPortConflicts(): void {
 		const allPorts = new Map<number, string>();
 
-		// Main app port
 		allPorts.set(this.config.port, "Main Application");
-		if (this.config.enableDebug) {
+		if (this.config.enableDebug && this.config.language.startsWith("java")) {
 			allPorts.set(5005, "Debug Port");
 		}
 
-		// Database ports
 		for (const db of this.config.databases) {
 			if (!db.useExternalUrl) {
 				if (allPorts.has(db.externalPort)) {
-					console.warn(`Port conflict: ${db.type} uses port ${db.externalPort} which is already used by ${allPorts.get(db.externalPort)}`);
 					db.externalPort = this.findFreePort(db.externalPort, allPorts);
 				}
 				allPorts.set(db.externalPort, `${db.type} Database`);
 			}
 		}
 
-		// Message queue ports
 		for (const mq of this.config.messageQueues) {
 			if (allPorts.has(mq.externalPort)) {
-				console.warn(`Port conflict: ${mq.type} uses port ${mq.externalPort} which is already used by ${allPorts.get(mq.externalPort)}`);
 				mq.externalPort = this.findFreePort(mq.externalPort, allPorts);
 			}
 			allPorts.set(mq.externalPort, `${mq.type} Message Queue`);
 		}
 
-		// Service ports
 		for (const service of this.config.services) {
 			if (allPorts.has(service.externalPort)) {
-				console.warn(`Port conflict: ${service.type} uses port ${service.externalPort} which is already used by ${allPorts.get(service.externalPort)}`);
 				service.externalPort = this.findFreePort(service.externalPort, allPorts);
 			}
 			allPorts.set(service.externalPort, `${service.type} Service`);
@@ -131,12 +112,15 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		const serviceName = this.config.projectName.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 		const ports = [`      - "${this.config.port}:${this.config.port}"`];
 
-		if (this.config.enableDebug) {
+		// Debug port فقط برای Java
+		if (this.config.enableDebug && this.config.language.startsWith("java")) {
 			ports.push(`      - "5005:5005"`);
 		}
 
 		let envVars = "";
-		if (this.config.language.startsWith("java")) {
+		const lang = this.config.language;
+
+		if (lang.startsWith("java")) {
 			let javaOpts = "-Xms512m -Xmx1024m";
 			if (this.config.enableDebug) {
 				javaOpts += " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005";
@@ -144,20 +128,34 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 			envVars = `
       - SPRING_PROFILES_ACTIVE=production
       - JAVA_OPTS=${javaOpts}`;
-		} else if (this.config.language.startsWith("js")) {
+		} else if (lang.startsWith("js")) {
 			envVars = `
-      - NODE_ENV=production
+      - NODE_ENV=${this.config.enableDebug ? "development" : "production"}
       - PORT=${this.config.port}`;
-		} else if (this.config.language === "python") {
+		} else if (lang === "python") {
 			envVars = `
       - PYTHONUNBUFFERED=1
       - PORT=${this.config.port}`;
-		} else if (this.config.language === "go") {
+		} else if (lang === "dotnet") {
 			envVars = `
-      - GIN_MODE=release`;
-		} else if (this.config.language === "rust") {
+      - ASPNETCORE_ENVIRONMENT=${this.config.enableDebug ? "Development" : "Production"}
+      - ASPNETCORE_URLS=http://+:${this.config.port}`;
+		} else if (lang === "go") {
 			envVars = `
-      - RUST_LOG=info`;
+      - GIN_MODE=${this.config.enableDebug ? "debug" : "release"}`;
+		} else if (lang === "rust") {
+			envVars = `
+      - RUST_LOG=${this.config.enableDebug ? "debug" : "info"}`;
+		} else if (lang === "laravel") {
+			envVars = `
+      - APP_ENV=${this.config.enableDebug ? "local" : "production"}
+      - APP_DEBUG=${this.config.enableDebug ? "true" : "false"}`;
+		} else if (lang === "rails") {
+			envVars = `
+      - RAILS_ENV=${this.config.enableDebug ? "development" : "production"}`;
+		} else if (lang === "cpp" || lang === "c") {
+			envVars = `
+      - DEBUG=${this.config.enableDebug ? "1" : "0"}`;
 		}
 
 		return `  ${serviceName}:
@@ -181,58 +179,12 @@ ${ports.join("\n")}
 
 		const serviceName = this.getServiceName(db.type);
 
-		// Use image from config
 		let image = db.image;
-
-		// If alpine selected and alpineImage exists
 		if (db.useAlpine && db.alpineImage) {
 			image = db.alpineImage;
 		}
-
-		// Fallback if no image
 		if (!image) {
-			const imageMap: Record<string, string> = {
-				postgresql: "postgres",
-				mysql: "mysql",
-				mariadb: "mariadb",
-				mongodb: "mongo",
-				redis: "redis",
-				elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch",
-				cassandra: "cassandra",
-				neo4j: "neo4j",
-				influxdb: "influxdb",
-				qdrant: "qdrant/qdrant",
-				cockroachdb: "cockroachdb/cockroach",
-				couchdb: "couchdb",
-				dynamodb: "amazon/dynamodb-local",
-				solr: "solr",
-				meilisearch: "getmeili/meilisearch",
-				milvus: "milvusdb/milvus",
-				oracle: "container-registry.oracle.com/database/enterprise",
-				mssql: "mcr.microsoft.com/mssql/server",
-				db2: "ibmcom/db2",
-				couchbase: "couchbase/server",
-				ravendb: "ravendb/ravendb",
-				memcached: "memcached",
-				etcd: "bitnami/etcd",
-				aerospike: "aerospike/aerospike-server",
-				scylladb: "scylladb/scylla",
-				hbase: "apache/hbase",
-				bigtable: "google/cloud-sdk",
-				arangodb: "arangodb",
-				janusgraph: "janusgraph/janusgraph",
-				dgraph: "dgraph/dgraph",
-				timescaledb: "timescale/timescaledb",
-				prometheus: "prom/prometheus",
-				opentsdb: "petergrace/opentsdb-docker",
-				typesense: "typesense/typesense",
-				tidb: "pingcap/tidb",
-				yugabytedb: "yugabytedb/yugabyte",
-				weaviate: "semitechnologies/weaviate",
-				chroma: "chromadb/chroma",
-			};
-			const baseImage = imageMap[db.type] || db.type;
-			image = `${baseImage}:${db.version}`;
+			image = `${db.type}:${db.version}`;
 		}
 
 		let service = `  ${serviceName}:
@@ -243,148 +195,51 @@ ${ports.join("\n")}
       - "${db.externalPort}:${db.internalPort}"
     environment:`;
 
-		// Add environment variables based on database type
-		if (db.type === "postgresql" || db.type === "timescaledb") {
+		const envMap: Record<string, string[]> = {
+			postgresql: [`POSTGRES_DB=${db.databaseName || "postgres"}`, `POSTGRES_USER=${db.username || "postgres"}`, `POSTGRES_PASSWORD=${db.password || "root"}`],
+			timescaledb: [`POSTGRES_DB=${db.databaseName || "postgres"}`, `POSTGRES_USER=${db.username || "postgres"}`, `POSTGRES_PASSWORD=${db.password || "root"}`],
+			mysql: [`MYSQL_DATABASE=${db.databaseName || "mysql"}`, `MYSQL_USER=${db.username || "root"}`, `MYSQL_PASSWORD=${db.password || "root"}`, `MYSQL_ROOT_PASSWORD=${db.password || "root"}`],
+			mariadb: [`MYSQL_DATABASE=${db.databaseName || "mysql"}`, `MYSQL_USER=${db.username || "root"}`, `MYSQL_PASSWORD=${db.password || "root"}`, `MYSQL_ROOT_PASSWORD=${db.password || "root"}`],
+			mongodb: [`MONGO_INITDB_ROOT_USERNAME=${db.username || "root"}`, `MONGO_INITDB_ROOT_PASSWORD=${db.password || "root"}`],
+			redis: [`REDIS_PASSWORD=${db.password || "root"}`],
+			mssql: ["ACCEPT_EULA=Y", `MSSQL_SA_PASSWORD=${db.password || "Root1234!"}`],
+			neo4j: [`NEO4J_AUTH=${db.username || "neo4j"}/${db.password || "password"}`],
+			elasticsearch: ["discovery.type=single-node", "xpack.security.enabled=false", "ES_JAVA_OPTS=-Xms512m -Xmx512m"],
+			cassandra: [`CASSANDRA_USER=${db.username || "cassandra"}`, `CASSANDRA_PASSWORD=${db.password || "cassandra"}`],
+			influxdb: ["DOCKER_INFLUXDB_INIT_MODE=setup", `DOCKER_INFLUXDB_INIT_USERNAME=${db.username || "admin"}`, `DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "root"}`, "DOCKER_INFLUXDB_INIT_ORG=my-org", "DOCKER_INFLUXDB_INIT_BUCKET=my-bucket"],
+			oracle: [`ORACLE_PWD=${db.password || "root"}`, "ORACLE_CHARACTERSET=AL32UTF8"],
+			db2: ["LICENSE=accept", `DB2INST1_PASSWORD=${db.password || "root"}`, `DBNAME=${db.databaseName || "sample"}`],
+			couchdb: [`COUCHDB_USER=${db.username || "admin"}`, `COUCHDB_PASSWORD=${db.password || "root"}`],
+			couchbase: [`CB_USERNAME=${db.username || "admin"}`, `CB_PASSWORD=${db.password || "root"}`],
+			dynamodb: ["AWS_ACCESS_KEY_ID=dummy", "AWS_SECRET_ACCESS_KEY=dummy", "AWS_DEFAULT_REGION=us-east-1"],
+			ravendb: ["RAVEN_Security_UnsecuredAccessAllowed=PrivateNetwork", "RAVEN_Setup_Mode=None"],
+			memcached: ["MEMCACHED_CACHE_SIZE=64"],
+			etcd: ["ALLOW_NONE_AUTHENTICATION=yes", `ETCD_ADVERTISE_CLIENT_URLS=http://${serviceName}:2379`],
+			aerospike: ["NAMESPACE=test"],
+			scylladb: [`SCYLLA_USER=${db.username || "root"}`, `SCYLLA_PASS=${db.password || "root"}`],
+			hbase: ["HBASE_STANDALONE=true"],
+			bigtable: ["BIGTABLE_EMULATOR_HOST=0.0.0.0:8080"],
+			arangodb: [`ARANGO_ROOT_PASSWORD=${db.password || "root"}`],
+			janusgraph: ["JANUS_PROPS_TEMPLATE=berkeleyje", "janusgraph.storage.backend=berkeleyje"],
+			dgraph: ["DGRAPH_ALPHA_WHITELIST=0.0.0.0/0"],
+			prometheus: ["PROMETHEUS_CONFIG=/etc/prometheus/prometheus.yml"],
+			opentsdb: ["TSDB_CONF=/etc/opentsdb/opentsdb.conf"],
+			solr: ["SOLR_HEAP=512m"],
+			meilisearch: [`MEILI_MASTER_KEY=${db.password || "root"}`, "MEILI_ENV=development"],
+			typesense: [`TYPESENSE_API_KEY=${db.password || "root"}`, "TYPESENSE_DATA_DIR=/data"],
+			tidb: ["TIDB_SERVER_PORT=4000", "TIDB_STATUS_PORT=10080"],
+			yugabytedb: [`YB_MASTER_ADDRESS=${serviceName}:7100`, `YB_TSERVER_ADDRESS=${serviceName}:9000`],
+			weaviate: ["AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true", "PERSISTENCE_DATA_PATH=/var/lib/weaviate"],
+			qdrant: ["QDRANT__SERVICE__GRPC_PORT=6334"],
+			cockroachdb: [`COCKROACH_DATABASE=${db.databaseName || "defaultdb"}`, `COCKROACH_USER=${db.username || "root"}`],
+			milvus: ["ETCD_AUTO_COMPACTION_MODE=revision", `MILVUS_ETCD_ENDPOINTS=${serviceName}:2379`],
+			chroma: [`CHROMA_SERVER_AUTH_CREDENTIALS=${db.password || "root"}`, "CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider"],
+		};
+
+		const envVars = envMap[db.type] || [];
+		for (const env of envVars) {
 			service += `
-      - POSTGRES_DB=${db.databaseName || "postgres"}
-      - POSTGRES_USER=${db.username || "postgres"}
-      - POSTGRES_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "mysql" || db.type === "mariadb") {
-			service += `
-      - MYSQL_DATABASE=${db.databaseName || "mysql"}
-      - MYSQL_USER=${db.username || "root"}
-      - MYSQL_PASSWORD=${db.password || "root"}
-      - MYSQL_ROOT_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "mongodb") {
-			service += `
-      - MONGO_INITDB_ROOT_USERNAME=${db.username || "root"}
-      - MONGO_INITDB_ROOT_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "redis") {
-			service += `
-      - REDIS_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "mssql") {
-			service += `
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${db.password || "Root1234!"}`;
-		} else if (db.type === "neo4j") {
-			service += `
-      - NEO4J_AUTH=${db.username || "neo4j"}/${db.password || "password"}`;
-		} else if (db.type === "elasticsearch") {
-			service += `
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m`;
-		} else if (db.type === "cassandra") {
-			service += `
-      - CASSANDRA_USER=${db.username || "cassandra"}
-      - CASSANDRA_PASSWORD=${db.password || "cassandra"}`;
-		} else if (db.type === "influxdb") {
-			service += `
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=${db.username || "admin"}
-      - DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "root"}
-      - DOCKER_INFLUXDB_INIT_ORG=my-org
-      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket`;
-		} else if (db.type === "oracle") {
-			service += `
-      - ORACLE_PWD=${db.password || "root"}
-      - ORACLE_CHARACTERSET=AL32UTF8`;
-		} else if (db.type === "db2") {
-			service += `
-      - LICENSE=accept
-      - DB2INST1_PASSWORD=${db.password || "root"}
-      - DBNAME=${db.databaseName || "sample"}`;
-		} else if (db.type === "couchdb") {
-			service += `
-      - COUCHDB_USER=${db.username || "admin"}
-      - COUCHDB_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "couchbase") {
-			service += `
-      - CB_USERNAME=${db.username || "admin"}
-      - CB_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "dynamodb") {
-			service += `
-      - AWS_ACCESS_KEY_ID=dummy
-      - AWS_SECRET_ACCESS_KEY=dummy
-      - AWS_DEFAULT_REGION=us-east-1`;
-		} else if (db.type === "ravendb") {
-			service += `
-      - RAVEN_Security_UnsecuredAccessAllowed=PrivateNetwork
-      - RAVEN_Setup_Mode=None`;
-		} else if (db.type === "memcached") {
-			service += `
-      - MEMCACHED_CACHE_SIZE=64`;
-		} else if (db.type === "etcd") {
-			service += `
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - ETCD_ADVERTISE_CLIENT_URLS=http://${serviceName}:2379`;
-		} else if (db.type === "aerospike") {
-			service += `
-      - NAMESPACE=test`;
-		} else if (db.type === "scylladb") {
-			service += `
-      - SCYLLA_USER=${db.username || "root"}
-      - SCYLLA_PASS=${db.password || "root"}`;
-		} else if (db.type === "hbase") {
-			service += `
-      - HBASE_STANDALONE=true`;
-		} else if (db.type === "bigtable") {
-			service += `
-      - BIGTABLE_EMULATOR_HOST=0.0.0.0:8080`;
-		} else if (db.type === "arangodb") {
-			service += `
-      - ARANGO_ROOT_PASSWORD=${db.password || "root"}`;
-		} else if (db.type === "janusgraph") {
-			service += `
-      - JANUS_PROPS_TEMPLATE=berkeleyje
-      - janusgraph.storage.backend=berkeleyje`;
-		} else if (db.type === "dgraph") {
-			service += `
-      - DGRAPH_ALPHA_WHITELIST=0.0.0.0/0`;
-		} else if (db.type === "prometheus") {
-			service += `
-      - PROMETHEUS_CONFIG=/etc/prometheus/prometheus.yml`;
-		} else if (db.type === "opentsdb") {
-			service += `
-      - TSDB_CONF=/etc/opentsdb/opentsdb.conf`;
-		} else if (db.type === "solr") {
-			service += `
-      - SOLR_HEAP=512m`;
-		} else if (db.type === "meilisearch") {
-			service += `
-      - MEILI_MASTER_KEY=${db.password || "root"}
-      - MEILI_ENV=development`;
-		} else if (db.type === "typesense") {
-			service += `
-      - TYPESENSE_API_KEY=${db.password || "root"}
-      - TYPESENSE_DATA_DIR=/data`;
-		} else if (db.type === "tidb") {
-			service += `
-      - TIDB_SERVER_PORT=4000
-      - TIDB_STATUS_PORT=10080`;
-		} else if (db.type === "yugabytedb") {
-			service += `
-      - YB_MASTER_ADDRESS=${serviceName}:7100
-      - YB_TSERVER_ADDRESS=${serviceName}:9000`;
-		} else if (db.type === "weaviate") {
-			service += `
-      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
-      - PERSISTENCE_DATA_PATH=/var/lib/weaviate`;
-		} else if (db.type === "qdrant") {
-			service += `
-      - QDRANT__SERVICE__GRPC_PORT=6334`;
-		} else if (db.type === "cockroachdb") {
-			service += `
-      - COCKROACH_DATABASE=${db.databaseName || "defaultdb"}
-      - COCKROACH_USER=${db.username || "root"}`;
-		} else if (db.type === "milvus") {
-			service += `
-      - ETCD_AUTO_COMPACTION_MODE=revision
-      - MILVUS_ETCD_ENDPOINTS=${serviceName}:2379`;
-		} else if (db.type === "chroma") {
-			service += `
-      - CHROMA_SERVER_AUTH_CREDENTIALS=${db.password || "root"}
-      - CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider`;
+      - ${env}`;
 		}
 
 		service += `
@@ -399,24 +254,12 @@ ${ports.join("\n")}
 	private generateMessageQueueService(mq: any): string {
 		const serviceName = this.getServiceName(mq.type);
 
-		// Use image from config
 		let image = mq.image;
-
-		// If alpine selected and alpineImage exists
 		if (mq.useAlpine && mq.alpineImage) {
 			image = mq.alpineImage;
 		}
-
-		// Fallback if no image
 		if (!image) {
-			const imageMap: Record<string, string> = {
-				kafka: "apache/kafka",
-				rabbitmq: "rabbitmq",
-				"activemq-classic": "apache/activemq-classic",
-				"activemq-artemis": "apache/activemq-artemis",
-			};
-			const baseImage = imageMap[mq.type] || mq.type;
-			image = `${baseImage}:${mq.version}`;
+			image = `${mq.type}:${mq.version}`;
 		}
 
 		let service = `  ${serviceName}:
@@ -453,25 +296,12 @@ ${ports.join("\n")}
 	private generateAdditionalService(service: any): string {
 		const serviceName = this.getServiceName(service.type);
 
-		// Use image from config
 		let image = service.image;
-
-		// If alpine selected and alpineImage exists
 		if (service.useAlpine && service.alpineImage) {
 			image = service.alpineImage;
 		}
-
-		// Fallback if no image
 		if (!image) {
-			const imageMap: Record<string, string> = {
-				nginx: "nginx",
-				grafana: "grafana/grafana",
-				prometheus: "prom/prometheus",
-				keycloak: "quay.io/keycloak/keycloak",
-				minio: "minio/minio",
-			};
-			const baseImage = imageMap[service.type] || service.type;
-			image = `${baseImage}:${service.version}`;
+			image = `${service.type}:${service.version}`;
 		}
 
 		let serviceConfig = `  ${serviceName}:
