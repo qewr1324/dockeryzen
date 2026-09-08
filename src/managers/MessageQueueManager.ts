@@ -1,44 +1,25 @@
 import * as vscode from "vscode";
 import { MessageQueueConfig } from "../types/index.js";
+const messageQueuesConfig: any = require("../config/message-queues.json");
 
 export class MessageQueueManager {
 	private queues: MessageQueueConfig[] = [];
 
 	async selectMessageQueues(currentStep: number, totalSteps: number): Promise<MessageQueueConfig[] | "back" | "cancel"> {
-		const allQueues = [
-			{
-				label: "$(mail) Kafka",
-				description: "Distributed Event Streaming",
-				detail: "Port: 9092 | Version: 3.6.0 | Best for: High-throughput, Event sourcing",
-				value: "kafka",
-				defaultPort: 9092,
-				versions: ["3.6.0", "3.5.0", "3.4.0", "3.3.0"],
-				picked: false,
-			},
-			{
-				label: "$(mail) RabbitMQ",
-				description: "Message Broker",
-				detail: "Port: 5672 | Version: 3.12 | Best for: Reliable messaging, Complex routing",
-				value: "rabbitmq",
-				defaultPort: 5672,
-				versions: ["3.12", "3.11", "3.10", "3.9"],
-				picked: false,
-			},
-			{
-				label: "$(mail) ActiveMQ",
-				description: "Apache Message Broker",
-				detail: "Port: 61616 | Version: 5.18 | Best for: JMS, Enterprise integration",
-				value: "activemq",
-				defaultPort: 61616,
-				versions: ["5.18", "5.17", "5.16", "5.15"],
-				picked: false,
-			},
-		];
+		const allQueues: any[] = messageQueuesConfig.queues;
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Select Message Queues`;
 		quickPick.placeholder = "Select message queues (multi-select) - Press Enter when done";
-		quickPick.items = allQueues;
+		quickPick.items = allQueues.map((mq: any) => ({
+			label: `$(${mq.icon}) ${mq.label}`,
+			description: mq.description,
+			detail: mq.detail,
+			value: mq.value,
+			defaultPort: mq.defaultPort,
+			versions: mq.versions,
+			picked: false,
+		}));
 		quickPick.canSelectMany = true;
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
@@ -104,9 +85,9 @@ export class MessageQueueManager {
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Message Queues`;
 		quickPick.placeholder = "Click on a message queue to edit it, or press Enter to continue with defaults";
 		quickPick.items = selectedQueues.map((mq) => ({
-			label: `$(mail) ${mq.label.replace("$(mail) ", "")}`,
+			label: `$(${mq.icon}) ${mq.label}`,
 			description: mq.configured ? "$(check) Configured" : "$(gear) Click to Edit",
-			detail: `Port: ${mq.defaultPort} | Version: ${mq.versions[0]}`,
+			detail: `Port: ${mq.defaultPort} | Version: ${mq.versions[0].label}`,
 			value: mq.value,
 			defaultPort: mq.defaultPort,
 			versions: mq.versions,
@@ -164,10 +145,12 @@ export class MessageQueueManager {
 						if (!mq.configured) {
 							this.queues.push({
 								type: mq.value,
-								version: mq.versions[0],
+								version: mq.versions[0].value,
 								internalPort: mq.defaultPort,
 								externalPort: mq.defaultPort,
 								useAlpine: false,
+								image: mq.versions[0].image,
+								alpineImage: mq.versions[0].alpineImage,
 							});
 						}
 					}
@@ -188,33 +171,32 @@ export class MessageQueueManager {
 	}
 
 	private async askQueueConfig(mq: any, currentStep: number, totalSteps: number): Promise<MessageQueueConfig | "back" | "cancel" | undefined> {
-		const version = await this.showQuickPickWithBack(
-			`Select ${mq.label.replace("$(mail) ", "")} Version`,
-			mq.versions.map((v: string) => ({
-				label: `$(tag) ${v}`,
-				description: `Version ${v}`,
-				detail: `Docker image tag: ${v}`,
-				value: v,
-			})),
-			currentStep,
-			totalSteps,
-		);
+		const versionItems = mq.versions.map((v: any) => ({
+			label: `$(tag) ${v.label}`,
+			description: `Version ${v.value}`,
+			detail: v.image ? `Image: ${v.image}` : "External registry",
+			value: v.value,
+			image: v.image,
+			alpineImage: v.alpineImage,
+		}));
+
+		const version = await this.showQuickPickWithBack(`Select ${mq.label} Version`, versionItems, currentStep, totalSteps);
 		if (version === "back") return "back";
 		if (version === "cancel") return "cancel";
 		if (!version) return undefined;
 
-		const internalPort = await this.showInputBoxWithBack(`Enter Internal Port`, mq.defaultPort.toString(), currentStep, totalSteps);
+		const internalPort = await this.showInputBoxWithBack(`Enter ${mq.label} Internal Port`, mq.defaultPort.toString(), currentStep, totalSteps);
 		if (internalPort === "back") return "back";
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
 
-		const externalPort = await this.showInputBoxWithBack(`Enter External Port`, internalPort, currentStep, totalSteps);
+		const externalPort = await this.showInputBoxWithBack(`Enter ${mq.label} External Port`, internalPort, currentStep, totalSteps);
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
 
 		const useAlpine = await this.showQuickPickWithBack(
-			`Use Alpine Version?`,
+			`Use Alpine Version for ${mq.label}?`,
 			[
 				{ label: "$(check) Yes", description: "Alpine-based image", detail: "Smaller image size", value: "yes" },
 				{ label: "$(x) No", description: "Standard image", detail: "Full-featured image", value: "no" },
@@ -231,6 +213,8 @@ export class MessageQueueManager {
 			internalPort: parseInt(internalPort),
 			externalPort: parseInt(externalPort),
 			useAlpine: useAlpine?.value === "yes",
+			image: version.image,
+			alpineImage: version.alpineImage,
 		};
 	}
 

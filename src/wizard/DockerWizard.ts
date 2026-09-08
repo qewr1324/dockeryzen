@@ -2,13 +2,24 @@ import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
 import { ProjectConfig } from "../types/index.js";
-import { ConfigLoader } from "../config/ConfigLoader.js";
 import { DatabaseManager } from "../managers/DatabaseManager.js";
 import { MessageQueueManager } from "../managers/MessageQueueManager.js";
 import { ServiceManager } from "../managers/ServiceManager.js";
 import { DockerfileGenerator } from "../generators/DockerfileGenerator.js";
 import { DockerComposeGenerator } from "../generators/DockerComposeGenerator.js";
 import { DockerignoreGenerator } from "../generators/DockerignoreGenerator.js";
+
+// Import JSON configs directly
+const javaConfig: any = require("../config/languages/java.json");
+const dotnetConfig: any = require("../config/languages/dotnet.json");
+const pythonConfig: any = require("../config/languages/python.json");
+const nodejsConfig: any = require("../config/languages/nodejs.json");
+const rubyConfig: any = require("../config/languages/ruby.json");
+const phpConfig: any = require("../config/languages/php.json");
+const rustConfig: any = require("../config/languages/rust.json");
+const goConfig: any = require("../config/languages/go.json");
+const cppConfig: any = require("../config/languages/cpp.json");
+const cConfig: any = require("../config/languages/c.json");
 
 export class DockerWizard {
 	private config: ProjectConfig;
@@ -135,19 +146,7 @@ export class DockerWizard {
 	}
 
 	private async askLanguage(): Promise<"next" | "back" | "cancel"> {
-		// Load language configs
-		const languageConfigs = [
-			await ConfigLoader.loadConfig("languages/java.json"),
-			await ConfigLoader.loadConfig("languages/dotnet.json"),
-			await ConfigLoader.loadConfig("languages/python.json"),
-			await ConfigLoader.loadConfig("languages/nodejs.json"),
-			await ConfigLoader.loadConfig("languages/ruby.json"),
-			await ConfigLoader.loadConfig("languages/php.json"),
-			await ConfigLoader.loadConfig("languages/rust.json"),
-			await ConfigLoader.loadConfig("languages/go.json"),
-			await ConfigLoader.loadConfig("languages/cpp.json"),
-			await ConfigLoader.loadConfig("languages/c.json"),
-		];
+		const languageConfigs: any[] = [javaConfig, dotnetConfig, pythonConfig, nodejsConfig, rubyConfig, phpConfig, rustConfig, goConfig, cppConfig, cConfig];
 
 		const languages: any[] = [];
 
@@ -384,18 +383,22 @@ export class DockerWizard {
 
 	private async askJavaSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		// Build tool
-		const buildTools = langConfig.types?.find((t: any) => t.type === this.config.language)?.buildTools || [];
-		const buildToolItems = buildTools.map((bt: any) => ({
-			label: `$(${bt.icon}) ${bt.label}`,
-			description: bt.description,
-			detail: bt.detail,
-			value: bt.value,
-		}));
+		const typeConfig = langConfig.types?.find((t: any) => t.type === this.config.language);
+		const buildTools = typeConfig?.buildTools || [];
 
-		const buildTool = await this.showQuickPickWithBack("Select Build Tool", buildToolItems);
-		if (buildTool === "back") return "back";
-		if (buildTool === "cancel") return "cancel";
-		if (buildTool) this.config.buildTool = buildTool.value as "maven" | "gradle";
+		if (buildTools.length > 0) {
+			const buildToolItems = buildTools.map((bt: any) => ({
+				label: `$(${bt.icon}) ${bt.label}`,
+				description: bt.description,
+				detail: bt.detail,
+				value: bt.value,
+			}));
+
+			const buildTool = await this.showQuickPickWithBack("Select Build Tool", buildToolItems);
+			if (buildTool === "back") return "back";
+			if (buildTool === "cancel") return "cancel";
+			if (buildTool) this.config.buildTool = buildTool.value as "maven" | "gradle";
+		}
 
 		// JDK Version
 		const jdkVersions = langConfig.jdkVersions.map((v: any) => ({
@@ -424,8 +427,6 @@ export class DockerWizard {
 		if (jdkVendor) this.config.jdkVendor = jdkVendor.value;
 
 		// Framework or Server
-		const typeConfig = langConfig.types?.find((t: any) => t.type === this.config.language);
-
 		if (this.config.language === "java-jar" && typeConfig?.frameworks) {
 			const frameworks = typeConfig.frameworks.map((f: any) => ({
 				label: `$(${f.icon}) ${f.label}`,
@@ -611,7 +612,8 @@ export class DockerWizard {
 			throw new Error("No workspace folder found. Please open a folder first.");
 		}
 
-		const dockerfileGenerator = new DockerfileGenerator(this.config, this.languageConfigs.get(this.config.language));
+		const langConfig = this.languageConfigs.get(this.config.language);
+		const dockerfileGenerator = new DockerfileGenerator(this.config, langConfig);
 		const dockerComposeGenerator = new DockerComposeGenerator(this.config);
 		const dockerignoreGenerator = new DockerignoreGenerator(this.config);
 

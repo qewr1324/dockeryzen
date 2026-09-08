@@ -1,12 +1,22 @@
 import * as vscode from "vscode";
 import { DatabaseConfig } from "../types/index.js";
-import { ConfigLoader } from "../config/ConfigLoader.js";
+
+// Import database JSON configs directly
+const sqlDatabases: any = require("../config/databases/sql.json");
+const nosqlDatabases: any = require("../config/databases/nosql.json");
+const keyValueDatabases: any = require("../config/databases/key-value.json");
+const wideColumnDatabases: any = require("../config/databases/wide-column.json");
+const graphDatabases: any = require("../config/databases/graph.json");
+const timeSeriesDatabases: any = require("../config/databases/time-series.json");
+const searchEngineDatabases: any = require("../config/databases/search-engines.json");
+const newsqlDatabases: any = require("../config/databases/newsql.json");
+const vectorDatabases: any = require("../config/databases/vector.json");
 
 export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];
 
 	async selectDatabases(currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
-		const allDatabases = await ConfigLoader.loadAllDatabases();
+		const allDatabases = this.getAllDatabases();
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Select Databases`;
@@ -80,6 +90,25 @@ export class DatabaseManager {
 
 			quickPick.show();
 		});
+	}
+
+	private getAllDatabases(): any[] {
+		const allDatabases: any[] = [];
+
+		const configs: any[] = [sqlDatabases, nosqlDatabases, keyValueDatabases, wideColumnDatabases, graphDatabases, timeSeriesDatabases, searchEngineDatabases, newsqlDatabases, vectorDatabases];
+
+		for (const config of configs) {
+			if (config.databases) {
+				for (const db of config.databases) {
+					allDatabases.push({
+						...db,
+						category: config.category,
+					});
+				}
+			}
+		}
+
+		return allDatabases;
 	}
 
 	private async showSelectedDatabasesWithEdit(selectedDbs: any[], currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
