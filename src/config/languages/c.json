@@ -1,0 +1,40 @@
+{
+	"language": "c",
+	"type": "c",
+	"label": "C",
+	"description": "C Application",
+	"detail": "C application | Best for: System programming, embedded systems",
+	"icon": "symbol-constant",
+	"versions": [
+		{
+			"value": "12",
+			"label": "GCC 12",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
+			"icon": "tag",
+			"image": "gcc:12",
+			"alpineImage": "gcc:12-alpine",
+			"slimImage": "gcc:12-slim"
+		},
+		{
+			"value": "13",
+			"label": "GCC 13",
+			"description": "Recommended",
+			"detail": "Latest stable | Best for: New projects",
+			"icon": "tag",
+			"image": "gcc:13",
+			"alpineImage": "gcc:13-alpine",
+			"slimImage": "gcc:13-slim"
+		},
+		{
+			"value": "14",
+			"label": "GCC 14",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"image": "gcc:14",
+			"alpineImage": "gcc:14-alpine",
+			"slimImage": "gcc:14-slim"
+		}
+	]
+}

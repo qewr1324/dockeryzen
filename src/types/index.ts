@@ -12,6 +12,7 @@ export interface ProjectConfig {
 	server?: string;
 	nodeVersion?: string;
 	pythonVersion?: string;
+	healthCheckPath?: string;
 	databases: DatabaseConfig[];
 	messageQueues: MessageQueueConfig[];
 	services: ServiceConfig[];
@@ -28,6 +29,8 @@ export interface DatabaseConfig {
 	useAlpine: boolean;
 	useExternalUrl?: boolean;
 	url?: string;
+	image?: string;
+	alpineImage?: string;
 }
 
 export interface MessageQueueConfig {
@@ -36,6 +39,8 @@ export interface MessageQueueConfig {
 	internalPort: number;
 	externalPort: number;
 	useAlpine: boolean;
+	image?: string;
+	alpineImage?: string;
 }
 
 export interface ServiceConfig {
@@ -44,28 +49,6 @@ export interface ServiceConfig {
 	internalPort: number;
 	externalPort: number;
 	useAlpine: boolean;
-}
-
-export interface DatabaseDefinition {
-	label: string;
-	value: string;
-	defaultPort: number;
-	defaultUser: string;
-	defaultDatabase?: string;
-	category: string;
-	versions: string[];
-}
-
-export interface MessageQueueDefinition {
-	label: string;
-	value: string;
-	defaultPort: number;
-	versions: string[];
-}
-
-export interface ServiceDefinition {
-	label: string;
-	value: string;
-	defaultPort: number;
-	versions: string[];
+	image?: string;
+	alpineImage?: string;
 }

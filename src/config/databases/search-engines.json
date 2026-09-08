@@ -1,0 +1,54 @@
+{
+	"category": "Search Engine",
+	"databases": [
+		{
+			"label": "Elasticsearch",
+			"value": "elasticsearch",
+			"defaultPort": 9200,
+			"defaultUser": "elastic",
+			"icon": "database",
+			"versions": [
+				{ "value": "9.5.0", "label": "Elasticsearch 9.5", "image": "elasticsearch:9.5.0" },
+				{ "value": "9.4.0", "label": "Elasticsearch 9.4", "image": "elasticsearch:9.4.0" },
+				{ "value": "8.19.0", "label": "Elasticsearch 8.19", "image": "elasticsearch:8.19.0" },
+				{ "value": "8.18.0", "label": "Elasticsearch 8.18", "image": "elasticsearch:8.18.0" }
+			]
+		},
+		{
+			"label": "Solr",
+			"value": "solr",
+			"defaultPort": 8983,
+			"defaultUser": "solr",
+			"icon": "database",
+			"versions": [
+				{ "value": "9.9", "label": "Solr 9.9", "image": "solr:9.9" },
+				{ "value": "9.8", "label": "Solr 9.8", "image": "solr:9.8" },
+				{ "value": "8.11", "label": "Solr 8.11", "image": "solr:8.11" }
+			]
+		},
+		{
+			"label": "Meilisearch",
+			"value": "meilisearch",
+			"defaultPort": 7700,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "v1.15", "label": "Meilisearch 1.15", "image": "getmeili/meilisearch:v1.15" },
+				{ "value": "v1.14", "label": "Meilisearch 1.14", "image": "getmeili/meilisearch:v1.14" },
+				{ "value": "v1.13", "label": "Meilisearch 1.13", "image": "getmeili/meilisearch:v1.13" }
+			]
+		},
+		{
+			"label": "Typesense",
+			"value": "typesense",
+			"defaultPort": 8108,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "28.0", "label": "Typesense 28.0", "image": "typesense/typesense:28.0" },
+				{ "value": "27.1", "label": "Typesense 27.1", "image": "typesense/typesense:27.1" },
+				{ "value": "26.0", "label": "Typesense 26.0", "image": "typesense/typesense:26.0" }
+			]
+		}
+	]
+}

@@ -2,8 +2,10 @@ import * as vscode from "vscode";
 import { MessageQueueConfig } from "../types/index.js";
 
 export class MessageQueueManager {
+	private queues: MessageQueueConfig[] = [];
+
 	async selectMessageQueues(currentStep: number, totalSteps: number): Promise<MessageQueueConfig[] | "back" | "cancel"> {
-		const queues = [
+		const allQueues = [
 			{
 				label: "$(mail) Kafka",
 				description: "Distributed Event Streaming",
@@ -36,7 +38,7 @@ export class MessageQueueManager {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Select Message Queues`;
 		quickPick.placeholder = "Select message queues (multi-select) - Press Enter when done";
-		quickPick.items = queues;
+		quickPick.items = allQueues;
 		quickPick.canSelectMany = true;
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
@@ -48,42 +50,20 @@ export class MessageQueueManager {
 		let isResolved = false;
 
 		return new Promise((resolve) => {
-			const handleDone = () => {
+			quickPick.onDidAccept(() => {
 				if (isResolved) return;
 				isResolved = true;
 				const selected = quickPick.selectedItems as any[];
 				quickPick.dispose();
 
-				const configs: MessageQueueConfig[] = [];
+				if (selected.length === 0) {
+					resolve([]);
+					return;
+				}
 
-				const processQueue = async (index: number): Promise<void> => {
-					if (index >= selected.length) {
-						resolve(configs);
-						return;
-					}
-
-					const queue = selected[index];
-					const config = await this.askQueueConfig(queue, currentStep, totalSteps);
-
-					if (config === "back") {
-						resolve("back");
-						return;
-					}
-					if (config === "cancel") {
-						resolve("cancel");
-						return;
-					}
-					if (config) {
-						configs.push(config);
-					}
-
-					await processQueue(index + 1);
-				};
-
-				processQueue(0);
-			};
-
-			quickPick.onDidAccept(handleDone);
+				const result = this.showSelectedQueuesWithEdit(selected, currentStep, totalSteps);
+				resolve(result);
+			});
 
 			quickPick.onDidTriggerButton((button) => {
 				if (isResolved) return;
@@ -93,7 +73,17 @@ export class MessageQueueManager {
 					quickPick.dispose();
 					resolve("back");
 				} else if (button.tooltip === "OK") {
-					handleDone();
+					isResolved = true;
+					const selected = quickPick.selectedItems as any[];
+					quickPick.dispose();
+
+					if (selected.length === 0) {
+						resolve([]);
+						return;
+					}
+
+					const result = this.showSelectedQueuesWithEdit(selected, currentStep, totalSteps);
+					resolve(result);
 				}
 			});
 
@@ -109,12 +99,100 @@ export class MessageQueueManager {
 		});
 	}
 
-	private async askQueueConfig(queue: any, currentStep: number, totalSteps: number): Promise<MessageQueueConfig | "back" | "cancel" | undefined> {
+	private async showSelectedQueuesWithEdit(selectedQueues: any[], currentStep: number, totalSteps: number): Promise<MessageQueueConfig[] | "back" | "cancel"> {
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Message Queues`;
+		quickPick.placeholder = "Click on a message queue to edit it, or press Enter to continue with defaults";
+		quickPick.items = selectedQueues.map((mq) => ({
+			label: `$(mail) ${mq.label.replace("$(mail) ", "")}`,
+			description: mq.configured ? "$(check) Configured" : "$(gear) Click to Edit",
+			detail: `Port: ${mq.defaultPort} | Version: ${mq.versions[0]}`,
+			value: mq.value,
+			defaultPort: mq.defaultPort,
+			versions: mq.versions,
+			configured: mq.configured || false,
+		}));
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(async () => {
+				if (isResolved) return;
+
+				const selected = quickPick.selectedItems[0] as any;
+				if (selected) {
+					isResolved = true;
+					quickPick.dispose();
+
+					const config = await this.askQueueConfig(selected, currentStep, totalSteps);
+
+					if (config === "back") {
+						resolve("back");
+						return;
+					}
+					if (config === "cancel") {
+						resolve("cancel");
+						return;
+					}
+					if (config) {
+						this.queues.push(config);
+						selected.configured = true;
+					}
+
+					const result = await this.showSelectedQueuesWithEdit(selectedQueues, currentStep, totalSteps);
+					resolve(result);
+				}
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (isResolved) return;
+
+				isResolved = true;
+				quickPick.dispose();
+
+				if (button.tooltip === "Back") {
+					resolve("back");
+				} else {
+					// OK - Continue with defaults for unconfigured queues
+					for (const mq of selectedQueues) {
+						if (!mq.configured) {
+							this.queues.push({
+								type: mq.value,
+								version: mq.versions[0],
+								internalPort: mq.defaultPort,
+								externalPort: mq.defaultPort,
+								useAlpine: false,
+							});
+						}
+					}
+					resolve(this.queues);
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
+	}
+
+	private async askQueueConfig(mq: any, currentStep: number, totalSteps: number): Promise<MessageQueueConfig | "back" | "cancel" | undefined> {
 		const version = await this.showQuickPickWithBack(
-			`Select ${queue.label} Version`,
-			queue.versions.map((v: string) => ({
+			`Select ${mq.label.replace("$(mail) ", "")} Version`,
+			mq.versions.map((v: string) => ({
 				label: `$(tag) ${v}`,
-				description: `${queue.label} version ${v}`,
+				description: `Version ${v}`,
 				detail: `Docker image tag: ${v}`,
 				value: v,
 			})),
@@ -125,18 +203,18 @@ export class MessageQueueManager {
 		if (version === "cancel") return "cancel";
 		if (!version) return undefined;
 
-		const internalPort = await this.showInputBoxWithBack(`Enter ${queue.label} Internal Port`, queue.defaultPort.toString(), currentStep, totalSteps);
+		const internalPort = await this.showInputBoxWithBack(`Enter Internal Port`, mq.defaultPort.toString(), currentStep, totalSteps);
 		if (internalPort === "back") return "back";
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
 
-		const externalPort = await this.showInputBoxWithBack(`Enter ${queue.label} External Port`, internalPort, currentStep, totalSteps);
+		const externalPort = await this.showInputBoxWithBack(`Enter External Port`, internalPort, currentStep, totalSteps);
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
 
 		const useAlpine = await this.showQuickPickWithBack(
-			`Use Alpine Version for ${queue.label}?`,
+			`Use Alpine Version?`,
 			[
 				{ label: "$(check) Yes", description: "Alpine-based image", detail: "Smaller image size", value: "yes" },
 				{ label: "$(x) No", description: "Standard image", detail: "Full-featured image", value: "no" },
@@ -148,7 +226,7 @@ export class MessageQueueManager {
 		if (useAlpine === "cancel") return "cancel";
 
 		return {
-			type: queue.value,
+			type: mq.value,
 			version: version.value,
 			internalPort: parseInt(internalPort),
 			externalPort: parseInt(externalPort),

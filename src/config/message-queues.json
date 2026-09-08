@@ -1,0 +1,53 @@
+{
+	"queues": [
+		{
+			"label": "Kafka",
+			"value": "kafka",
+			"description": "Distributed Event Streaming",
+			"detail": "Port: 9092 | Best for: High-throughput, Event sourcing",
+			"icon": "mail",
+			"defaultPort": 9092,
+			"versions": [
+				{ "value": "4.3.0", "label": "Kafka 4.3.0", "image": "apache/kafka:4.3.0" },
+				{ "value": "4.2.0", "label": "Kafka 4.2.0", "image": "apache/kafka:4.2.0" },
+				{ "value": "3.9.0", "label": "Kafka 3.9.0", "image": "apache/kafka:3.9.0" },
+				{ "value": "4.3.1", "label": "Kafka 4.3.1 (wlsc)", "image": "wlsc/kafka:4.3.1" },
+				{ "value": "4.1.1", "label": "Kafka 4.1.1 (Standalone)", "image": "ueisele/apache-kafka-server-standalone:4.1.1" }
+			]
+		},
+		{
+			"label": "RabbitMQ",
+			"value": "rabbitmq",
+			"description": "Message Broker",
+			"detail": "Port: 5672 | Best for: Reliable messaging, Complex routing",
+			"icon": "mail",
+			"defaultPort": 5672,
+			"versions": [
+				{ "value": "4.1", "label": "RabbitMQ 4.1", "image": "rabbitmq:4.1", "alpineImage": "rabbitmq:4.1-alpine" },
+				{ "value": "4.0", "label": "RabbitMQ 4.0", "image": "rabbitmq:4.0", "alpineImage": "rabbitmq:4.0-alpine" },
+				{ "value": "3.13", "label": "RabbitMQ 3.13", "image": "rabbitmq:3.13", "alpineImage": "rabbitmq:3.13-alpine" }
+			]
+		},
+		{
+			"label": "ActiveMQ Classic",
+			"value": "activemq-classic",
+			"description": "Apache Message Broker",
+			"detail": "Port: 61616 | Best for: JMS, Enterprise integration",
+			"icon": "mail",
+			"defaultPort": 61616,
+			"versions": [
+				{ "value": "6.1", "label": "ActiveMQ Classic 6.1", "image": "apache/activemq-classic:6.1" },
+				{ "value": "6.0", "label": "ActiveMQ Classic 6.0", "image": "apache/activemq-classic:6.0" }
+			]
+		},
+		{
+			"label": "ActiveMQ Artemis",
+			"value": "activemq-artemis",
+			"description": "Apache Message Broker",
+			"detail": "Port: 61616 | Best for: High-performance messaging",
+			"icon": "mail",
+			"defaultPort": 61616,
+			"versions": [{ "value": "2.37", "label": "ActiveMQ Artemis 2.37", "image": "apache/activemq-artemis:2.37" }]
+		}
+	]
+}

@@ -1,0 +1,94 @@
+{
+	"language": "python",
+	"type": "python",
+	"label": "Python",
+	"description": "Django, Flask, FastAPI",
+	"detail": "Python application | Best for: AI/ML, data processing, APIs",
+	"icon": "terminal",
+	"frameworks": [
+		{
+			"value": "django",
+			"label": "Django",
+			"description": "Full-featured web framework",
+			"detail": "Best for: Large web apps, Admin interfaces, ORM",
+			"icon": "terminal"
+		},
+		{
+			"value": "flask",
+			"label": "Flask",
+			"description": "Lightweight web framework",
+			"detail": "Best for: Simple APIs, Microservices, Prototyping",
+			"icon": "terminal"
+		},
+		{
+			"value": "fastapi",
+			"label": "FastAPI",
+			"description": "Modern fast API framework",
+			"detail": "Best for: High-performance APIs, Auto documentation",
+			"icon": "terminal"
+		}
+	],
+	"versions": [
+		{
+			"value": "3.9",
+			"label": "Python 3.9",
+			"description": "Legacy",
+			"detail": "Older version | Best for: Legacy projects",
+			"icon": "tag",
+			"images": {
+				"standard": "python:3.9",
+				"alpine": "python:3.9-alpine",
+				"slim": "python:3.9-slim"
+			}
+		},
+		{
+			"value": "3.10",
+			"label": "Python 3.10",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
+			"icon": "tag",
+			"images": {
+				"standard": "python:3.10",
+				"alpine": "python:3.10-alpine",
+				"slim": "python:3.10-slim"
+			}
+		},
+		{
+			"value": "3.11",
+			"label": "Python 3.11",
+			"description": "Recommended",
+			"detail": "Faster performance | Best for: New projects",
+			"icon": "tag",
+			"images": {
+				"standard": "python:3.11",
+				"alpine": "python:3.11-alpine",
+				"slim": "python:3.11-slim",
+				"bookworm": "python:3.11-bookworm"
+			}
+		},
+		{
+			"value": "3.12",
+			"label": "Python 3.12",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"standard": "python:3.12",
+				"alpine": "python:3.12-alpine",
+				"slim": "python:3.12-slim"
+			}
+		},
+		{
+			"value": "3.13",
+			"label": "Python 3.13",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"standard": "python:3.13",
+				"alpine": "python:3.13-alpine",
+				"slim": "python:3.13-slim"
+			}
+		}
+	]
+}

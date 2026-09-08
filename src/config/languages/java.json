@@ -1,0 +1,277 @@
+{
+	"language": "java",
+	"types": [
+		{
+			"type": "java-jar",
+			"label": "Java (JAR)",
+			"description": "Spring Boot, Quarkus, Micronaut",
+			"detail": "Java application packaged as JAR | Best for: Microservices, REST APIs",
+			"icon": "coffee",
+			"frameworks": [
+				{
+					"value": "spring-boot",
+					"label": "Spring Boot",
+					"description": "Most popular Java framework",
+					"detail": "Best for: Enterprise apps, Microservices, REST APIs",
+					"icon": "rocket",
+					"healthCheckPath": "/actuator/health"
+				},
+				{
+					"value": "quarkus",
+					"label": "Quarkus",
+					"description": "Kubernetes-native Java framework",
+					"detail": "Best for: Cloud-native, Serverless, Fast startup",
+					"icon": "rocket",
+					"healthCheckPath": "/health"
+				},
+				{
+					"value": "micronaut",
+					"label": "Micronaut",
+					"description": "Lightweight Java framework",
+					"detail": "Best for: Microservices, Low memory footprint",
+					"icon": "rocket",
+					"healthCheckPath": "/health"
+				}
+			],
+			"buildTools": [
+				{
+					"value": "maven",
+					"label": "Maven",
+					"description": "Apache Maven",
+					"detail": "Most popular Java build tool | Uses pom.xml",
+					"icon": "tools"
+				},
+				{
+					"value": "gradle",
+					"label": "Gradle",
+					"description": "Gradle Build Tool",
+					"detail": "Modern build tool | Uses build.gradle",
+					"icon": "tools"
+				}
+			]
+		},
+		{
+			"type": "java-war",
+			"label": "Java (WAR)",
+			"description": "Tomcat, Jetty",
+			"detail": "Java web application packaged as WAR | Best for: Traditional web apps",
+			"icon": "coffee",
+			"servers": [
+				{
+					"value": "tomcat",
+					"label": "Tomcat",
+					"description": "Apache Tomcat",
+					"detail": "Most popular | Best for: Traditional Java web apps",
+					"icon": "server",
+					"images": {
+						"8": "tomcat:8.5-jre8",
+						"11": "tomcat:9.0-jre11",
+						"17": "tomcat:10.1-jre17",
+						"21": "tomcat:11.0-jre21",
+						"25": "tomcat:11.0-jre21"
+					},
+					"alpineImages": {
+						"8": "tomcat:8.5-jre8-alpine",
+						"11": "tomcat:9.0-jre11-alpine",
+						"17": "tomcat:10.1-jre17-alpine",
+						"21": "tomcat:11.0-jre21-alpine",
+						"25": "tomcat:11.0-jre21-alpine"
+					}
+				},
+				{
+					"value": "jetty",
+					"label": "Jetty",
+					"description": "Eclipse Jetty",
+					"detail": "Lightweight | Best for: Embedded servers, Microservices",
+					"icon": "server",
+					"images": {
+						"8": "jetty:9.4-jre8",
+						"11": "jetty:11.0-jre11",
+						"17": "jetty:11.0-jre17",
+						"21": "jetty:12.0-jre21",
+						"25": "jetty:12.0-jre21"
+					},
+					"alpineImages": {
+						"8": "jetty:9.4-jre8-alpine",
+						"11": "jetty:11.0-jre11-alpine",
+						"17": "jetty:11.0-jre17-alpine",
+						"21": "jetty:12.0-jre21-alpine",
+						"25": "jetty:12.0-jre21-alpine"
+					}
+				}
+			]
+		}
+	],
+	"jdkVersions": [
+		{
+			"value": "8",
+			"label": "JDK 8",
+			"description": "Java 8 (LTS)",
+			"detail": "Legacy | Best for: Old enterprise applications",
+			"icon": "tag"
+		},
+		{
+			"value": "11",
+			"label": "JDK 11",
+			"description": "Java 11 (LTS)",
+			"detail": "Long-term support | Best for: Production stability",
+			"icon": "tag"
+		},
+		{
+			"value": "17",
+			"label": "JDK 17",
+			"description": "Java 17 (LTS)",
+			"detail": "Modern LTS | Best for: New projects (Recommended)",
+			"icon": "tag"
+		},
+		{
+			"value": "21",
+			"label": "JDK 21",
+			"description": "Java 21 (LTS)",
+			"detail": "Latest LTS | Best for: Cutting-edge features",
+			"icon": "tag"
+		},
+		{
+			"value": "25",
+			"label": "JDK 25",
+			"description": "Java 25",
+			"detail": "Latest release | Best for: Experimental features",
+			"icon": "tag"
+		}
+	],
+	"jdkVendors": [
+		{
+			"value": "eclipse-temurin",
+			"label": "Eclipse Temurin",
+			"description": "Recommended - Free and open source",
+			"detail": "Most popular | Best for: Production use",
+			"icon": "shield",
+			"jdkImages": {
+				"8": "eclipse-temurin:8-jdk",
+				"11": "eclipse-temurin:11-jdk",
+				"17": "eclipse-temurin:17-jdk",
+				"21": "eclipse-temurin:21-jdk",
+				"25": "eclipse-temurin:25-jdk"
+			},
+			"jdkAlpineImages": {
+				"8": "eclipse-temurin:8-jdk-alpine",
+				"11": "eclipse-temurin:11-jdk-alpine",
+				"17": "eclipse-temurin:17-jdk-alpine",
+				"21": "eclipse-temurin:21-jdk-alpine",
+				"25": "eclipse-temurin:25-jdk-alpine"
+			},
+			"jreImages": {
+				"8": "eclipse-temurin:8-jre",
+				"11": "eclipse-temurin:11-jre",
+				"17": "eclipse-temurin:17-jre",
+				"21": "eclipse-temurin:21-jre",
+				"25": "eclipse-temurin:25-jre"
+			},
+			"jreAlpineImages": {
+				"8": "eclipse-temurin:8-jre-alpine",
+				"11": "eclipse-temurin:11-jre-alpine",
+				"17": "eclipse-temurin:17-jre-alpine",
+				"21": "eclipse-temurin:21-jre-alpine",
+				"25": "eclipse-temurin:25-jre-alpine"
+			}
+		},
+		{
+			"value": "amazoncorretto",
+			"label": "Amazon Corretto",
+			"description": "Amazon's free distribution",
+			"detail": "AWS optimized | Best for: AWS deployments",
+			"icon": "shield",
+			"jdkImages": {
+				"8": "amazoncorretto:8",
+				"11": "amazoncorretto:11",
+				"17": "amazoncorretto:17",
+				"21": "amazoncorretto:21",
+				"25": "amazoncorretto:25"
+			},
+			"jdkAlpineImages": {
+				"8": "amazoncorretto:8-alpine",
+				"11": "amazoncorretto:11-alpine",
+				"17": "amazoncorretto:17-alpine",
+				"21": "amazoncorretto:21-alpine",
+				"25": "amazoncorretto:25-alpine"
+			}
+		},
+		{
+			"value": "openjdk",
+			"label": "OpenJDK",
+			"description": "Official open-source JDK",
+			"detail": "Reference implementation | Best for: Open source projects",
+			"icon": "shield",
+			"jdkImages": {
+				"8": "openjdk:8",
+				"11": "openjdk:11",
+				"17": "openjdk:17",
+				"21": "openjdk:21",
+				"25": "openjdk:25"
+			},
+			"jdkAlpineImages": {
+				"8": "openjdk:8-alpine",
+				"11": "openjdk:11-alpine",
+				"17": "openjdk:17-alpine",
+				"21": "openjdk:21-alpine",
+				"25": "openjdk:25-alpine"
+			},
+			"jdkSlimImages": {
+				"8": "openjdk:8-slim",
+				"11": "openjdk:11-slim",
+				"17": "openjdk:17-slim",
+				"21": "openjdk:21-slim",
+				"25": "openjdk:25-slim"
+			}
+		},
+		{
+			"value": "azul-zulu",
+			"label": "Azul Zulu",
+			"description": "Azul's OpenJDK distribution",
+			"detail": "Enterprise support | Best for: Commercial deployments",
+			"icon": "shield",
+			"jdkImages": {
+				"8": "azul/zulu-openjdk:8",
+				"11": "azul/zulu-openjdk:11",
+				"17": "azul/zulu-openjdk:17",
+				"21": "azul/zulu-openjdk:21",
+				"25": "azul/zulu-openjdk:25"
+			},
+			"jdkAlpineImages": {
+				"8": "azul/zulu-openjdk:8-alpine",
+				"11": "azul/zulu-openjdk:11-alpine",
+				"17": "azul/zulu-openjdk:17-alpine",
+				"21": "azul/zulu-openjdk:21-alpine",
+				"25": "azul/zulu-openjdk:25-alpine"
+			}
+		}
+	],
+	"mavenImages": {
+		"8": "maven:3.9-jdk-8",
+		"11": "maven:3.9-jdk-11",
+		"17": "maven:3.9-jdk-17",
+		"21": "maven:3.9-jdk-21",
+		"25": "maven:3.9-jdk-25"
+	},
+	"mavenAlpineImages": {
+		"8": "maven:3.9-jdk-8-alpine",
+		"11": "maven:3.9-jdk-11-alpine",
+		"17": "maven:3.9-jdk-17-alpine",
+		"21": "maven:3.9-jdk-21-alpine",
+		"25": "maven:3.9-jdk-25-alpine"
+	},
+	"gradleImages": {
+		"8": "gradle:8-jdk8",
+		"11": "gradle:8-jdk11",
+		"17": "gradle:8-jdk17",
+		"21": "gradle:8-jdk21",
+		"25": "gradle:8-jdk25"
+	},
+	"gradleAlpineImages": {
+		"8": "gradle:8-jdk8-alpine",
+		"11": "gradle:8-jdk11-alpine",
+		"17": "gradle:8-jdk17-alpine",
+		"21": "gradle:8-jdk21-alpine",
+		"25": "gradle:8-jdk25-alpine"
+	}
+}

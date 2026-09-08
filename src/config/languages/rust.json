@@ -1,0 +1,46 @@
+{
+	"language": "rust",
+	"type": "rust",
+	"label": "Rust",
+	"description": "Actix, Rocket",
+	"detail": "Rust application | Best for: High performance, system programming",
+	"icon": "gear",
+	"versions": [
+		{
+			"value": "1.74",
+			"label": "Rust 1.74",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
+			"icon": "tag",
+			"buildImage": "rust:1.74",
+			"buildAlpineImage": "rust:1.74-alpine",
+			"buildSlimImage": "rust:1.74-slim",
+			"runtimeImage": "debian:bookworm-slim",
+			"runtimeAlpineImage": "alpine:latest"
+		},
+		{
+			"value": "1.75",
+			"label": "Rust 1.75",
+			"description": "Recommended",
+			"detail": "Latest stable | Best for: New projects",
+			"icon": "tag",
+			"buildImage": "rust:1.75",
+			"buildAlpineImage": "rust:1.75-alpine",
+			"buildSlimImage": "rust:1.75-slim",
+			"runtimeImage": "debian:bookworm-slim",
+			"runtimeAlpineImage": "alpine:latest"
+		},
+		{
+			"value": "latest",
+			"label": "Rust Latest",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"buildImage": "rust:latest",
+			"buildAlpineImage": "rust:alpine",
+			"buildSlimImage": "rust:slim",
+			"runtimeImage": "debian:bookworm-slim",
+			"runtimeAlpineImage": "alpine:latest"
+		}
+	]
+}

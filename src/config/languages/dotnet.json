@@ -1,0 +1,40 @@
+{
+	"language": "dotnet",
+	"type": "dotnet",
+	"label": "C# .NET",
+	"description": ".NET Core/Framework",
+	"detail": ".NET application | Best for: Windows/Linux services, Web APIs",
+	"icon": "symbol-class",
+	"versions": [
+		{
+			"value": "8.0",
+			"label": ".NET 8.0",
+			"description": "LTS",
+			"detail": "Latest LTS | Best for: New projects (Recommended)",
+			"icon": "tag",
+			"sdkImage": "mcr.microsoft.com/dotnet/sdk:8.0",
+			"aspnetImage": "mcr.microsoft.com/dotnet/aspnet:8.0",
+			"aspnetAlpineImage": "mcr.microsoft.com/dotnet/aspnet:8.0-alpine"
+		},
+		{
+			"value": "9.0",
+			"label": ".NET 9.0",
+			"description": "STS",
+			"detail": "Standard-term support | Best for: New features",
+			"icon": "tag",
+			"sdkImage": "mcr.microsoft.com/dotnet/sdk:9.0",
+			"aspnetImage": "mcr.microsoft.com/dotnet/aspnet:9.0",
+			"aspnetAlpineImage": "mcr.microsoft.com/dotnet/aspnet:9.0-alpine"
+		},
+		{
+			"value": "10.0",
+			"label": ".NET 10.0",
+			"description": "LTS",
+			"detail": "Latest LTS | Best for: Cutting-edge features",
+			"icon": "tag",
+			"sdkImage": "mcr.microsoft.com/dotnet/sdk:10.0",
+			"aspnetImage": "mcr.microsoft.com/dotnet/aspnet:10.0",
+			"aspnetAlpineImage": "mcr.microsoft.com/dotnet/aspnet:10.0-alpine"
+		}
+	]
+}

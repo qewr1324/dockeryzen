@@ -1,0 +1,106 @@
+{
+	"language": "nodejs",
+	"types": [
+		{
+			"type": "js-frontend",
+			"label": "JavaScript Frontend",
+			"description": "Next.js, Angular, Nuxt.js",
+			"detail": "Frontend JavaScript application | Best for: SPAs, SSR apps",
+			"icon": "browser",
+			"frameworks": [
+				{
+					"value": "nextjs",
+					"label": "Next.js",
+					"description": "React framework",
+					"detail": "Best for: SSR, Static sites, Full-stack React",
+					"icon": "browser"
+				},
+				{
+					"value": "angular",
+					"label": "Angular",
+					"description": "Google's framework",
+					"detail": "Best for: Enterprise SPAs, Large teams",
+					"icon": "browser"
+				},
+				{
+					"value": "nuxtjs",
+					"label": "Nuxt.js",
+					"description": "Vue.js framework",
+					"detail": "Best for: SSR, Static sites, Full-stack Vue",
+					"icon": "browser"
+				}
+			]
+		},
+		{
+			"type": "js-backend",
+			"label": "JavaScript Backend",
+			"description": "Node.js, Express",
+			"detail": "Backend JavaScript application | Best for: APIs, real-time apps",
+			"icon": "server",
+			"frameworks": [
+				{
+					"value": "express",
+					"label": "Express",
+					"description": "Minimal Node.js framework",
+					"detail": "Best for: Simple APIs, Quick prototyping",
+					"icon": "server"
+				},
+				{
+					"value": "nestjs",
+					"label": "NestJS",
+					"description": "Progressive Node.js framework",
+					"detail": "Best for: Enterprise apps, TypeScript projects",
+					"icon": "server"
+				},
+				{
+					"value": "fastify",
+					"label": "Fastify",
+					"description": "Fast Node.js framework",
+					"detail": "Best for: High performance APIs",
+					"icon": "server"
+				}
+			]
+		}
+	],
+	"versions": [
+		{
+			"value": "18",
+			"label": "Node.js 18",
+			"description": "LTS",
+			"detail": "Long-term support | Best for: Production stability",
+			"icon": "tag",
+			"images": {
+				"standard": "node:18",
+				"alpine": "node:18-alpine",
+				"slim": "node:18-slim",
+				"bookworm": "node:18-bookworm"
+			}
+		},
+		{
+			"value": "20",
+			"label": "Node.js 20",
+			"description": "LTS",
+			"detail": "Latest LTS | Best for: New projects (Recommended)",
+			"icon": "tag",
+			"images": {
+				"standard": "node:20",
+				"alpine": "node:20-alpine",
+				"slim": "node:20-slim",
+				"bookworm": "node:20-bookworm"
+			}
+		},
+		{
+			"value": "22",
+			"label": "Node.js 22",
+			"description": "Current",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"standard": "node:22",
+				"alpine": "node:22-alpine",
+				"slim": "node:22-slim",
+				"bookworm": "node:22-bookworm"
+			}
+		}
+	]
+}

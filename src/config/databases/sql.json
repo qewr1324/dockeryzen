@@ -1,0 +1,76 @@
+{
+	"category": "SQL Database",
+	"databases": [
+		{
+			"label": "PostgreSQL",
+			"value": "postgresql",
+			"defaultPort": 5432,
+			"defaultUser": "postgres",
+			"defaultDatabase": "postgres",
+			"icon": "database",
+			"versions": [
+				{ "value": "17.10", "label": "PostgreSQL 17.10", "image": "postgres:17.10", "alpineImage": "postgres:17.10-alpine" },
+				{ "value": "16.14", "label": "PostgreSQL 16.14", "image": "postgres:16.14", "alpineImage": "postgres:16.14-alpine" },
+				{ "value": "15.18", "label": "PostgreSQL 15.18", "image": "postgres:15.18", "alpineImage": "postgres:15.18-alpine" },
+				{ "value": "14.23", "label": "PostgreSQL 14.23", "image": "postgres:14.23", "alpineImage": "postgres:14.23-alpine" },
+				{ "value": "19beta2", "label": "PostgreSQL 19 Beta 2", "image": "postgres:19beta2", "alpineImage": "postgres:19beta2-alpine" }
+			]
+		},
+		{
+			"label": "MySQL",
+			"value": "mysql",
+			"defaultPort": 3306,
+			"defaultUser": "root",
+			"defaultDatabase": "mysql",
+			"icon": "database",
+			"versions": [
+				{ "value": "9.2", "label": "MySQL 9.2", "image": "mysql:9.2" },
+				{ "value": "8.4", "label": "MySQL 8.4", "image": "mysql:8.4" },
+				{ "value": "8.0", "label": "MySQL 8.0", "image": "mysql:8.0" }
+			]
+		},
+		{
+			"label": "MariaDB",
+			"value": "mariadb",
+			"defaultPort": 3306,
+			"defaultUser": "root",
+			"defaultDatabase": "mysql",
+			"icon": "database",
+			"versions": [
+				{ "value": "11.8", "label": "MariaDB 11.8", "image": "mariadb:11.8" },
+				{ "value": "11.4", "label": "MariaDB 11.4", "image": "mariadb:11.4" },
+				{ "value": "10.11", "label": "MariaDB 10.11", "image": "mariadb:10.11" }
+			]
+		},
+		{
+			"label": "Oracle",
+			"value": "oracle",
+			"defaultPort": 1521,
+			"defaultUser": "system",
+			"defaultDatabase": "ORCL",
+			"icon": "database",
+			"versions": [{ "value": "latest", "label": "Oracle Enterprise", "image": "container-registry.oracle.com/database/enterprise:latest" }]
+		},
+		{
+			"label": "MSSQL",
+			"value": "mssql",
+			"defaultPort": 1433,
+			"defaultUser": "sa",
+			"defaultDatabase": "master",
+			"icon": "database",
+			"versions": [
+				{ "value": "2022-latest", "label": "SQL Server 2022", "image": "mcr.microsoft.com/mssql/server:2022-latest" },
+				{ "value": "2019-latest", "label": "SQL Server 2019", "image": "mcr.microsoft.com/mssql/server:2019-latest" }
+			]
+		},
+		{
+			"label": "IBM Db2",
+			"value": "db2",
+			"defaultPort": 50000,
+			"defaultUser": "db2inst1",
+			"defaultDatabase": "sample",
+			"icon": "database",
+			"versions": [{ "value": "latest", "label": "Db2 Latest", "image": "ibmcom/db2:latest" }]
+		}
+	]
+}

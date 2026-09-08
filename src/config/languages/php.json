@@ -1,0 +1,49 @@
+{
+	"language": "php",
+	"type": "laravel",
+	"label": "PHP Laravel",
+	"description": "Laravel Framework",
+	"detail": "PHP Laravel application | Best for: Rapid web development",
+	"icon": "globe",
+	"versions": [
+		{
+			"value": "8.2",
+			"label": "PHP 8.2",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
+			"icon": "tag",
+			"images": {
+				"cli": "php:8.2-cli",
+				"fpm": "php:8.2-fpm",
+				"fpmAlpine": "php:8.2-fpm-alpine",
+				"apache": "php:8.2-apache"
+			}
+		},
+		{
+			"value": "8.3",
+			"label": "PHP 8.3",
+			"description": "Recommended",
+			"detail": "Latest stable | Best for: New projects",
+			"icon": "tag",
+			"images": {
+				"cli": "php:8.3-cli",
+				"fpm": "php:8.3-fpm",
+				"fpmAlpine": "php:8.3-fpm-alpine",
+				"apache": "php:8.3-apache"
+			}
+		},
+		{
+			"value": "8.4",
+			"label": "PHP 8.4",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"cli": "php:8.4-cli",
+				"fpm": "php:8.4-fpm",
+				"fpmAlpine": "php:8.4-fpm-alpine",
+				"apache": "php:8.4-apache"
+			}
+		}
+	]
+}

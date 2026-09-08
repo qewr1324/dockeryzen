@@ -1,0 +1,61 @@
+{
+	"category": "NoSQL Database",
+	"databases": [
+		{
+			"label": "MongoDB",
+			"value": "mongodb",
+			"defaultPort": 27017,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "8.0", "label": "MongoDB 8.0", "image": "mongo:8.0" },
+				{ "value": "7.0", "label": "MongoDB 7.0", "image": "mongo:7.0" },
+				{ "value": "6.0", "label": "MongoDB 6.0", "image": "mongo:6.0" }
+			]
+		},
+		{
+			"label": "CouchDB",
+			"value": "couchdb",
+			"defaultPort": 5984,
+			"defaultUser": "admin",
+			"icon": "database",
+			"versions": [
+				{ "value": "3.4", "label": "CouchDB 3.4", "image": "couchdb:3.4" },
+				{ "value": "3.3", "label": "CouchDB 3.3", "image": "couchdb:3.3" },
+				{ "value": "3.2", "label": "CouchDB 3.2", "image": "couchdb:3.2" }
+			]
+		},
+		{
+			"label": "Couchbase",
+			"value": "couchbase",
+			"defaultPort": 8091,
+			"defaultUser": "admin",
+			"icon": "database",
+			"versions": [
+				{ "value": "7.6", "label": "Couchbase 7.6", "image": "couchbase/server:7.6" },
+				{ "value": "7.2", "label": "Couchbase 7.2", "image": "couchbase/server:7.2" },
+				{ "value": "7.0", "label": "Couchbase 7.0", "image": "couchbase/server:7.0" }
+			]
+		},
+		{
+			"label": "Amazon DynamoDB",
+			"value": "dynamodb",
+			"defaultPort": 8000,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [{ "value": "latest", "label": "DynamoDB Local", "image": "amazon/dynamodb-local:latest" }]
+		},
+		{
+			"label": "RavenDB",
+			"value": "ravendb",
+			"defaultPort": 8080,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "6.2", "label": "RavenDB 6.2", "image": "ravendb/ravendb:6.2" },
+				{ "value": "6.0", "label": "RavenDB 6.0", "image": "ravendb/ravendb:6.0" },
+				{ "value": "5.4", "label": "RavenDB 5.4", "image": "ravendb/ravendb:5.4" }
+			]
+		}
+	]
+}

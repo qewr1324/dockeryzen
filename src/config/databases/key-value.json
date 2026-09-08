@@ -1,0 +1,55 @@
+{
+	"category": "Key-Value Store",
+	"databases": [
+		{
+			"label": "Redis",
+			"value": "redis",
+			"defaultPort": 6379,
+			"defaultUser": "default",
+			"icon": "database",
+			"versions": [
+				{ "value": "8.8", "label": "Redis 8.8", "image": "redis:8.8", "alpineImage": "redis:8.8-alpine" },
+				{ "value": "8.6", "label": "Redis 8.6", "image": "redis:8.6", "alpineImage": "redis:8.6-alpine" },
+				{ "value": "7.4", "label": "Redis 7.4", "image": "redis:7.4", "alpineImage": "redis:7.4-alpine" },
+				{ "value": "7.2", "label": "Redis 7.2", "image": "redis:7.2", "alpineImage": "redis:7.2-alpine" },
+				{ "value": "6.2", "label": "Redis 6.2", "image": "redis:6.2", "alpineImage": "redis:6.2-alpine" }
+			]
+		},
+		{
+			"label": "Memcached",
+			"value": "memcached",
+			"defaultPort": 11211,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "1.6", "label": "Memcached 1.6", "image": "memcached:1.6", "alpineImage": "memcached:1.6-alpine" },
+				{ "value": "1.5", "label": "Memcached 1.5", "image": "memcached:1.5", "alpineImage": "memcached:1.5-alpine" },
+				{ "value": "1.4", "label": "Memcached 1.4", "image": "memcached:1.4", "alpineImage": "memcached:1.4-alpine" }
+			]
+		},
+		{
+			"label": "etcd",
+			"value": "etcd",
+			"defaultPort": 2379,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "3.5", "label": "etcd 3.5", "image": "bitnami/etcd:3.5" },
+				{ "value": "3.5.15", "label": "etcd 3.5.15", "image": "gcr.io/etcd-development/etcd:v3.5.15" },
+				{ "value": "3.4", "label": "etcd 3.4", "image": "bitnami/etcd:3.4" }
+			]
+		},
+		{
+			"label": "Aerospike",
+			"value": "aerospike",
+			"defaultPort": 3000,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "8.0", "label": "Aerospike 8.0", "image": "aerospike/aerospike-server:8.0" },
+				{ "value": "7.0", "label": "Aerospike 7.0", "image": "aerospike/aerospike-server:7.0" },
+				{ "value": "6.4", "label": "Aerospike 6.4", "image": "aerospike/aerospike-server:6.4" }
+			]
+		}
+	]
+}

@@ -1,0 +1,49 @@
+{
+	"language": "ruby",
+	"type": "rails",
+	"label": "Ruby on Rails",
+	"description": "Rails Framework",
+	"detail": "Ruby on Rails application | Best for: Rapid prototyping, MVPs",
+	"icon": "ruby",
+	"versions": [
+		{
+			"value": "3.2",
+			"label": "Ruby 3.2",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
+			"icon": "tag",
+			"images": {
+				"standard": "ruby:3.2",
+				"alpine": "ruby:3.2-alpine",
+				"slim": "ruby:3.2-slim",
+				"bookworm": "ruby:3.2-bookworm"
+			}
+		},
+		{
+			"value": "3.3",
+			"label": "Ruby 3.3",
+			"description": "Recommended",
+			"detail": "Latest stable | Best for: New projects",
+			"icon": "tag",
+			"images": {
+				"standard": "ruby:3.3",
+				"alpine": "ruby:3.3-alpine",
+				"slim": "ruby:3.3-slim",
+				"bookworm": "ruby:3.3-bookworm"
+			}
+		},
+		{
+			"value": "3.4",
+			"label": "Ruby 3.4",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"standard": "ruby:3.4",
+				"alpine": "ruby:3.4-alpine",
+				"slim": "ruby:3.4-slim",
+				"bookworm": "ruby:3.4-bookworm"
+			}
+		}
+	]
+}

@@ -1,0 +1,50 @@
+{
+	"category": "Time Series Database",
+	"databases": [
+		{
+			"label": "InfluxDB",
+			"value": "influxdb",
+			"defaultPort": 8086,
+			"defaultUser": "admin",
+			"icon": "database",
+			"versions": [
+				{ "value": "2.7", "label": "InfluxDB 2.7", "image": "influxdb:2.7", "alpineImage": "influxdb:2.7-alpine" },
+				{ "value": "2.6", "label": "InfluxDB 2.6", "image": "influxdb:2.6", "alpineImage": "influxdb:2.6-alpine" },
+				{ "value": "1.8", "label": "InfluxDB 1.8", "image": "influxdb:1.8", "alpineImage": "influxdb:1.8-alpine" }
+			]
+		},
+		{
+			"label": "TimescaleDB",
+			"value": "timescaledb",
+			"defaultPort": 5432,
+			"defaultUser": "postgres",
+			"defaultDatabase": "postgres",
+			"icon": "database",
+			"versions": [
+				{ "value": "2.18-pg17", "label": "TimescaleDB 2.18 (PG17)", "image": "timescale/timescaledb:2.18-pg17" },
+				{ "value": "2.17-pg16", "label": "TimescaleDB 2.17 (PG16)", "image": "timescale/timescaledb:2.17-pg16" },
+				{ "value": "2.16-pg15", "label": "TimescaleDB 2.16 (PG15)", "image": "timescale/timescaledb:2.16-pg15" }
+			]
+		},
+		{
+			"label": "Prometheus",
+			"value": "prometheus",
+			"defaultPort": 9090,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [
+				{ "value": "v3.2", "label": "Prometheus 3.2", "image": "prom/prometheus:v3.2" },
+				{ "value": "v2.55", "label": "Prometheus 2.55", "image": "prom/prometheus:v2.55" },
+				{ "value": "v2.54", "label": "Prometheus 2.54", "image": "prom/prometheus:v2.54" }
+			]
+		},
+		{
+			"label": "OpenTSDB",
+			"value": "opentsdb",
+			"defaultPort": 4242,
+			"defaultUser": "root",
+			"icon": "database",
+			"versions": [{ "value": "latest", "label": "OpenTSDB Latest", "image": "petergrace/opentsdb-docker:latest" }]
+		}
+	]
+}
