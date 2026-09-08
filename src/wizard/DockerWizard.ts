@@ -11,6 +11,8 @@ import { DockerignoreGenerator } from "../generators/DockerignoreGenerator.js";
 
 export class DockerWizard {
 	private config: ProjectConfig;
+	private currentStep: number = 0;
+	private totalSteps: number = 8;
 
 	constructor() {
 		this.config = {
@@ -29,334 +31,753 @@ export class DockerWizard {
 	async start(): Promise<void> {
 		vscode.window.showInformationMessage("🚀 Welcome to Dockeryzen! Let's create your Docker configuration.");
 
-		await this.askProjectName();
-		await this.askLanguage();
-		await this.askPort();
-		await this.askGeneralOptions();
-		await this.askLanguageSpecificSettings();
-		await this.askDatabases();
-		await this.askMessageQueues();
-		await this.askServices();
+		const steps = [
+			{ name: "Project Name", fn: () => this.askProjectName() },
+			{ name: "Language", fn: () => this.askLanguage() },
+			{ name: "Port", fn: () => this.askPort() },
+			{ name: "General Options", fn: () => this.askGeneralOptions() },
+			{ name: "Language Settings", fn: () => this.askLanguageSpecificSettings() },
+			{ name: "Databases", fn: () => this.askDatabases() },
+			{ name: "Message Queues", fn: () => this.askMessageQueues() },
+			{ name: "Services", fn: () => this.askServices() },
+		];
+
+		this.currentStep = 0;
+
+		while (this.currentStep < steps.length) {
+			const step = steps[this.currentStep];
+
+			try {
+				const result = await step.fn();
+
+				if (result === "back") {
+					this.currentStep = Math.max(0, this.currentStep - 1);
+					continue;
+				}
+
+				if (result === "cancel") {
+					vscode.window.showInformationMessage("❌ Operation cancelled by user");
+					return;
+				}
+
+				this.currentStep++;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Unknown error";
+				vscode.window.showErrorMessage(`Error in step "${step.name}": ${message}`);
+				return;
+			}
+		}
+
 		await this.generateFiles();
 	}
 
-	private async askProjectName(): Promise<void> {
+	private async askProjectName(): Promise<"next" | "back" | "cancel"> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		const defaultName = workspaceFolder ? path.basename(workspaceFolder.uri.fsPath) : "my-project";
 
-		const projectName = await vscode.window.showInputBox({
-			prompt: "Enter project name",
-			value: defaultName,
-			validateInput: (value) => {
-				if (!value || value.length === 0) {
-					return "Project name cannot be empty";
-				}
-				if (!/^[a-zA-Z0-9-_]+$/.test(value)) {
-					return "Project name can only contain letters, numbers, hyphens, and underscores";
-				}
-				return null;
-			},
-		});
+		const inputBox = vscode.window.createInputBox();
+		inputBox.title = `Step ${this.currentStep + 1}/${this.totalSteps}: Project Name`;
+		inputBox.prompt = "Enter project name (e.g., my-awesome-app)";
+		inputBox.placeholder = "my-awesome-app";
+		inputBox.value = defaultName;
+		inputBox.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
 
-		if (!projectName) {
-			throw new Error("Project name is required");
-		}
-		this.config.projectName = projectName;
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			inputBox.onDidAccept(() => {
+				if (!isResolved) {
+					const value = inputBox.value;
+					if (!value || value.length === 0) {
+						inputBox.validationMessage = "Project name cannot be empty";
+						return;
+					}
+					if (!/^[a-zA-Z0-9-_]+$/.test(value)) {
+						inputBox.validationMessage = "Project name can only contain letters, numbers, hyphens, and underscores";
+						return;
+					}
+					isResolved = true;
+					this.config.projectName = value;
+					inputBox.dispose();
+					resolve("next");
+				}
+			});
+
+			inputBox.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					if (button.tooltip === "Back") {
+						isResolved = true;
+						inputBox.dispose();
+						resolve("back");
+					} else if (button.tooltip === "OK") {
+						const value = inputBox.value;
+						if (!value || value.length === 0) {
+							inputBox.validationMessage = "Project name cannot be empty";
+							return;
+						}
+						if (!/^[a-zA-Z0-9-_]+$/.test(value)) {
+							inputBox.validationMessage = "Project name can only contain letters, numbers, hyphens, and underscores";
+							return;
+						}
+						isResolved = true;
+						this.config.projectName = value;
+						inputBox.dispose();
+						resolve("next");
+					}
+				}
+			});
+
+			inputBox.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					inputBox.dispose();
+					resolve("cancel");
+				}
+			});
+
+			inputBox.show();
+		});
 	}
 
-	private async askLanguage(): Promise<void> {
+	private async askLanguage(): Promise<"next" | "back" | "cancel"> {
 		const languages = [
-			{ label: "$(coffee) Java (JAR)", description: "Spring Boot, Quarkus, Micronaut", value: "java-jar" },
-			{ label: "$(coffee) Java (WAR)", description: "Tomcat, Jetty", value: "java-war" },
-			{ label: "$(symbol-class) C# .NET", description: ".NET Core/Framework", value: "dotnet" },
-			{ label: "$(globe) PHP Laravel", description: "Laravel Framework", value: "laravel" },
-			{ label: "$(browser) JavaScript Frontend", description: "Next.js, Angular, Nuxt.js", value: "js-frontend" },
-			{ label: "$(server) JavaScript Backend", description: "Node.js, Express", value: "js-backend" },
-			{ label: "$(ruby) Ruby on Rails", description: "Rails Framework", value: "rails" },
-			{ label: "$(terminal) Python", description: "Django, Flask, FastAPI", value: "python" },
-			{ label: "$(gear) Rust", description: "Actix, Rocket", value: "rust" },
-			{ label: "$(rocket) Go", description: "Golang Application", value: "go" },
-		];
-
-		const selected = await vscode.window.showQuickPick(languages, {
-			placeHolder: "Select your project language/framework",
-			matchOnDescription: true,
-		});
-
-		if (!selected) {
-			throw new Error("Language selection is required");
-		}
-		this.config.language = selected.value;
-	}
-
-	private async askPort(): Promise<void> {
-		const port = await vscode.window.showInputBox({
-			prompt: "Enter application port",
-			value: "8080",
-			validateInput: (value) => {
-				const portNum = parseInt(value);
-				if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-					return "Please enter a valid port number (1-65535)";
-				}
-				return null;
+			{
+				label: "$(coffee) Java (JAR)",
+				description: "Spring Boot, Quarkus, Micronaut",
+				detail: "Java application packaged as JAR | Best for: Microservices, REST APIs",
+				value: "java-jar",
 			},
-		});
-
-		if (!port) {
-			throw new Error("Port is required");
-		}
-		this.config.port = parseInt(port);
-	}
-
-	private async askGeneralOptions(): Promise<void> {
-		const options = [
-			{ label: "$(package) Use Alpine", description: "Smaller image size (where available)", picked: false },
-			{ label: "$(bug) Enable Debug", description: "Debug on port 5005", picked: false },
-			{ label: "$(pulse) Enable Health Check", description: "Health check endpoint", picked: false },
+			{
+				label: "$(coffee) Java (WAR)",
+				description: "Tomcat, Jetty",
+				detail: "Java web application packaged as WAR | Best for: Traditional web apps",
+				value: "java-war",
+			},
+			{
+				label: "$(symbol-class) C# .NET",
+				description: ".NET Core/Framework",
+				detail: ".NET application | Best for: Windows/Linux services, Web APIs",
+				value: "dotnet",
+			},
+			{
+				label: "$(globe) PHP Laravel",
+				description: "Laravel Framework",
+				detail: "PHP Laravel application | Best for: Rapid web development",
+				value: "laravel",
+			},
+			{
+				label: "$(browser) JavaScript Frontend",
+				description: "Next.js, Angular, Nuxt.js",
+				detail: "Frontend JavaScript application | Best for: SPAs, SSR apps",
+				value: "js-frontend",
+			},
+			{
+				label: "$(server) JavaScript Backend",
+				description: "Node.js, Express",
+				detail: "Backend JavaScript application | Best for: APIs, real-time apps",
+				value: "js-backend",
+			},
+			{
+				label: "$(ruby) Ruby on Rails",
+				description: "Rails Framework",
+				detail: "Ruby on Rails application | Best for: Rapid prototyping, MVPs",
+				value: "rails",
+			},
+			{
+				label: "$(terminal) Python",
+				description: "Django, Flask, FastAPI",
+				detail: "Python application | Best for: AI/ML, data processing, APIs",
+				value: "python",
+			},
+			{
+				label: "$(gear) Rust",
+				description: "Actix, Rocket",
+				detail: "Rust application | Best for: High performance, system programming",
+				value: "rust",
+			},
+			{
+				label: "$(rocket) Go",
+				description: "Golang Application",
+				detail: "Go application | Best for: Cloud-native, microservices, CLI tools",
+				value: "go",
+			},
 		];
 
-		const selected = await vscode.window.showQuickPick(options, {
-			placeHolder: "Select general options (multi-select)",
-			canPickMany: true,
-			matchOnDescription: true,
-		});
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: Select Language`;
+		quickPick.placeholder = "Select your project language/framework";
+		quickPick.items = languages;
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
 
-		this.config.useAlpine = selected?.some((o) => o.label.includes("Alpine")) || false;
-		this.config.enableDebug = selected?.some((o) => o.label.includes("Debug")) || false;
-		this.config.enableHealthCheck = selected?.some((o) => o.label.includes("Health")) || false;
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(() => {
+				if (!isResolved) {
+					const selected = quickPick.selectedItems[0] as any;
+					if (selected) {
+						isResolved = true;
+						this.config.language = selected.value;
+						quickPick.dispose();
+						resolve("next");
+					}
+				}
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("back");
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
 	}
 
-	private async askLanguageSpecificSettings(): Promise<void> {
+	private async askPort(): Promise<"next" | "back" | "cancel"> {
+		const inputBox = vscode.window.createInputBox();
+		inputBox.title = `Step ${this.currentStep + 1}/${this.totalSteps}: Application Port`;
+		inputBox.prompt = "Enter application port (1-65535)";
+		inputBox.placeholder = "8080";
+		inputBox.value = "8080";
+		inputBox.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			const acceptValue = () => {
+				if (!isResolved) {
+					const value = inputBox.value;
+					const portNum = parseInt(value);
+					if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+						inputBox.validationMessage = "Please enter a valid port number (1-65535)";
+						return;
+					}
+					isResolved = true;
+					this.config.port = portNum;
+					inputBox.dispose();
+					resolve("next");
+				}
+			};
+
+			inputBox.onDidAccept(acceptValue);
+
+			inputBox.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					if (button.tooltip === "Back") {
+						isResolved = true;
+						inputBox.dispose();
+						resolve("back");
+					} else if (button.tooltip === "OK") {
+						acceptValue();
+					}
+				}
+			});
+
+			inputBox.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					inputBox.dispose();
+					resolve("cancel");
+				}
+			});
+
+			inputBox.show();
+		});
+	}
+
+	private async askGeneralOptions(): Promise<"next" | "back" | "cancel"> {
+		const options = [
+			{
+				label: "$(package) Use Alpine",
+				description: "Smaller image size (where available)",
+				detail: "Uses Alpine-based images for reduced container size",
+				picked: false,
+			},
+			{
+				label: "$(bug) Enable Debug",
+				description: "Debug on port 5005",
+				detail: "Enables JDWP debug mode for remote debugging",
+				picked: false,
+			},
+			{
+				label: "$(pulse) Enable Health Check",
+				description: "Health check endpoint",
+				detail: "Adds HEALTHCHECK to monitor application status",
+				picked: false,
+			},
+		];
+
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: General Options`;
+		quickPick.placeholder = "Select general options (multi-select) - Press Enter when done";
+		quickPick.items = options;
+		quickPick.canSelectMany = true;
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+
+		const applySelections = () => {
+			const selected = quickPick.selectedItems;
+			this.config.useAlpine = selected.some((o) => o.label.includes("Alpine"));
+			this.config.enableDebug = selected.some((o) => o.label.includes("Debug"));
+			this.config.enableHealthCheck = selected.some((o) => o.label.includes("Health"));
+		};
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(() => {
+				if (!isResolved) {
+					isResolved = true;
+					applySelections();
+					quickPick.dispose();
+					resolve("next");
+				}
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					if (button.tooltip === "Back") {
+						resolve("back");
+					} else {
+						applySelections();
+						resolve("next");
+					}
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
+	}
+
+	private async askLanguageSpecificSettings(): Promise<"next" | "back" | "cancel"> {
 		switch (this.config.language) {
 			case "java-jar":
 			case "java-war":
-				await this.askJavaSettings();
-				break;
+				return await this.askJavaSettings();
 			case "js-frontend":
 			case "js-backend":
-				await this.askNodeSettings();
-				break;
+				return await this.askNodeSettings();
 			case "python":
-				await this.askPythonSettings();
-				break;
+				return await this.askPythonSettings();
 			case "dotnet":
-				await this.askDotNetSettings();
-				break;
+				return await this.askDotNetSettings();
 			case "go":
-				await this.askGoSettings();
-				break;
+				return await this.askGoSettings();
 			case "rust":
-				await this.askRustSettings();
-				break;
+				return await this.askRustSettings();
 			case "laravel":
-				await this.askLaravelSettings();
-				break;
+				return await this.askLaravelSettings();
 			case "rails":
-				await this.askRailsSettings();
-				break;
+				return await this.askRailsSettings();
+			default:
+				return "next";
 		}
 	}
 
-	private async askJavaSettings(): Promise<void> {
+	private async askJavaSettings(): Promise<"next" | "back" | "cancel"> {
 		// Build tool
 		const buildTools = [
-			{ label: "$(tools) Maven", value: "maven" },
-			{ label: "$(tools) Gradle", value: "gradle" },
+			{
+				label: "$(tools) Maven",
+				description: "Apache Maven",
+				detail: "Most popular Java build tool | Uses pom.xml | Best for: Traditional Java projects",
+				value: "maven",
+			},
+			{
+				label: "$(tools) Gradle",
+				description: "Gradle Build Tool",
+				detail: "Modern build tool | Uses build.gradle | Best for: Android, Kotlin, large projects",
+				value: "gradle",
+			},
 		];
 
-		const buildTool = await vscode.window.showQuickPick(buildTools, {
-			placeHolder: "Select build tool",
-		});
-
-		if (buildTool) {
-			this.config.buildTool = buildTool.value as "maven" | "gradle";
-		}
+		const buildTool = await this.showQuickPickWithBack("Select Build Tool", buildTools);
+		if (buildTool === "back") return "back";
+		if (buildTool === "cancel") return "cancel";
+		if (buildTool) this.config.buildTool = buildTool.value as "maven" | "gradle";
 
 		// JDK Version
-		const jdkVersions = ["8", "11", "17", "21", "25"].map((v) => ({ label: `JDK ${v}`, value: v }));
+		const jdkVersions = [
+			{ label: "$(tag) JDK 8", description: "Java 8 (LTS)", detail: "Legacy | Best for: Old enterprise applications", value: "8" },
+			{ label: "$(tag) JDK 11", description: "Java 11 (LTS)", detail: "Long-term support | Best for: Production stability", value: "11" },
+			{ label: "$(tag) JDK 17", description: "Java 17 (LTS)", detail: "Modern LTS | Best for: New projects (Recommended)", value: "17" },
+			{ label: "$(tag) JDK 21", description: "Java 21 (LTS)", detail: "Latest LTS | Best for: Cutting-edge features", value: "21" },
+			{ label: "$(tag) JDK 25", description: "Java 25", detail: "Latest release | Best for: Experimental features", value: "25" },
+		];
 
-		const jdkVersion = await vscode.window.showQuickPick(jdkVersions, {
-			placeHolder: "Select JDK version",
-		});
-
-		if (jdkVersion) {
-			this.config.jdkVersion = jdkVersion.value;
-		}
+		const jdkVersion = await this.showQuickPickWithBack("Select JDK Version", jdkVersions);
+		if (jdkVersion === "back") return "back";
+		if (jdkVersion === "cancel") return "cancel";
+		if (jdkVersion) this.config.jdkVersion = jdkVersion.value;
 
 		// JDK Vendor
 		const jdkVendors = [
-			{ label: "Eclipse Temurin", value: "eclipse-temurin" },
-			{ label: "Amazon Corretto", value: "amazoncorretto" },
-			{ label: "OpenJDK", value: "openjdk" },
-			{ label: "Oracle JDK", value: "oracle-jdk" },
+			{
+				label: "$(shield) Eclipse Temurin",
+				description: "Recommended - Free and open source",
+				detail: "Most popular | Best for: Production use, community support",
+				value: "eclipse-temurin",
+			},
+			{
+				label: "$(shield) Amazon Corretto",
+				description: "Amazon's free distribution",
+				detail: "AWS optimized | Best for: AWS deployments",
+				value: "amazoncorretto",
+			},
+			{
+				label: "$(shield) OpenJDK",
+				description: "Official open-source JDK",
+				detail: "Reference implementation | Best for: Open source projects",
+				value: "openjdk",
+			},
+			{
+				label: "$(shield) Oracle JDK",
+				description: "Oracle's commercial JDK",
+				detail: "Commercial support | Best for: Enterprise with Oracle support",
+				value: "oracle-jdk",
+			},
 		];
 
-		const jdkVendor = await vscode.window.showQuickPick(jdkVendors, {
-			placeHolder: "Select JDK vendor",
-		});
-
-		if (jdkVendor) {
-			this.config.jdkVendor = jdkVendor.value;
-		}
+		const jdkVendor = await this.showQuickPickWithBack("Select JDK Vendor", jdkVendors);
+		if (jdkVendor === "back") return "back";
+		if (jdkVendor === "cancel") return "cancel";
+		if (jdkVendor) this.config.jdkVendor = jdkVendor.value;
 
 		// Framework or Server
 		if (this.config.language === "java-jar") {
 			const frameworks = [
-				{ label: "Spring Boot", value: "spring-boot" },
-				{ label: "Quarkus", value: "quarkus" },
-				{ label: "Micronaut", value: "micronaut" },
+				{
+					label: "$(rocket) Spring Boot",
+					description: "Most popular Java framework",
+					detail: "Best for: Enterprise apps, Microservices, REST APIs",
+					value: "spring-boot",
+				},
+				{
+					label: "$(rocket) Quarkus",
+					description: "Kubernetes-native Java framework",
+					detail: "Best for: Cloud-native, Serverless, Fast startup",
+					value: "quarkus",
+				},
+				{
+					label: "$(rocket) Micronaut",
+					description: "Lightweight Java framework",
+					detail: "Best for: Microservices, Low memory footprint",
+					value: "micronaut",
+				},
 			];
 
-			const framework = await vscode.window.showQuickPick(frameworks, {
-				placeHolder: "Select Java framework",
-			});
-
-			if (framework) {
-				this.config.framework = framework.value;
-			}
+			const framework = await this.showQuickPickWithBack("Select Java Framework", frameworks);
+			if (framework === "back") return "back";
+			if (framework === "cancel") return "cancel";
+			if (framework) this.config.framework = framework.value;
 		} else {
 			const servers = [
-				{ label: "Tomcat", value: "tomcat" },
-				{ label: "Jetty", value: "jetty" },
+				{
+					label: "$(server) Tomcat",
+					description: "Apache Tomcat",
+					detail: "Most popular | Best for: Traditional Java web apps",
+					value: "tomcat",
+				},
+				{
+					label: "$(server) Jetty",
+					description: "Eclipse Jetty",
+					detail: "Lightweight | Best for: Embedded servers, Microservices",
+					value: "jetty",
+				},
 			];
 
-			const server = await vscode.window.showQuickPick(servers, {
-				placeHolder: "Select application server",
-			});
-
-			if (server) {
-				this.config.server = server.value;
-			}
+			const server = await this.showQuickPickWithBack("Select Application Server", servers);
+			if (server === "back") return "back";
+			if (server === "cancel") return "cancel";
+			if (server) this.config.server = server.value;
 		}
+
+		return "next";
 	}
 
-	private async askNodeSettings(): Promise<void> {
-		const nodeVersions = ["18", "20", "22"].map((v) => ({ label: `Node.js ${v}`, value: v }));
+	private async askNodeSettings(): Promise<"next" | "back" | "cancel"> {
+		const nodeVersions = [
+			{ label: "$(tag) Node.js 18", description: "LTS", detail: "Long-term support | Best for: Production stability", value: "18" },
+			{ label: "$(tag) Node.js 20", description: "LTS", detail: "Latest LTS | Best for: New projects (Recommended)", value: "20" },
+			{ label: "$(tag) Node.js 22", description: "Current", detail: "Latest features | Best for: Experimental projects", value: "22" },
+		];
 
-		const nodeVersion = await vscode.window.showQuickPick(nodeVersions, {
-			placeHolder: "Select Node.js version",
-		});
-
-		if (nodeVersion) {
-			this.config.nodeVersion = nodeVersion.value;
-		}
+		const nodeVersion = await this.showQuickPickWithBack("Select Node.js Version", nodeVersions);
+		if (nodeVersion === "back") return "back";
+		if (nodeVersion === "cancel") return "cancel";
+		if (nodeVersion) this.config.nodeVersion = nodeVersion.value;
 
 		if (this.config.language === "js-frontend") {
 			const frameworks = [
-				{ label: "Next.js", value: "nextjs" },
-				{ label: "Angular", value: "angular" },
-				{ label: "Nuxt.js", value: "nuxtjs" },
+				{
+					label: "$(browser) Next.js",
+					description: "React framework",
+					detail: "Best for: SSR, Static sites, Full-stack React",
+					value: "nextjs",
+				},
+				{
+					label: "$(browser) Angular",
+					description: "Google's framework",
+					detail: "Best for: Enterprise SPAs, Large teams",
+					value: "angular",
+				},
+				{
+					label: "$(browser) Nuxt.js",
+					description: "Vue.js framework",
+					detail: "Best for: SSR, Static sites, Full-stack Vue",
+					value: "nuxtjs",
+				},
 			];
 
-			const framework = await vscode.window.showQuickPick(frameworks, {
-				placeHolder: "Select JavaScript framework",
-			});
+			const framework = await this.showQuickPickWithBack("Select JavaScript Framework", frameworks);
+			if (framework === "back") return "back";
+			if (framework === "cancel") return "cancel";
+			if (framework) this.config.framework = framework.value;
+		} else {
+			const frameworks = [
+				{
+					label: "$(server) Express",
+					description: "Minimal Node.js framework",
+					detail: "Best for: Simple APIs, Quick prototyping",
+					value: "express",
+				},
+				{
+					label: "$(server) NestJS",
+					description: "Progressive Node.js framework",
+					detail: "Best for: Enterprise apps, TypeScript projects",
+					value: "nestjs",
+				},
+				{
+					label: "$(server) Fastify",
+					description: "Fast Node.js framework",
+					detail: "Best for: High performance APIs",
+					value: "fastify",
+				},
+			];
 
-			if (framework) {
-				this.config.framework = framework.value;
-			}
+			const framework = await this.showQuickPickWithBack("Select Node.js Framework", frameworks);
+			if (framework === "back") return "back";
+			if (framework === "cancel") return "cancel";
+			if (framework) this.config.framework = framework.value;
 		}
+
+		return "next";
 	}
 
-	private async askPythonSettings(): Promise<void> {
+	private async askPythonSettings(): Promise<"next" | "back" | "cancel"> {
 		const frameworks = [
-			{ label: "Django", value: "django" },
-			{ label: "Flask", value: "flask" },
-			{ label: "FastAPI", value: "fastapi" },
+			{
+				label: "$(terminal) Django",
+				description: "Full-featured web framework",
+				detail: "Best for: Large web apps, Admin interfaces, ORM",
+				value: "django",
+			},
+			{
+				label: "$(terminal) Flask",
+				description: "Lightweight web framework",
+				detail: "Best for: Simple APIs, Microservices, Prototyping",
+				value: "flask",
+			},
+			{
+				label: "$(terminal) FastAPI",
+				description: "Modern fast API framework",
+				detail: "Best for: High-performance APIs, Auto documentation",
+				value: "fastapi",
+			},
 		];
 
-		const framework = await vscode.window.showQuickPick(frameworks, {
-			placeHolder: "Select Python framework",
-		});
+		const framework = await this.showQuickPickWithBack("Select Python Framework", frameworks);
+		if (framework === "back") return "back";
+		if (framework === "cancel") return "cancel";
+		if (framework) this.config.framework = framework.value;
 
-		if (framework) {
-			this.config.framework = framework.value;
-		}
+		const pythonVersions = [
+			{ label: "$(tag) Python 3.9", description: "Legacy", detail: "Older version | Best for: Legacy projects", value: "3.9" },
+			{ label: "$(tag) Python 3.10", description: "Stable", detail: "Stable release | Best for: Production stability", value: "3.10" },
+			{ label: "$(tag) Python 3.11", description: "Recommended", detail: "Faster performance | Best for: New projects", value: "3.11" },
+			{ label: "$(tag) Python 3.12", description: "Latest", detail: "Latest features | Best for: Experimental projects", value: "3.12" },
+		];
 
-		const pythonVersions = ["3.9", "3.10", "3.11", "3.12"].map((v) => ({ label: `Python ${v}`, value: v }));
+		const pythonVersion = await this.showQuickPickWithBack("Select Python Version", pythonVersions);
+		if (pythonVersion === "back") return "back";
+		if (pythonVersion === "cancel") return "cancel";
+		if (pythonVersion) this.config.pythonVersion = pythonVersion.value;
 
-		const pythonVersion = await vscode.window.showQuickPick(pythonVersions, {
-			placeHolder: "Select Python version",
-		});
-
-		if (pythonVersion) {
-			this.config.pythonVersion = pythonVersion.value;
-		}
+		return "next";
 	}
 
-	private async askDotNetSettings(): Promise<void> {
-		const versions = ["6.0", "7.0", "8.0"].map((v) => ({ label: `.NET ${v}`, value: v }));
+	private async askDotNetSettings(): Promise<"next" | "back" | "cancel"> {
+		const versions = [
+			{ label: "$(tag) .NET 6.0", description: "LTS", detail: "Long-term support | Best for: Production stability", value: "6.0" },
+			{ label: "$(tag) .NET 7.0", description: "STS", detail: "Standard-term support | Best for: New features", value: "7.0" },
+			{ label: "$(tag) .NET 8.0", description: "LTS", detail: "Latest LTS | Best for: New projects (Recommended)", value: "8.0" },
+		];
 
-		const version = await vscode.window.showQuickPick(versions, {
-			placeHolder: "Select .NET version",
-		});
+		const version = await this.showQuickPickWithBack("Select .NET Version", versions);
+		if (version === "back") return "back";
+		if (version === "cancel") return "cancel";
+		if (version) this.config.framework = version.value;
 
-		if (version) {
-			this.config.framework = version.value;
-		}
+		return "next";
 	}
 
-	private async askGoSettings(): Promise<void> {
-		const versions = ["1.20", "1.21", "1.22"].map((v) => ({ label: `Go ${v}`, value: v }));
+	private async askGoSettings(): Promise<"next" | "back" | "cancel"> {
+		const versions = [
+			{ label: "$(tag) Go 1.20", description: "Stable", detail: "Stable release | Best for: Production stability", value: "1.20" },
+			{ label: "$(tag) Go 1.21", description: "Recommended", detail: "Latest stable | Best for: New projects", value: "1.21" },
+			{ label: "$(tag) Go 1.22", description: "Latest", detail: "Latest features | Best for: Experimental projects", value: "1.22" },
+		];
 
-		const version = await vscode.window.showQuickPick(versions, {
-			placeHolder: "Select Go version",
-		});
+		const version = await this.showQuickPickWithBack("Select Go Version", versions);
+		if (version === "back") return "back";
+		if (version === "cancel") return "cancel";
+		if (version) this.config.framework = version.value;
 
-		if (version) {
-			this.config.framework = version.value;
-		}
+		return "next";
 	}
 
-	private async askRustSettings(): Promise<void> {
-		const versions = ["1.74", "1.75", "1.76"].map((v) => ({ label: `Rust ${v}`, value: v }));
+	private async askRustSettings(): Promise<"next" | "back" | "cancel"> {
+		const versions = [
+			{ label: "$(tag) Rust 1.74", description: "Stable", detail: "Stable release | Best for: Production stability", value: "1.74" },
+			{ label: "$(tag) Rust 1.75", description: "Recommended", detail: "Latest stable | Best for: New projects", value: "1.75" },
+			{ label: "$(tag) Rust 1.76", description: "Latest", detail: "Latest features | Best for: Experimental projects", value: "1.76" },
+		];
 
-		const version = await vscode.window.showQuickPick(versions, {
-			placeHolder: "Select Rust version",
-		});
+		const version = await this.showQuickPickWithBack("Select Rust Version", versions);
+		if (version === "back") return "back";
+		if (version === "cancel") return "cancel";
+		if (version) this.config.framework = version.value;
 
-		if (version) {
-			this.config.framework = version.value;
-		}
+		return "next";
 	}
 
-	private async askLaravelSettings(): Promise<void> {
-		const versions = ["8.1", "8.2", "8.3"].map((v) => ({ label: `PHP ${v}`, value: v }));
+	private async askLaravelSettings(): Promise<"next" | "back" | "cancel"> {
+		const versions = [
+			{ label: "$(tag) PHP 8.1", description: "Stable", detail: "Stable release | Best for: Production stability", value: "8.1" },
+			{ label: "$(tag) PHP 8.2", description: "Recommended", detail: "Latest stable | Best for: New projects", value: "8.2" },
+			{ label: "$(tag) PHP 8.3", description: "Latest", detail: "Latest features | Best for: Experimental projects", value: "8.3" },
+		];
 
-		const version = await vscode.window.showQuickPick(versions, {
-			placeHolder: "Select PHP version",
-		});
+		const version = await this.showQuickPickWithBack("Select PHP Version", versions);
+		if (version === "back") return "back";
+		if (version === "cancel") return "cancel";
+		if (version) this.config.framework = version.value;
 
-		if (version) {
-			this.config.framework = version.value;
-		}
+		return "next";
 	}
 
-	private async askRailsSettings(): Promise<void> {
-		const versions = ["3.2", "3.3"].map((v) => ({ label: `Ruby ${v}`, value: v }));
+	private async askRailsSettings(): Promise<"next" | "back" | "cancel"> {
+		const versions = [
+			{ label: "$(tag) Ruby 3.2", description: "Stable", detail: "Stable release | Best for: Production stability", value: "3.2" },
+			{ label: "$(tag) Ruby 3.3", description: "Latest", detail: "Latest features | Best for: New projects", value: "3.3" },
+		];
 
-		const version = await vscode.window.showQuickPick(versions, {
-			placeHolder: "Select Ruby version",
-		});
+		const version = await this.showQuickPickWithBack("Select Ruby Version", versions);
+		if (version === "back") return "back";
+		if (version === "cancel") return "cancel";
+		if (version) this.config.framework = version.value;
 
-		if (version) {
-			this.config.framework = version.value;
-		}
+		return "next";
 	}
 
-	private async askDatabases(): Promise<void> {
+	private async askDatabases(): Promise<"next" | "back" | "cancel"> {
 		const databaseManager = new DatabaseManager();
-		this.config.databases = await databaseManager.selectDatabases();
+		const result = await databaseManager.selectDatabases(this.currentStep, this.totalSteps);
+		if (result === "back") return "back";
+		if (result === "cancel") return "cancel";
+		this.config.databases = result;
+		return "next";
 	}
 
-	private async askMessageQueues(): Promise<void> {
+	private async askMessageQueues(): Promise<"next" | "back" | "cancel"> {
 		const messageQueueManager = new MessageQueueManager();
-		this.config.messageQueues = await messageQueueManager.selectMessageQueues();
+		const result = await messageQueueManager.selectMessageQueues(this.currentStep, this.totalSteps);
+		if (result === "back") return "back";
+		if (result === "cancel") return "cancel";
+		this.config.messageQueues = result;
+		return "next";
 	}
 
-	private async askServices(): Promise<void> {
+	private async askServices(): Promise<"next" | "back" | "cancel"> {
 		const serviceManager = new ServiceManager();
-		this.config.services = await serviceManager.selectServices();
+		const result = await serviceManager.selectServices(this.currentStep, this.totalSteps);
+		if (result === "back") return "back";
+		if (result === "cancel") return "cancel";
+		this.config.services = result;
+		return "next";
+	}
+
+	private showQuickPickWithBack(title: string, items: any[]): Promise<any> {
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: ${title}`;
+		quickPick.items = items;
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(() => {
+				if (!isResolved) {
+					isResolved = true;
+					const selected = quickPick.selectedItems[0];
+					quickPick.dispose();
+					resolve(selected);
+				}
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("back");
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
 	}
 
 	private async generateFiles(): Promise<void> {

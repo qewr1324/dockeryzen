@@ -6,15 +6,23 @@ export class DockerComposeGenerator {
 	generate(): string {
 		const services: string[] = [];
 		const volumes: string[] = [];
+		const usedPorts = new Set<number>();
+
+		// Check for port conflicts
+		this.checkPortConflicts();
 
 		// Main application service
 		services.push(this.generateMainService());
+		usedPorts.add(this.config.port);
+		if (this.config.enableDebug) {
+			usedPorts.add(5005);
+		}
 
 		// Database services
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
-				services.push(this.generateDatabaseService(db));
 				if (!db.useExternalUrl) {
+					services.push(this.generateDatabaseService(db, usedPorts));
 					const volumeName = `${this.config.projectName}-${db.type}-data`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 					volumes.push(`  ${volumeName}:\n    driver: local`);
 				}
@@ -24,14 +32,14 @@ export class DockerComposeGenerator {
 		// Message queue services
 		if (this.config.messageQueues.length > 0) {
 			for (const mq of this.config.messageQueues) {
-				services.push(this.generateMessageQueueService(mq));
+				services.push(this.generateMessageQueueService(mq, usedPorts));
 			}
 		}
 
 		// Additional services
 		if (this.config.services.length > 0) {
 			for (const service of this.config.services) {
-				services.push(this.generateAdditionalService(service));
+				services.push(this.generateAdditionalService(service, usedPorts));
 			}
 		}
 
@@ -48,6 +56,54 @@ volumes:
 ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 	}
 
+	private checkPortConflicts(): void {
+		const allPorts = new Map<number, string>();
+
+		// Main app port
+		allPorts.set(this.config.port, "Main Application");
+		if (this.config.enableDebug) {
+			allPorts.set(5005, "Debug Port");
+		}
+
+		// Database ports
+		for (const db of this.config.databases) {
+			if (!db.useExternalUrl) {
+				if (allPorts.has(db.externalPort)) {
+					console.warn(`Port conflict: ${db.type} uses port ${db.externalPort} which is already used by ${allPorts.get(db.externalPort)}`);
+					// Auto-assign new port
+					db.externalPort = this.findFreePort(db.externalPort, allPorts);
+				}
+				allPorts.set(db.externalPort, `${db.type} Database`);
+			}
+		}
+
+		// Message queue ports
+		for (const mq of this.config.messageQueues) {
+			if (allPorts.has(mq.externalPort)) {
+				console.warn(`Port conflict: ${mq.type} uses port ${mq.externalPort} which is already used by ${allPorts.get(mq.externalPort)}`);
+				mq.externalPort = this.findFreePort(mq.externalPort, allPorts);
+			}
+			allPorts.set(mq.externalPort, `${mq.type} Message Queue`);
+		}
+
+		// Service ports
+		for (const service of this.config.services) {
+			if (allPorts.has(service.externalPort)) {
+				console.warn(`Port conflict: ${service.type} uses port ${service.externalPort} which is already used by ${allPorts.get(service.externalPort)}`);
+				service.externalPort = this.findFreePort(service.externalPort, allPorts);
+			}
+			allPorts.set(service.externalPort, `${service.type} Service`);
+		}
+	}
+
+	private findFreePort(startPort: number, usedPorts: Map<number, string>): number {
+		let port = startPort + 1;
+		while (usedPorts.has(port)) {
+			port++;
+		}
+		return port;
+	}
+
 	private generateMainService(): string {
 		const serviceName = this.config.projectName.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 		const ports = [`      - "${this.config.port}:${this.config.port}"`];
@@ -58,9 +114,13 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 
 		let envVars = "";
 		if (this.config.language.startsWith("java")) {
+			let javaOpts = "-Xms512m -Xmx1024m";
+			if (this.config.enableDebug) {
+				javaOpts += " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005";
+			}
 			envVars = `
       - SPRING_PROFILES_ACTIVE=production
-      - JAVA_OPTS=-Xms512m -Xmx1024m`;
+      - JAVA_OPTS=${javaOpts}`;
 		} else if (this.config.language.startsWith("js")) {
 			envVars = `
       - NODE_ENV=production
@@ -84,7 +144,7 @@ ${ports.join("\n")}
       - dockeryzen-network`;
 	}
 
-	private generateDatabaseService(db: any): string {
+	private generateDatabaseService(db: any, usedPorts: Set<number>): string {
 		if (db.useExternalUrl) {
 			return `  # External ${db.type} database
   # URL: ${db.url}`;
@@ -169,7 +229,7 @@ ${ports.join("\n")}
 		return service;
 	}
 
-	private generateMessageQueueService(mq: any): string {
+	private generateMessageQueueService(mq: any, usedPorts: Set<number>): string {
 		const serviceName = `${this.config.projectName}-${mq.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 
 		const imageMap: Record<string, string> = {
@@ -197,6 +257,10 @@ ${ports.join("\n")}
 			service += `
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest`;
+		} else if (mq.type === "activemq") {
+			service += `
+      - ARTEMIS_USER=admin
+      - ARTEMIS_PASSWORD=admin`;
 		}
 
 		service += `
@@ -206,7 +270,7 @@ ${ports.join("\n")}
 		return service;
 	}
 
-	private generateAdditionalService(service: any): string {
+	private generateAdditionalService(service: any, usedPorts: Set<number>): string {
 		const serviceName = `${this.config.projectName}-${service.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 
 		const imageMap: Record<string, string> = {

@@ -58,7 +58,7 @@ USER appuser
 EXPOSE ${this.config.port}
 ${debugConfig}${healthCheck}
 # Run application
-ENTRYPOINT ["java", "-jar", "app.jar"]`;
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 	}
 
 	private getJavaBaseImage(): string {
@@ -77,40 +77,66 @@ ENTRYPOINT ["java", "-jar", "app.jar"]`;
 	}
 
 	private getJavaBuildStage(): string {
+		const vendor = this.config.jdkVendor || "eclipse-temurin";
 		const version = this.config.jdkVersion || "17";
+		const variant = this.config.useAlpine ? "-alpine" : "";
+
+		// Build stage with selected JDK vendor
+		const buildImage = this.getBuildImage(vendor, version, variant);
 
 		if (this.config.buildTool === "gradle") {
-			return `FROM gradle:${version}-jdk${this.config.useAlpine ? "-alpine" : ""} AS build
+			return `FROM ${buildImage} AS build
 WORKDIR /app
 
+# Install Gradle
+RUN wget https://services.gradle.org/distributions/gradle-8.5-bin.zip && \\
+    unzip gradle-8.5-bin.zip && \\
+    rm gradle-8.5-bin.zip
+
 # Copy build files
-COPY build.gradle settings.gradle gradlew ./
-COPY gradle ./gradle
+COPY build.gradle settings.gradle ./
 COPY src ./src
 
 # Build application
-RUN gradle build -x test --no-daemon`;
+RUN /gradle-8.5/bin/gradle build -x test --no-daemon && \\
+    rm -rf /root/.gradle/caches`;
 		} else {
-			return `FROM maven:${version}-${this.config.useAlpine ? "alpine" : "slim"} AS build
+			// Maven build
+			return `FROM ${buildImage} AS build
 WORKDIR /app
 
-# Copy POM and download dependencies
-COPY pom.xml .
-RUN mvn dependency:go-offline
+# Install Maven
+RUN wget https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz && \\
+    tar -xzf apache-maven-3.9.6-bin.tar.gz && \\
+    rm apache-maven-3.9.6-bin.tar.gz && \\
+    mv apache-maven-3.9.6 /opt/maven
 
-# Copy source code and build
+# Copy POM and download dependencies in one layer
+COPY pom.xml .
+RUN /opt/maven/bin/mvn dependency:go-offline
+
+# Copy source code and build in one layer
 COPY src ./src
-RUN mvn package -DskipTests`;
+RUN /opt/maven/bin/mvn package -DskipTests && \\
+    rm -rf /root/.m2`;
 		}
+	}
+
+	private getBuildImage(vendor: string, version: string, variant: string): string {
+		const imageMap: Record<string, string> = {
+			"eclipse-temurin": `eclipse-temurin:${version}-jdk${variant}`,
+			amazoncorretto: `amazoncorretto:${version}${variant}`,
+			openjdk: `openjdk:${version}${variant ? "-alpine" : "-slim"}`,
+			"oracle-jdk": `oraclelinux:${version}`,
+		};
+
+		return imageMap[vendor] || imageMap["eclipse-temurin"];
 	}
 
 	private getJavaDebugConfig(): string {
 		return `
 # Debug port
-EXPOSE 5005
-
-# Enable debug mode
-ENTRYPOINT ["java", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "app.jar"]`;
+EXPOSE 5005`;
 	}
 
 	private getJavaHealthCheck(): string {
@@ -147,7 +173,7 @@ FROM ${serverImages[server]}
 # Remove default applications
 RUN rm -rf /usr/local/tomcat/webapps/*
 
-# Copy WAR file
+# Copy WAR file (using specific name to avoid wildcard issues)
 COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 # Expose port
@@ -165,7 +191,7 @@ CMD ["catalina.sh", "run"]`;
 			"11": "9.0-jre11",
 			"17": "10.1-jre17",
 			"21": "10.1-jre21",
-			"25": "11.0-jre21",
+			"25": "11.0-jre21", // Tomcat 11 with JDK 21 support
 		};
 		return versions[version] || "10.1-jre17";
 	}
@@ -178,7 +204,7 @@ CMD ["catalina.sh", "run"]`;
 			"11": "11.0-jre11",
 			"17": "11.0-jre17",
 			"21": "12.0-jre21",
-			"25": "12.0-jre21",
+			"25": "12.0-jre21", // Jetty 12 with JDK 21 support
 		};
 		return versions[version] || "11.0-jre17";
 	}

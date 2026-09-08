@@ -4,41 +4,382 @@ import { DatabaseConfig } from "../types/index.js";
 export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];
 
-	async selectDatabases(): Promise<DatabaseConfig[]> {
+	async selectDatabases(currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
 		const allDatabases = this.getDatabaseDefinitions();
 
-		const selected = await vscode.window.showQuickPick(
-			allDatabases.map((db) => ({
-				label: `$(database) ${db.label}`,
-				description: db.category,
-				detail: `Default port: ${db.defaultPort}`,
-				value: db.value,
-				defaultPort: db.defaultPort,
-				defaultUser: db.defaultUser,
-				defaultDatabase: db.defaultDatabase,
-				versions: db.versions,
-				picked: false,
-			})),
-			{
-				placeHolder: "Select databases (multi-select)",
-				canPickMany: true,
-				matchOnDescription: true,
-				matchOnDetail: true,
-			},
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Select Databases`;
+		quickPick.placeholder = "Select databases (multi-select) - Press Enter when done";
+		quickPick.items = allDatabases.map((db) => ({
+			label: `$(database) ${db.label}`,
+			description: db.category,
+			detail: `Port: ${db.defaultPort} | Version: ${db.versions[0]} | User: ${db.defaultUser}`,
+			value: db.value,
+			defaultPort: db.defaultPort,
+			defaultUser: db.defaultUser,
+			defaultDatabase: db.defaultDatabase,
+			versions: db.versions,
+			picked: false,
+		}));
+		quickPick.canSelectMany = true;
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(() => {
+				if (isResolved) return;
+				isResolved = true;
+				const selected = quickPick.selectedItems as any[];
+				quickPick.dispose();
+
+				if (selected.length === 0) {
+					resolve([]);
+					return;
+				}
+
+				const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
+				resolve(result);
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (isResolved) return;
+
+				if (button.tooltip === "Back") {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("back");
+				} else if (button.tooltip === "OK") {
+					isResolved = true;
+					const selected = quickPick.selectedItems as any[];
+					quickPick.dispose();
+
+					if (selected.length === 0) {
+						resolve([]);
+						return;
+					}
+
+					const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
+					resolve(result);
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
+	}
+
+	private async showSelectedDatabasesWithEdit(selectedDbs: any[], currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Databases`;
+		quickPick.placeholder = "Click on a database to edit it, or press Enter to continue with defaults";
+		quickPick.items = selectedDbs.map((db) => ({
+			label: `$(database) ${db.label}`,
+			description: db.configured ? "$(check) Configured" : "$(gear) Click to Edit",
+			detail: `Port: ${db.defaultPort} | Version: ${db.versions[0]} | User: ${db.defaultUser}`,
+			value: db.value,
+			defaultPort: db.defaultPort,
+			defaultUser: db.defaultUser,
+			defaultDatabase: db.defaultDatabase,
+			versions: db.versions,
+			configured: db.configured || false,
+		}));
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(async () => {
+				if (isResolved) return;
+
+				const selected = quickPick.selectedItems[0] as any;
+				if (selected) {
+					isResolved = true;
+					quickPick.dispose();
+
+					const config = await this.askDatabaseConfig(selected, currentStep, totalSteps);
+
+					if (config === "back") {
+						resolve("back");
+						return;
+					}
+					if (config === "cancel") {
+						resolve("cancel");
+						return;
+					}
+					if (config) {
+						this.databases.push(config);
+						selected.configured = true;
+					}
+
+					const result = await this.showSelectedDatabasesWithEdit(selectedDbs, currentStep, totalSteps);
+					resolve(result);
+				}
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (isResolved) return;
+
+				isResolved = true;
+				quickPick.dispose();
+
+				if (button.tooltip === "Back") {
+					resolve("back");
+				} else {
+					// OK - Continue with defaults for unconfigured databases
+					for (const db of selectedDbs) {
+						if (!db.configured) {
+							this.databases.push({
+								type: db.value,
+								version: db.versions[0],
+								internalPort: db.defaultPort,
+								externalPort: db.defaultPort,
+								databaseName: db.defaultDatabase,
+								username: db.defaultUser,
+								password: "root",
+								useAlpine: false,
+							});
+						}
+					}
+					resolve(this.databases);
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
+	}
+
+	private async askDatabaseConfig(db: any, currentStep: number, totalSteps: number): Promise<DatabaseConfig | "back" | "cancel" | undefined> {
+		const configMethod = await this.showQuickPickWithBack(
+			`Configure ${db.label}`,
+			[
+				{ label: "$(check) Use Defaults", description: "Use default settings", detail: "Quick setup with recommended defaults", value: "defaults" },
+				{ label: "$(settings-gear) Edit Part", description: "Configure individual settings", detail: "Set version, ports, credentials manually", value: "part" },
+				{ label: "$(link) Edit URL", description: "Use external connection URL", detail: "Connect to external database instance", value: "url" },
+			],
+			currentStep,
+			totalSteps,
 		);
 
-		if (!selected || selected.length === 0) {
-			return [];
+		if (configMethod === "back") return "back";
+		if (configMethod === "cancel") return "cancel";
+		if (!configMethod) return undefined;
+
+		if (configMethod.value === "defaults") {
+			return {
+				type: db.value,
+				version: db.versions[0],
+				internalPort: db.defaultPort,
+				externalPort: db.defaultPort,
+				databaseName: db.defaultDatabase,
+				username: db.defaultUser,
+				password: "root",
+				useAlpine: false,
+			};
 		}
 
-		for (const db of selected) {
-			const config = await this.askDatabaseConfig(db);
-			if (config) {
-				this.databases.push(config);
-			}
+		if (configMethod.value === "url") {
+			const url = await this.showInputBoxWithBack(`Enter ${db.label} connection URL`, "postgresql://user:pass@host:port/dbname", currentStep, totalSteps);
+
+			if (url === "back") return "back";
+			if (url === "cancel") return "cancel";
+			if (!url) return undefined;
+
+			return {
+				type: db.value,
+				version: "latest",
+				internalPort: db.defaultPort,
+				externalPort: db.defaultPort,
+				useAlpine: false,
+				useExternalUrl: true,
+				url: url,
+			};
 		}
 
-		return this.databases;
+		// Edit Part - Version
+		const version = await this.showQuickPickWithBack(
+			`Select ${db.label} Version`,
+			db.versions.map((v: string) => ({
+				label: `$(tag) ${v}`,
+				description: `${db.label} version ${v}`,
+				detail: `Docker image tag: ${v}`,
+				value: v,
+			})),
+			currentStep,
+			totalSteps,
+		);
+		if (version === "back") return "back";
+		if (version === "cancel") return "cancel";
+		if (!version) return undefined;
+
+		// Internal port
+		const internalPort = await this.showInputBoxWithBack(`Enter ${db.label} Internal Port`, db.defaultPort.toString(), currentStep, totalSteps);
+		if (internalPort === "back") return "back";
+		if (internalPort === "cancel") return "cancel";
+		if (!internalPort) return undefined;
+
+		// External port
+		const externalPort = await this.showInputBoxWithBack(`Enter ${db.label} External Port`, internalPort, currentStep, totalSteps);
+		if (externalPort === "back") return "back";
+		if (externalPort === "cancel") return "cancel";
+		if (!externalPort) return undefined;
+
+		// Database name
+		let databaseName: string | undefined;
+		if (db.defaultDatabase) {
+			const dbName = await this.showInputBoxWithBack(`Enter Database Name for ${db.label}`, db.defaultDatabase, currentStep, totalSteps);
+			if (dbName === "back") return "back";
+			if (dbName === "cancel") return "cancel";
+			databaseName = dbName;
+		}
+
+		// Username
+		const username = await this.showInputBoxWithBack(`Enter Username for ${db.label}`, db.defaultUser, currentStep, totalSteps);
+		if (username === "back") return "back";
+		if (username === "cancel") return "cancel";
+		if (!username) return undefined;
+
+		// Password
+		const password = await this.showInputBoxWithBack(`Enter Password for ${db.label}`, "root", currentStep, totalSteps, true);
+		if (password === "back") return "back";
+		if (password === "cancel") return "cancel";
+
+		// Alpine option
+		const useAlpine = await this.showQuickPickWithBack(
+			`Use Alpine Version for ${db.label}?`,
+			[
+				{ label: "$(check) Yes", description: "Alpine-based image", detail: "Smaller image size (~50% smaller)", value: "yes" },
+				{ label: "$(x) No", description: "Standard image", detail: "Full-featured image with all dependencies", value: "no" },
+			],
+			currentStep,
+			totalSteps,
+		);
+		if (useAlpine === "back") return "back";
+		if (useAlpine === "cancel") return "cancel";
+
+		return {
+			type: db.value,
+			version: version.value,
+			internalPort: parseInt(internalPort),
+			externalPort: parseInt(externalPort),
+			databaseName: databaseName,
+			username: username,
+			password: password || "root",
+			useAlpine: useAlpine?.value === "yes",
+		};
+	}
+
+	private showQuickPickWithBack(title: string, items: any[], currentStep: number, totalSteps: number): Promise<any> {
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: ${title}`;
+		quickPick.items = items;
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			quickPick.onDidAccept(() => {
+				if (!isResolved) {
+					isResolved = true;
+					const selected = quickPick.selectedItems[0];
+					quickPick.dispose();
+					resolve(selected);
+				}
+			});
+
+			quickPick.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("back");
+				}
+			});
+
+			quickPick.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					quickPick.dispose();
+					resolve("cancel");
+				}
+			});
+
+			quickPick.show();
+		});
+	}
+
+	private showInputBoxWithBack(title: string, value: string, currentStep: number, totalSteps: number, isPassword = false): Promise<string | "back" | "cancel"> {
+		const inputBox = vscode.window.createInputBox();
+		inputBox.title = `Step ${currentStep + 1}/${totalSteps}: ${title}`;
+		inputBox.value = value;
+		inputBox.password = isPassword;
+		inputBox.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+
+		return new Promise((resolve) => {
+			const acceptValue = () => {
+				if (!isResolved) {
+					isResolved = true;
+					const value = inputBox.value;
+					inputBox.dispose();
+					resolve(value);
+				}
+			};
+
+			inputBox.onDidAccept(acceptValue);
+
+			inputBox.onDidTriggerButton((button) => {
+				if (!isResolved) {
+					if (button.tooltip === "Back") {
+						isResolved = true;
+						inputBox.dispose();
+						resolve("back");
+					} else if (button.tooltip === "OK") {
+						acceptValue();
+					}
+				}
+			});
+
+			inputBox.onDidHide(() => {
+				if (!isResolved) {
+					isResolved = true;
+					inputBox.dispose();
+					resolve("cancel");
+				}
+			});
+
+			inputBox.show();
+		});
 	}
 
 	private getDatabaseDefinitions() {
@@ -69,7 +410,7 @@ export class DatabaseManager {
 				defaultUser: "root",
 				defaultDatabase: "mysql",
 				category: "SQL Database",
-				versions: ["11.2", "11.1", "10.11"],
+				versions: ["11.2", "11.1", "10.11", "10.6"],
 			},
 			{
 				label: "Oracle",
@@ -124,7 +465,7 @@ export class DatabaseManager {
 				versions: ["7.2", "7.1", "7.0"],
 			},
 			{
-				label: "DynamoDB",
+				label: "Amazon DynamoDB",
 				value: "dynamodb",
 				defaultPort: 8000,
 				defaultUser: "root",
@@ -198,7 +539,7 @@ export class DatabaseManager {
 				versions: ["2.5", "2.4", "2.3"],
 			},
 			{
-				label: "Bigtable",
+				label: "Google Bigtable",
 				value: "bigtable",
 				defaultPort: 8080,
 				defaultUser: "root",
@@ -245,7 +586,7 @@ export class DatabaseManager {
 				value: "influxdb",
 				defaultPort: 8086,
 				defaultUser: "admin",
-				category: "Time Series",
+				category: "Time Series Database",
 				versions: ["2.7", "2.6", "2.5"],
 			},
 			{
@@ -254,7 +595,7 @@ export class DatabaseManager {
 				defaultPort: 5432,
 				defaultUser: "postgres",
 				defaultDatabase: "postgres",
-				category: "Time Series",
+				category: "Time Series Database",
 				versions: ["2.13", "2.12", "2.11"],
 			},
 			{
@@ -262,7 +603,7 @@ export class DatabaseManager {
 				value: "prometheus",
 				defaultPort: 9090,
 				defaultUser: "root",
-				category: "Time Series",
+				category: "Time Series Database",
 				versions: ["2.48", "2.47", "2.46"],
 			},
 			{
@@ -270,7 +611,7 @@ export class DatabaseManager {
 				value: "opentsdb",
 				defaultPort: 4242,
 				defaultUser: "root",
-				category: "Time Series",
+				category: "Time Series Database",
 				versions: ["2.4", "2.3"],
 			},
 			// Search Engines
@@ -313,7 +654,7 @@ export class DatabaseManager {
 				defaultPort: 26257,
 				defaultUser: "root",
 				defaultDatabase: "defaultdb",
-				category: "NewSQL",
+				category: "NewSQL Database",
 				versions: ["23.2", "23.1", "22.2"],
 			},
 			{
@@ -321,7 +662,7 @@ export class DatabaseManager {
 				value: "tidb",
 				defaultPort: 4000,
 				defaultUser: "root",
-				category: "NewSQL",
+				category: "NewSQL Database",
 				versions: ["7.5", "7.4", "7.3"],
 			},
 			{
@@ -330,7 +671,7 @@ export class DatabaseManager {
 				defaultPort: 5433,
 				defaultUser: "yugabyte",
 				defaultDatabase: "yugabyte",
-				category: "NewSQL",
+				category: "NewSQL Database",
 				versions: ["2.20", "2.19", "2.18"],
 			},
 			// Vector Databases
@@ -339,7 +680,7 @@ export class DatabaseManager {
 				value: "pinecone",
 				defaultPort: 433,
 				defaultUser: "root",
-				category: "Vector Database",
+				category: "Vector Database (AI/ML)",
 				versions: ["latest"],
 			},
 			{
@@ -347,7 +688,7 @@ export class DatabaseManager {
 				value: "weaviate",
 				defaultPort: 8080,
 				defaultUser: "root",
-				category: "Vector Database",
+				category: "Vector Database (AI/ML)",
 				versions: ["1.23", "1.22", "1.21"],
 			},
 			{
@@ -355,7 +696,7 @@ export class DatabaseManager {
 				value: "qdrant",
 				defaultPort: 6333,
 				defaultUser: "root",
-				category: "Vector Database",
+				category: "Vector Database (AI/ML)",
 				versions: ["1.7", "1.6", "1.5"],
 			},
 			{
@@ -363,7 +704,7 @@ export class DatabaseManager {
 				value: "milvus",
 				defaultPort: 19530,
 				defaultUser: "root",
-				category: "Vector Database",
+				category: "Vector Database (AI/ML)",
 				versions: ["2.3", "2.2", "2.1"],
 			},
 			{
@@ -371,125 +712,9 @@ export class DatabaseManager {
 				value: "chroma",
 				defaultPort: 8000,
 				defaultUser: "root",
-				category: "Vector Database",
+				category: "Vector Database (AI/ML)",
 				versions: ["0.4", "0.3", "0.2"],
 			},
 		];
-	}
-
-	private async askDatabaseConfig(db: any): Promise<DatabaseConfig | undefined> {
-		// Ask for configuration method
-		const configMethod = await vscode.window.showQuickPick(
-			[
-				{ label: "$(settings-gear) Edit Part", description: "Configure individual settings", value: "part" },
-				{ label: "$(link) Edit URL", description: "Use external URL", value: "url" },
-			],
-			{
-				placeHolder: `How to configure ${db.label}?`,
-			},
-		);
-
-		if (!configMethod) return undefined;
-
-		if (configMethod.value === "url") {
-			const url = await vscode.window.showInputBox({
-				prompt: `Enter ${db.label} connection URL`,
-				placeHolder: "e.g., postgresql://user:pass@host:port/dbname",
-			});
-
-			if (!url) return undefined;
-
-			return {
-				type: db.value,
-				version: "latest",
-				internalPort: db.defaultPort,
-				externalPort: db.defaultPort,
-				useAlpine: false,
-				useExternalUrl: true,
-				url: url,
-			};
-		}
-
-		// Version selection
-		const version = await vscode.window.showQuickPick(
-			db.versions.map((v: string) => ({ label: `$(tag) ${v}`, value: v })),
-			{ placeHolder: `Select ${db.label} version` },
-		);
-
-		if (!version) return undefined;
-
-		// Internal port
-		const internalPort = await vscode.window.showInputBox({
-			prompt: `Enter ${db.label} internal port`,
-			value: db.defaultPort.toString(),
-			validateInput: (value) => {
-				const portNum = parseInt(value);
-				if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-					return "Please enter a valid port number (1-65535)";
-				}
-				return null;
-			},
-		});
-
-		if (!internalPort) return undefined;
-
-		// External port
-		const externalPort = await vscode.window.showInputBox({
-			prompt: `Enter ${db.label} external port`,
-			value: internalPort,
-			validateInput: (value) => {
-				const portNum = parseInt(value);
-				if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-					return "Please enter a valid port number (1-65535)";
-				}
-				return null;
-			},
-		});
-
-		if (!externalPort) return undefined;
-
-		// Database name
-		let databaseName: string | undefined;
-		if (db.defaultDatabase) {
-			databaseName = await vscode.window.showInputBox({
-				prompt: `Enter database name for ${db.label}`,
-				value: db.defaultDatabase,
-			});
-		}
-
-		// Username
-		const username = await vscode.window.showInputBox({
-			prompt: `Enter username for ${db.label}`,
-			value: db.defaultUser,
-		});
-
-		if (!username) return undefined;
-
-		// Password
-		const password = await vscode.window.showInputBox({
-			prompt: `Enter password for ${db.label}`,
-			value: "root",
-			password: true,
-		});
-
-		// Alpine option
-		const useAlpine = await vscode.window.showQuickPick(
-			[
-				{ label: "$(check) Yes", description: "Use Alpine-based image", value: "yes" },
-				{ label: "$(x) No", description: "Use standard image", value: "no" },
-			],
-			{ placeHolder: "Use Alpine version?" },
-		);
-
-		return {
-			type: db.value,
-			version: version.value,
-			internalPort: parseInt(internalPort),
-			externalPort: parseInt(externalPort),
-			databaseName: databaseName,
-			username: username,
-			password: password || "root",
-			useAlpine: useAlpine?.value === "yes",
-		};
 	}
 }
