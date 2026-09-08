@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { DatabaseConfig } from "../types/index.js";
 
-// Import database JSON configs directly
+// Use require with any type
 const sqlDatabases: any = require("../config/databases/sql.json");
 const nosqlDatabases: any = require("../config/databases/nosql.json");
 const keyValueDatabases: any = require("../config/databases/key-value.json");
@@ -16,6 +16,7 @@ export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];
 
 	async selectDatabases(currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
+		this.databases = [];
 		const allDatabases = this.getAllDatabases();
 
 		const quickPick = vscode.window.createQuickPick();
@@ -155,7 +156,13 @@ export class DatabaseManager {
 						return;
 					}
 					if (config) {
-						this.databases.push(config);
+						const exists = this.databases.some((d) => d.type === config.type);
+						if (!exists) {
+							this.databases.push(config);
+						} else {
+							const index = this.databases.findIndex((d) => d.type === config.type);
+							this.databases[index] = config;
+						}
 						selected.configured = true;
 					}
 
@@ -176,18 +183,21 @@ export class DatabaseManager {
 					// OK - Continue with defaults for unconfigured databases
 					for (const db of selectedDbs) {
 						if (!db.configured) {
-							this.databases.push({
-								type: db.value,
-								version: db.versions[0].value,
-								internalPort: db.defaultPort,
-								externalPort: db.defaultPort,
-								databaseName: db.defaultDatabase,
-								username: db.defaultUser,
-								password: "root",
-								useAlpine: false,
-								image: db.versions[0].image,
-								alpineImage: db.versions[0].alpineImage,
-							});
+							const exists = this.databases.some((d) => d.type === db.value);
+							if (!exists) {
+								this.databases.push({
+									type: db.value,
+									version: db.versions[0].value,
+									internalPort: db.defaultPort,
+									externalPort: db.defaultPort,
+									databaseName: db.defaultDatabase,
+									username: db.defaultUser,
+									password: "root",
+									useAlpine: false,
+									image: db.versions[0].image,
+									alpineImage: db.versions[0].alpineImage,
+								});
+							}
 						}
 					}
 					resolve(this.databases);

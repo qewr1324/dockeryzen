@@ -6,6 +6,7 @@ export class MessageQueueManager {
 	private queues: MessageQueueConfig[] = [];
 
 	async selectMessageQueues(currentStep: number, totalSteps: number): Promise<MessageQueueConfig[] | "back" | "cancel"> {
+		this.queues = [];
 		const allQueues: any[] = messageQueuesConfig.queues;
 
 		const quickPick = vscode.window.createQuickPick();

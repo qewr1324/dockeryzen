@@ -22,7 +22,7 @@ export class DockerComposeGenerator {
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
 				if (!db.useExternalUrl) {
-					services.push(this.generateDatabaseService(db, usedPorts));
+					services.push(this.generateDatabaseService(db));
 					const volumeName = `${this.config.projectName}-${db.type}-data`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 					volumes.push(`  ${volumeName}:\n    driver: local`);
 				}
@@ -32,14 +32,14 @@ export class DockerComposeGenerator {
 		// Message queue services
 		if (this.config.messageQueues.length > 0) {
 			for (const mq of this.config.messageQueues) {
-				services.push(this.generateMessageQueueService(mq, usedPorts));
+				services.push(this.generateMessageQueueService(mq));
 			}
 		}
 
 		// Additional services
 		if (this.config.services.length > 0) {
 			for (const service of this.config.services) {
-				services.push(this.generateAdditionalService(service, usedPorts));
+				services.push(this.generateAdditionalService(service));
 			}
 		}
 
@@ -70,7 +70,6 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 			if (!db.useExternalUrl) {
 				if (allPorts.has(db.externalPort)) {
 					console.warn(`Port conflict: ${db.type} uses port ${db.externalPort} which is already used by ${allPorts.get(db.externalPort)}`);
-					// Auto-assign new port
 					db.externalPort = this.findFreePort(db.externalPort, allPorts);
 				}
 				allPorts.set(db.externalPort, `${db.type} Database`);
@@ -144,7 +143,7 @@ ${ports.join("\n")}
       - dockeryzen-network`;
 	}
 
-	private generateDatabaseService(db: any, usedPorts: Set<number>): string {
+	private generateDatabaseService(db: any): string {
 		if (db.useExternalUrl) {
 			return `  # External ${db.type} database
   # URL: ${db.url}`;
@@ -152,33 +151,43 @@ ${ports.join("\n")}
 
 		const serviceName = `${this.config.projectName}-${db.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 
-		const imageMap: Record<string, string> = {
-			postgresql: "postgres",
-			mysql: "mysql",
-			mariadb: "mariadb",
-			mongodb: "mongo",
-			redis: "redis",
-			elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch",
-			cassandra: "cassandra",
-			neo4j: "neo4j",
-			influxdb: "influxdb",
-			qdrant: "qdrant/qdrant",
-			cockroachdb: "cockroachdb/cockroach",
-			couchdb: "couchdb",
-			dynamodb: "amazon/dynamodb-local",
-			solr: "solr",
-			meilisearch: "getmeili/meilisearch",
-			milvus: "milvusdb/milvus",
-			oracle: "oraclelinux",
-			mssql: "mcr.microsoft.com/mssql/server",
-			db2: "ibmcom/db2",
-		};
+		// Use image from config
+		let image = db.image;
 
-		const image = imageMap[db.type] || db.type;
-		const imageTag = db.useAlpine ? `${db.version}-alpine` : db.version;
+		// If alpine selected and alpineImage exists
+		if (db.useAlpine && db.alpineImage) {
+			image = db.alpineImage;
+		}
+
+		// Fallback if no image
+		if (!image) {
+			const imageMap: Record<string, string> = {
+				postgresql: "postgres",
+				mysql: "mysql",
+				mariadb: "mariadb",
+				mongodb: "mongo",
+				redis: "redis",
+				elasticsearch: "docker.elastic.co/elasticsearch/elasticsearch",
+				cassandra: "cassandra",
+				neo4j: "neo4j",
+				influxdb: "influxdb",
+				qdrant: "qdrant/qdrant",
+				cockroachdb: "cockroachdb/cockroach",
+				couchdb: "couchdb",
+				dynamodb: "amazon/dynamodb-local",
+				solr: "solr",
+				meilisearch: "getmeili/meilisearch",
+				milvus: "milvusdb/milvus",
+				oracle: "container-registry.oracle.com/database/enterprise",
+				mssql: "mcr.microsoft.com/mssql/server",
+				db2: "ibmcom/db2",
+			};
+			const baseImage = imageMap[db.type] || db.type;
+			image = `${baseImage}:${db.version}`;
+		}
 
 		let service = `  ${serviceName}:
-    image: ${image}:${imageTag}
+    image: ${image}
     container_name: ${serviceName}
     restart: unless-stopped
     ports:
@@ -218,6 +227,13 @@ ${ports.join("\n")}
 			service += `
       - CASSANDRA_USER=${db.username || "cassandra"}
       - CASSANDRA_PASSWORD=${db.password || "cassandra"}`;
+		} else if (db.type === "influxdb") {
+			service += `
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${db.username || "admin"}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "password"}
+      - DOCKER_INFLUXDB_INIT_ORG=my-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket`;
 		}
 
 		service += `
@@ -229,20 +245,31 @@ ${ports.join("\n")}
 		return service;
 	}
 
-	private generateMessageQueueService(mq: any, usedPorts: Set<number>): string {
+	private generateMessageQueueService(mq: any): string {
 		const serviceName = `${this.config.projectName}-${mq.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 
-		const imageMap: Record<string, string> = {
-			kafka: "confluentinc/cp-kafka",
-			rabbitmq: "rabbitmq",
-			activemq: "apache/activemq-artemis",
-		};
+		// Use image from config
+		let image = mq.image;
 
-		const image = imageMap[mq.type] || mq.type;
-		const imageTag = mq.useAlpine ? `${mq.version}-alpine` : mq.version;
+		// If alpine selected and alpineImage exists
+		if (mq.useAlpine && mq.alpineImage) {
+			image = mq.alpineImage;
+		}
+
+		// Fallback if no image
+		if (!image) {
+			const imageMap: Record<string, string> = {
+				kafka: "apache/kafka",
+				rabbitmq: "rabbitmq",
+				"activemq-classic": "apache/activemq-classic",
+				"activemq-artemis": "apache/activemq-artemis",
+			};
+			const baseImage = imageMap[mq.type] || mq.type;
+			image = `${baseImage}:${mq.version}`;
+		}
 
 		let service = `  ${serviceName}:
-    image: ${image}:${imageTag}
+    image: ${image}
     container_name: ${serviceName}
     restart: unless-stopped
     ports:
@@ -257,7 +284,7 @@ ${ports.join("\n")}
 			service += `
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest`;
-		} else if (mq.type === "activemq") {
+		} else if (mq.type === "activemq-classic" || mq.type === "activemq-artemis") {
 			service += `
       - ARTEMIS_USER=admin
       - ARTEMIS_PASSWORD=admin`;
@@ -270,22 +297,32 @@ ${ports.join("\n")}
 		return service;
 	}
 
-	private generateAdditionalService(service: any, usedPorts: Set<number>): string {
+	private generateAdditionalService(service: any): string {
 		const serviceName = `${this.config.projectName}-${service.type}`.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 
-		const imageMap: Record<string, string> = {
-			nginx: "nginx",
-			grafana: "grafana/grafana",
-			prometheus: "prom/prometheus",
-			keycloak: "quay.io/keycloak/keycloak",
-			minio: "minio/minio",
-		};
+		// Use image from config
+		let image = service.image;
 
-		const image = imageMap[service.type] || service.type;
-		const imageTag = service.useAlpine ? `${service.version}-alpine` : service.version;
+		// If alpine selected and alpineImage exists
+		if (service.useAlpine && service.alpineImage) {
+			image = service.alpineImage;
+		}
+
+		// Fallback if no image
+		if (!image) {
+			const imageMap: Record<string, string> = {
+				nginx: "nginx",
+				grafana: "grafana/grafana",
+				prometheus: "prom/prometheus",
+				keycloak: "quay.io/keycloak/keycloak",
+				minio: "minio/minio",
+			};
+			const baseImage = imageMap[service.type] || service.type;
+			image = `${baseImage}:${service.version}`;
+		}
 
 		let serviceConfig = `  ${serviceName}:
-    image: ${image}:${imageTag}
+    image: ${image}
     container_name: ${serviceName}
     restart: unless-stopped
     ports:

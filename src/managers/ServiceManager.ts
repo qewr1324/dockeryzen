@@ -6,6 +6,7 @@ export class ServiceManager {
 	private services: ServiceConfig[] = [];
 
 	async selectServices(currentStep: number, totalSteps: number): Promise<ServiceConfig[] | "back" | "cancel"> {
+		this.services = [];
 		const allServices: any[] = servicesConfig.services;
 
 		const quickPick = vscode.window.createQuickPick();
