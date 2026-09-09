@@ -415,9 +415,11 @@ ${secretsSection}`;
 		const pullPolicy = `
     pull_policy: if_not_present`;
 
+		// Fix: Health check path برای Java WAR باید / باشه
 		let healthCheckSection = "";
 		if (this.config.enableHealthCheck) {
-			const healthPath = this.config.healthCheckPath || "/health";
+			const isWarLang = this.config.language === "java-war";
+			const healthPath = isWarLang ? "/" : this.config.healthCheckPath || "/health";
 			healthCheckSection = `
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${this.config.port}${healthPath}"]

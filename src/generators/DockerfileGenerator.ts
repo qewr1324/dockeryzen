@@ -163,19 +163,18 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 	// Fix bugs: 343, 362, 393, 413, 452
 	private generateJavaWarDockerfile(): string {
 		const server = this.config.server || "tomcat";
-		const serverImage = this.getServerImage(server);
+		const actualServer = server === "jetty" && this.config.language === "java-war" ? "tomcat" : server;
+		const serverImage = this.getServerImage(actualServer);
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
-		// Tomcat همیشه Debian-based هست، پس همیشه apt-get
 		const healthCheckInstall = this.config.enableHealthCheck ? `\n# Install health check tools\nRUN apt-get update && apt-get install -y --no-install-recommends curl wget ca-certificates && rm -rf /var/lib/apt/lists/*\n` : "";
 		const ociLabels = this.getOciLabels();
 
-		const isJetty = server === "jetty";
+		const isJetty = actualServer === "jetty";
 		const webappsPath = isJetty ? "/var/lib/jetty/webapps" : "/usr/local/tomcat/webapps";
 		const startCommand = isJetty ? '["/usr/local/jetty/bin/jetty.sh", "run"]' : '["catalina.sh", "run"]';
 		const warPath = this.config.buildTool === "gradle" ? "/app/build/libs/*.war" : "/app/target/*.war";
 
-		// CATALINA_OPTS برای debug
 		let catalinaOpts = "";
 		if (this.config.enableDebug) {
 			catalinaOpts = `\n# Debug configuration for Tomcat\nENV CATALINA_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"`;
@@ -590,7 +589,6 @@ ${startCmd}`;
 		const cgoFlag = cgoEnabled ? "1" : "0";
 		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
 
-		// Fix: Use proper Go mod cache path
 		return `# syntax=docker/dockerfile:1.4
 
 # Build stage
@@ -608,8 +606,7 @@ RUN CGO_ENABLED=${cgoFlag} GOOS=linux go build -a -installsuffix cgo -ldflags="-
 # Runtime stage
 FROM ${runtimeBase}
 WORKDIR /app
-${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates tzdata" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*"}
-${healthCheckInstall}
+${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates tzdata curl wget" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata curl wget && rm -rf /var/lib/apt/lists/*"}
 COPY --from=build /app/main .
 RUN mkdir -p /app/static /app/templates /app/config 2>/dev/null || true
 ${isAlpineUser}
@@ -650,7 +647,6 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 RUN rm -rf src
 COPY . .
-# Fix: Use strip for smaller binary
 ARG RUSTFLAGS="-C strip=symbols"
 RUN --mount=type=cache,target=/usr/local/cargo/registry \\
     touch src/main.rs && RUSTFLAGS="$RUSTFLAGS" cargo build --release
