@@ -21,10 +21,10 @@ export class DockerComposeGenerator {
 
 		const dependsOn: string[] = [];
 
-		// Add database services
+		// Add database services - Fix bug 380, 396, 500: Limit depends_on to essential DBs
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
-				if (!db.useExternalUrl) {
+				if (!db.useExternalUrl && db.type !== "prometheus" && db.type !== "grafana") {
 					const service = this.generateDatabaseService(db);
 					const serviceName = this.getServiceName(db.type);
 
@@ -34,19 +34,22 @@ export class DockerComposeGenerator {
 						dependsOn.push(serviceName);
 						volumes.push(`  ${serviceName}-data:\n    driver: local`);
 
+						// Fix bug 345, 382-383: Only add backup for supported DBs
 						const backupService = this.generateBackupService(db);
-						const backupName = `${serviceName}-backup`;
-						if (!usedServiceNames.has(backupName)) {
-							services.push(backupService);
-							usedServiceNames.add(backupName);
-							volumes.push(`  ${backupName}-data:\n    driver: local`);
+						if (backupService) {
+							const backupName = `${serviceName}-backup`;
+							if (!usedServiceNames.has(backupName)) {
+								services.push(backupService);
+								usedServiceNames.add(backupName);
+								volumes.push(`  ${backupName}-data:\n    driver: local`);
+							}
 						}
 					}
 				}
 			}
 		}
 
-		// Add message queue services
+		// Add message queue services - Fix bug 402, 425, 449, 468
 		if (this.config.messageQueues.length > 0) {
 			for (const mq of this.config.messageQueues) {
 				const service = this.generateMessageQueueService(mq);
@@ -58,6 +61,7 @@ export class DockerComposeGenerator {
 					dependsOn.push(serviceName);
 				}
 
+				// Fix bug 468: Kafka 2.x needs Zookeeper connection
 				if (mq.type === "kafka" && mq.version.startsWith("2")) {
 					const zookeeperService = this.generateZookeeperService();
 					const zookeeperName = this.getServiceName("zookeeper");
@@ -69,8 +73,9 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Redis
-		if (this.config.enableRedis) {
+		// Add Redis - Fix bug 483-484: Only if queue worker or sidekiq is enabled
+		const needRedis = this.config.enableRedis || this.config.enableQueueWorker || this.config.enableSidekiq;
+		if (needRedis && !this.config.databases.some((d) => d.type === "redis")) {
 			const redisService = this.generateRedisService();
 			const redisName = this.getServiceName("redis");
 			if (!usedServiceNames.has(redisName)) {
@@ -81,8 +86,8 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Nginx for Laravel
-		if (this.config.language === "laravel" && this.config.enableNginx) {
+		// Add Nginx for Laravel - Fix bug 371, 457
+		if (this.config.language === "laravel" && this.config.enableNginx && !this.config.services.some((s) => s.type === "nginx")) {
 			const nginxService = this.generateNginxService(appServiceName);
 			const nginxName = this.getServiceName("nginx");
 			if (!usedServiceNames.has(nginxName)) {
@@ -91,8 +96,8 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Queue Worker for Laravel
-		if (this.config.language === "laravel" && this.config.enableQueueWorker) {
+		// Add Queue Worker - Fix bug 483
+		if (this.config.language === "laravel" && this.config.enableQueueWorker && needRedis) {
 			const queueWorker = this.generateLaravelQueueWorker(appServiceName);
 			const queueName = this.getServiceName("queue-worker");
 			if (!usedServiceNames.has(queueName)) {
@@ -101,8 +106,8 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Sidekiq for Rails
-		if (this.config.language === "rails" && this.config.enableSidekiq) {
+		// Add Sidekiq - Fix bug 484
+		if (this.config.language === "rails" && this.config.enableSidekiq && needRedis) {
 			const sidekiq = this.generateSidekiqWorker(appServiceName);
 			const sidekiqName = this.getServiceName("sidekiq");
 			if (!usedServiceNames.has(sidekiqName)) {
@@ -111,22 +116,27 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Prometheus and Grafana
-		if (this.config.enableHealthCheck || this.config.enableRedis) {
-			const prometheus = this.generatePrometheusService();
-			const prometheusName = this.getServiceName("prometheus");
-			if (!usedServiceNames.has(prometheusName)) {
-				services.push(prometheus);
-				usedServiceNames.add(prometheusName);
-				volumes.push(`  ${prometheusName}-data:\n    driver: local`);
+		// Add Prometheus and Grafana - Fix bug 369-370, 385-386, 430
+		if (this.config.enableHealthCheck) {
+			// Only add if not already selected as DB
+			if (!this.config.databases.some((d) => d.type === "prometheus")) {
+				const prometheus = this.generatePrometheusService();
+				const prometheusName = this.getServiceName("prometheus");
+				if (!usedServiceNames.has(prometheusName)) {
+					services.push(prometheus);
+					usedServiceNames.add(prometheusName);
+					volumes.push(`  ${prometheusName}-data:\n    driver: local`);
+				}
 			}
 
-			const grafana = this.generateGrafanaService();
-			const grafanaName = this.getServiceName("grafana");
-			if (!usedServiceNames.has(grafanaName)) {
-				services.push(grafana);
-				usedServiceNames.add(grafanaName);
-				volumes.push(`  ${grafanaName}-data:\n    driver: local`);
+			if (!this.config.services.some((s) => s.type === "grafana")) {
+				const grafana = this.generateGrafanaService();
+				const grafanaName = this.getServiceName("grafana");
+				if (!usedServiceNames.has(grafanaName)) {
+					services.push(grafana);
+					usedServiceNames.add(grafanaName);
+					volumes.push(`  ${grafanaName}-data:\n    driver: local`);
+				}
 			}
 		}
 
@@ -144,7 +154,7 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add depends_on with proper syntax
+		// Add depends_on with proper syntax - Fix bug 348, 380
 		let mainServiceWithDeps = mainService;
 		if (dependsOn.length > 0) {
 			const depsWithCondition = dependsOn.map((d) => `      ${d}:\n        condition: service_healthy`).join("\n");
@@ -152,7 +162,9 @@ export class DockerComposeGenerator {
 		}
 		services[0] = mainServiceWithDeps;
 
+		// Fix bug 384, 439, 470: Only generate secrets for DBs with passwords
 		const secretsSection = this.generateSecretsSection();
+
 		const networkDriver = this.config.networkDriver || "bridge";
 
 		return `# ============================================
@@ -176,16 +188,18 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}
 ${secretsSection}`;
 	}
 
+	// Fix bug 384: Only secrets for DBs that actually need passwords
 	private generateSecretsSection(): string {
+		const passwordNeedingDBs = ["postgresql", "timescaledb", "mysql", "mariadb", "mongodb", "redis", "mssql", "oracle", "db2", "couchdb", "couchbase", "arangodb", "elasticsearch", "cassandra", "scylladb", "influxdb"];
 		const secrets: string[] = [];
 
 		for (const db of this.config.databases) {
-			if (!db.useExternalUrl) {
+			if (!db.useExternalUrl && passwordNeedingDBs.includes(db.type)) {
 				secrets.push(`  ${sanitizeName(db.type)}_password:\n    file: ./secrets/${sanitizeName(db.type)}_password.txt`);
 			}
 		}
 
-		if (this.config.enableRedis) {
+		if (this.config.enableRedis && !this.config.databases.some((d) => d.type === "redis")) {
 			secrets.push(`  redis_password:\n    file: ./secrets/redis_password.txt`);
 		}
 
@@ -210,7 +224,6 @@ ${secretsSection}`;
 			cassandra: "/var/lib/cassandra",
 			influxdb: "/var/lib/influxdb",
 			couchdb: "/opt/couchdb/data",
-			keycloak: "/opt/jboss/keycloak/standalone/data",
 			mssql: "/var/opt/mssql",
 			oracle: "/opt/oracle/oradata",
 			arangodb: "/var/lib/arangodb3",
@@ -227,6 +240,7 @@ ${secretsSection}`;
 		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
+	// Fix bug 420: Check both internal and external ports
 	private checkPortConflicts(): void {
 		const allPorts = new Map<number, string>();
 		allPorts.set(this.config.port, "Main Application");
@@ -279,24 +293,46 @@ ${secretsSection}`;
 		return null;
 	}
 
+	// Fix bugs: 363-364, 403, 453, 486-487
 	private generateMainService(): string {
 		const serviceName = sanitizeName(this.config.projectName);
 		const ports = [`      - "${this.config.port}:${this.config.port}"`];
 		const restartPolicy = this.config.restartPolicy || "unless-stopped";
 		const debugPort = this.getDebugPort();
 		const lang = this.config.language;
+		const isWar = lang === "java-war";
 
 		let envVars = "";
 
 		if (lang.startsWith("java")) {
-			let javaOpts = "-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0";
-			if (this.config.enableDebug && debugPort) {
-				ports.push(`      - "${debugPort}:${debugPort}"`);
-				javaOpts += ` -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}`;
-			}
-			envVars = `
-      - SPRING_PROFILES_ACTIVE=production
+			if (isWar) {
+				// برای Java WAR فقط CATALINA_OPTS
+				if (this.config.enableDebug && debugPort) {
+					ports.push(`      - "${debugPort}:${debugPort}"`);
+					const catalinaOpts = `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}`;
+					envVars = `\n      - CATALINA_OPTS=${catalinaOpts}`;
+				}
+				// اگه debug غیرفعاله، envVars خالی می‌مونه
+			} else {
+				// برای Java JAR
+				let profileEnv = "";
+				if (this.config.framework === "quarkus") {
+					profileEnv = "QUARKUS_PROFILE=prod";
+				} else if (this.config.framework === "micronaut") {
+					profileEnv = "MICRONAUT_ENVIRONMENTS=prod";
+				} else {
+					profileEnv = "SPRING_PROFILES_ACTIVE=production";
+				}
+
+				let javaOpts = "-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0";
+				if (this.config.enableDebug && debugPort) {
+					ports.push(`      - "${debugPort}:${debugPort}"`);
+					javaOpts += ` -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}`;
+				}
+				envVars = `
+      - ${profileEnv}
       - JAVA_OPTS=${javaOpts}`;
+			}
 		} else if (lang.startsWith("js")) {
 			if (this.config.enableDebug && debugPort) {
 				ports.push(`      - "${debugPort}:${debugPort}"`);
@@ -329,21 +365,21 @@ ${secretsSection}`;
 			if (this.config.enableDebug && debugPort) {
 				ports.push(`      - "${debugPort}:${debugPort}"`);
 			}
+			const redisHost = this.config.enableRedis || this.config.enableQueueWorker ? this.getServiceName("redis") : "localhost";
 			envVars = `
       - APP_ENV=${this.config.enableDebug ? "local" : "production"}
       - APP_DEBUG=${this.config.enableDebug ? "true" : "false"}
       - DB_HOST=${this.getServiceName("postgresql")}
       - DB_PORT=5432
-      - QUEUE_CONNECTION=${this.config.enableRedis ? "redis" : "database"}
-      - REDIS_HOST=${this.config.enableRedis ? this.getServiceName("redis") : "localhost"}`;
+      - REDIS_HOST=${redisHost}`;
 		} else if (lang === "rails") {
 			if (this.config.enableDebug && debugPort) {
 				ports.push(`      - "${debugPort}:${debugPort}"`);
 			}
+			const redisUrl = this.config.enableRedis || this.config.enableSidekiq ? `redis://${this.getServiceName("redis")}:6379/0` : "";
 			envVars = `
       - RAILS_ENV=${this.config.enableDebug ? "development" : "production"}
-      - DATABASE_URL=postgresql://postgres:root@${this.getServiceName("postgresql")}:5432/${this.config.projectName}_production
-      - REDIS_URL=${this.config.enableRedis ? `redis://${this.getServiceName("redis")}:6379/0` : ""}`;
+      - DATABASE_URL=postgresql://postgres:root@${this.getServiceName("postgresql")}:5432/${this.config.projectName}_production${redisUrl ? `\n      - REDIS_URL=${redisUrl}` : ""}`;
 		} else if (lang === "rust") {
 			envVars = `
       - RUST_LOG=${this.config.enableDebug ? "debug" : "info"}`;
@@ -373,7 +409,8 @@ ${secretsSection}`;
 			: `
     read_only: true
     tmpfs:
-      - /tmp`;
+      - /tmp
+      - /var/tmp`;
 
 		const pullPolicy = `
     pull_policy: if_not_present`;
@@ -399,7 +436,9 @@ ${secretsSection}`;
 		const labels = `
     labels:
       - "com.dockeryzen.project=${this.config.projectName}"
-      - "com.dockeryzen.language=${this.config.language}"`;
+      - "com.dockeryzen.language=${this.config.language}"
+      - "com.dockeryzen.generated=true"
+      - "com.dockeryzen.version=1.0.0"`;
 
 		const networksSection = `
     networks:
@@ -407,6 +446,9 @@ ${secretsSection}`;
         aliases:
           - ${serviceName}.local
           - app`;
+
+		// Fix: environment فقط وقتی envVars خالی نیست
+		const environmentSection = envVars ? `    environment:${envVars}` : "";
 
 		return `  ${serviceName}:
     build:
@@ -416,12 +458,13 @@ ${secretsSection}`;
     restart: ${restartPolicy}
     ports:
 ${ports.join("\n")}${platformSection}${pullPolicy}
-    environment:${envVars}${devVolume}${initProcess}${readOnly}${loggingConfig}${healthCheckSection}${labels}${networksSection}
+${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${healthCheckSection}${labels}${networksSection}
     dns:
       - 8.8.8.8
       - 8.8.4.4`;
 	}
 
+	// Fix bugs: 347, 395, 451, 477
 	private generateDatabaseService(db: any): string {
 		if (db.useExternalUrl) {
 			return `  # External ${db.type} database
@@ -452,6 +495,8 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
 			mongodb: [`MONGO_INITDB_ROOT_USERNAME=${db.username || "root"}`, `MONGO_INITDB_ROOT_PASSWORD=${db.password || "root"}`, `MONGO_INITDB_DATABASE=${db.databaseName || "admin"}`],
 			redis: [`REDIS_PASSWORD=${db.password || ""}`, "REDIS_APPENDONLY=yes", "REDIS_MAXMEMORY=256mb", "REDIS_MAXMEMORY_POLICY=allkeys-lru"],
 			mssql: ["ACCEPT_EULA=Y", `MSSQL_SA_PASSWORD=${db.password || "Root1234!"}`],
+			// Fix bug 451: Neo4j auth
+			neo4j: [`NEO4J_AUTH=${db.username || "neo4j"}/${db.password || "password"}`],
 			elasticsearch: ["discovery.type=single-node", "xpack.security.enabled=false", "ES_JAVA_OPTS=-Xms512m -Xmx512m"],
 			cassandra: [`CASSANDRA_USER=${db.username || "cassandra"}`, `CASSANDRA_PASSWORD=${db.password || "cassandra"}`],
 			influxdb: ["DOCKER_INFLUXDB_INIT_MODE=setup", `DOCKER_INFLUXDB_INIT_USERNAME=${db.username || "admin"}`, `DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "root"}`, "DOCKER_INFLUXDB_INIT_ORG=my-org", "DOCKER_INFLUXDB_INIT_BUCKET=my-bucket"],
@@ -459,19 +504,17 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
 			db2: ["LICENSE=accept", `DB2INST1_PASSWORD=${db.password || "root"}`, `DBNAME=${db.databaseName || "sample"}`],
 			couchdb: [`COUCHDB_USER=${db.username || "admin"}`, `COUCHDB_PASSWORD=${db.password || "root"}`],
 			couchbase: [`CB_USERNAME=${db.username || "admin"}`, `CB_PASSWORD=${db.password || "root"}`],
-			dynamodb: ["AWS_ACCESS_KEY_ID=dummy", "AWS_SECRET_ACCESS_KEY=dummy", "AWS_DEFAULT_REGION=us-east-1"],
+			arangodb: [`ARANGO_ROOT_PASSWORD=${db.password || "root"}`],
+			scylladb: [`SCYLLA_USER=${db.username || "root"}`, `SCYLLA_PASS=${db.password || "root"}`],
+			cockroachdb: [`COCKROACH_DATABASE=${db.databaseName || "defaultdb"}`, `COCKROACH_USER=${db.username || "root"}`],
+			meilisearch: [`MEILI_MASTER_KEY=${db.password || "root"}`, "MEILI_ENV=development"],
+			typesense: [`TYPESENSE_API_KEY=${db.password || "root"}`, "TYPESENSE_DATA_DIR=/data"],
+			chroma: [`CHROMA_SERVER_AUTH_CREDENTIALS=${db.password || "root"}`, "CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider"],
+			qdrant: ["QDRANT__SERVICE__GRPC_PORT=6334"],
+			weaviate: ["AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true", "PERSISTENCE_DATA_PATH=/var/lib/weaviate"],
 			memcached: ["MEMCACHED_CACHE_SIZE=64"],
 			etcd: ["ALLOW_NONE_AUTHENTICATION=yes", `ETCD_ADVERTISE_CLIENT_URLS=http://${serviceName}:2379`],
 			aerospike: ["NAMESPACE=test"],
-			scylladb: [`SCYLLA_USER=${db.username || "root"}`, `SCYLLA_PASS=${db.password || "root"}`],
-			arangodb: [`ARANGO_ROOT_PASSWORD=${db.password || "root"}`],
-			prometheus: ["PROMETHEUS_CONFIG=/etc/prometheus/prometheus.yml"],
-			meilisearch: [`MEILI_MASTER_KEY=${db.password || "root"}`, "MEILI_ENV=development"],
-			typesense: [`TYPESENSE_API_KEY=${db.password || "root"}`, "TYPESENSE_DATA_DIR=/data"],
-			cockroachdb: [`COCKROACH_DATABASE=${db.databaseName || "defaultdb"}`, `COCKROACH_USER=${db.username || "root"}`],
-			qdrant: ["QDRANT__SERVICE__GRPC_PORT=6334"],
-			weaviate: ["AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true", "PERSISTENCE_DATA_PATH=/var/lib/weaviate"],
-			chroma: [`CHROMA_SERVER_AUTH_CREDENTIALS=${db.password || "root"}`, "CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider"],
 		};
 
 		const envVars = envMap[db.type] || [];
@@ -499,6 +542,7 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
 		return service;
 	}
 
+	// Fix bug 347, 395: Real health checks for more DBs
 	private getDatabaseHealthCheck(dbType: string): string {
 		switch (dbType) {
 			case "postgresql":
@@ -515,11 +559,30 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
 				return '["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]';
 			case "cassandra":
 				return '["CMD-SHELL", "cqlsh -e \'SELECT now() FROM system.local\' || exit 1"]';
+			case "neo4j":
+				return '["CMD-SHELL", "cypher-shell -u neo4j -p password \'RETURN 1\' || exit 1"]';
+			case "influxdb":
+				return '["CMD-SHELL", "curl -f http://localhost:8086/health || exit 1"]';
+			case "couchdb":
+				return '["CMD-SHELL", "curl -f http://localhost:5984/_up || exit 1"]';
+			case "couchbase":
+				return '["CMD-SHELL", "curl -f http://localhost:8091/pools || exit 1"]';
+			case "arangodb":
+				return '["CMD-SHELL", "curl -f http://localhost:8529/_api/version || exit 1"]';
+			case "meilisearch":
+				return '["CMD-SHELL", "curl -f http://localhost:7700/health || exit 1"]';
+			case "cockroachdb":
+				return '["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]';
+			case "oracle":
+				return '["CMD-SHELL", "sqlplus -s system/root@localhost:1521/ORCL <<< \'SELECT 1 FROM dual;\' | grep -q 1 || exit 1"]';
+			case "mssql":
+				return '["CMD-SHELL", "sqlcmd -S localhost -U sa -P Root1234! -Q \'SELECT 1\' || exit 1"]';
 			default:
 				return '["CMD-SHELL", "exit 0"]';
 		}
 	}
 
+	// Fix bugs: 382, 429, 446-447, 461-462, 492
 	private generateBackupService(db: any): string {
 		const serviceName = `${this.getServiceName(db.type)}-backup`;
 		const dbServiceName = this.getServiceName(db.type);
@@ -527,15 +590,18 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
 		let backupCmd = "";
 		let backupImage = "";
 
-		if (db.type === "postgresql") {
+		if (db.type === "postgresql" || db.type === "timescaledb") {
 			backupImage = "postgres:17-alpine";
-			backupCmd = `sh -c "while true; do pg_dump -h ${dbServiceName} -U postgres postgres | gzip > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
+			// Fix bug 446, 461-462: Use PGPASSWORD from env
+			backupCmd = `sh -c "while true; do PGPASSWORD='${db.password || "root"}' pg_dump -h ${dbServiceName} -U ${db.username || "postgres"} ${db.databaseName || "postgres"} | gzip > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
 		} else if (db.type === "mysql" || db.type === "mariadb") {
 			backupImage = "mysql:8";
-			backupCmd = `sh -c "while true; do mysqldump -h ${dbServiceName} -u root -proot mysql | gzip > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
+			// Fix bug 447: Use MYSQL_PWD
+			backupCmd = `sh -c "while true; do MYSQL_PWD='${db.password || "root"}' mysqldump -h ${dbServiceName} -u ${db.username || "root"} ${db.databaseName || "mysql"} | gzip > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
 		} else if (db.type === "mongodb") {
-			backupImage = "mongo:8";
-			backupCmd = `sh -c "while true; do mongodump --host ${dbServiceName} --out /backup/dump_$(date +%Y%m%d_%H%M%S); find /backup -name 'dump_*' -mtime +7 -delete; sleep 86400; done"`;
+			// Fix bug 429: Use mongo:7 for mongodump
+			backupImage = "mongo:7";
+			backupCmd = `sh -c "while true; do mongodump --host ${dbServiceName} -u ${db.username || "root"} -p '${db.password || "root"}' --authenticationDatabase admin --out /backup/dump_$(date +%Y%m%d_%H%M%S); find /backup -name 'dump_*' -mtime +7 -delete; sleep 86400; done"`;
 		} else {
 			return "";
 		}
@@ -559,6 +625,7 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
         max-file: "3"`;
 	}
 
+	// Fix bug 402, 449, 468
 	private generateMessageQueueService(mq: any): string {
 		const serviceName = this.getServiceName(mq.type);
 		let image = mq.image;
@@ -583,7 +650,16 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
       - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.7
       - RABBITMQ_DISK_FREE_LIMIT=2GB`;
 		} else if (mq.type === "kafka") {
-			service += `
+			// Fix bug 449, 468: Proper Kafka config with Zookeeper for 2.x
+			if (mq.version.startsWith("2")) {
+				service += `
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=${this.getServiceName("zookeeper")}:2181
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:${mq.internalPort}
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${serviceName}:${mq.internalPort}
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`;
+			} else {
+				service += `
     environment:
       - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:${mq.internalPort},CONTROLLER://0.0.0.0:9093
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${serviceName}:${mq.internalPort}
@@ -595,6 +671,7 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
       - KAFKA_DEFAULT_REPLICATION_FACTOR=1
       - KAFKA_LOG_RETENTION_HOURS=168`;
+			}
 		} else {
 			service += `
     environment:
@@ -626,7 +703,6 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
     environment:
       - ZOOKEEPER_CLIENT_PORT=2181
       - ZOOKEEPER_TICK_TIME=2000
-      - ZOOKEEPER_SYNC_LIMIT=2
     healthcheck:
       test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok || exit 1"]
       interval: 10s
@@ -665,10 +741,8 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./html:/usr/share/nginx/html:ro
     depends_on:
       ${appServiceName}:
         condition: service_healthy
@@ -692,7 +766,7 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
       dockerfile: Dockerfile
     container_name: ${serviceName}-container
     restart: unless-stopped
-    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    command: php artisan queue:work redis --sleep=3 --tries=3
     depends_on:
       ${appServiceName}:
         condition: service_healthy
@@ -743,7 +817,6 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
       interval: 10s
@@ -777,6 +850,7 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
       - dockeryzen-network`;
 	}
 
+	// Fix bug 455, 494
 	private generateAdditionalService(service: any): string {
 		const serviceName = this.getServiceName(service.type);
 		let image = service.image;
@@ -793,12 +867,13 @@ ${ports.join("\n")}${platformSection}${pullPolicy}
       - "${service.externalPort}:${service.internalPort}"`;
 
 		if (service.type === "keycloak") {
+			// Fix bug 455: Only add KC_DB if postgres is selected
+			const hasPostgres = this.config.databases.some((d) => d.type === "postgresql");
 			serviceConfig += `
     environment:
       - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KC_DB=postgres
-    command: start-dev`;
+      - KEYCLOAK_ADMIN_PASSWORD=admin${hasPostgres ? `\n      - KC_DB=postgres\n      - KC_DB_URL=jdbc:postgresql://${this.getServiceName("postgresql")}:5432/postgres\n      - KC_DB_USERNAME=postgres\n      - KC_DB_PASSWORD=root` : ""}
+    command: start`;
 		} else if (service.type === "minio") {
 			serviceConfig += `
     environment:

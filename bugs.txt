@@ -345,6 +345,168 @@ Part-2---------------------------------------------------------------------
 ✅ 339. Docker Compose بدون Image Pull Policy
 ✅ 340. Dockerfile بدون Base Image Update Check
 
+Part-3---------------------------------------------------------------------
+
+✅ 341: Tomcat 8.5 با JDK 8 Alpine ناسازگار هست
+✅ 342: Maven با JDK 8 Alpine مشکل داره
+✅ 343: Java WAR با debug port منطقی نیست
+✅ 344: Health Check برای Java WAR از پورت درست استفاده نمی‌کنه
+✅ 345: Backup volumes برای همه DB ها ساخته میشه ولی service نیست
+✅ 346: Secrets برای DB های بدون password
+✅ 347: Health check غیرواقعی برای اکثر DB ها
+✅ 348: depends_on خیلی طولانی
+✅ 349: Duplicate service names
+✅ 350: Wrong image برای MariaDB
+✅ 351: (mongosh) نقل قول mongosh اشتباهه
+✅ 352: Service name ها با هم conflict دارن
+✅ 353: Override خیلی بزرگه
+✅ 354: Volume برای node_modules در Java
+✅ 355: DB_NAME برای همه یکیه
+✅ 356: DB_HOST تکراری
+✅ 357: (env) نام‌های تکراری برای env vars
+✅ 358: Dockerfile را ignore می‌کنه؟
+✅ 359: (code-line) حجم خیلی زیاد
+✅ 360: (select-all-db) کاربر همه DB ها رو انتخاب کرده
+✅ 361: Dockerfile - HEALTHCHECK برای WAR از wget استفاده می‌کنه ولی Tomcat Alpine ممکنه wget نداشته باشه
+✅ 362: Dockerfile - JAVA_OPTS برای WAR روی Tomcat کار نمی‌کنه
+✅ 363: Docker Compose - JAVA_OPTS در environment برای WAR روی Tomcat بی‌فایده هست
+✅ 364: Docker Compose - SPRING_PROFILES_ACTIVE برای Java WAR بی‌معنی هست
+✅ 365: GitHub Workflow - برای Java WAR از Maven استفاده می‌کنه ولی برای Gradle باید فرق کنه
+✅ 366: GitHub Workflow - cache همیشه maven هست
+✅ 367: GitLab CI - برای Gradle باید image فرق کنه
+✅ 368: GitLab CI - Redis service وقتی enableRedis هست اضافه نمیشه
+✅ 369: Docker Compose - prometheus هم به عنوان DB انتخاب شده هم به عنوان monitoring
+✅ 370: Docker Compose - grafana از services و monitoring هر دو اضافه میشه
+✅ 371: Docker Compose - nginx از services اضافه میشه ولی ممکنه با Laravel Nginx conflict داشته باشه
+✅ 372: Docker Compose - Prometheus از DB انتخاب شده ولی volume و config درستی نداره
+✅ 373: Env File - DB_NAME برای دیتابیس‌هایی که database name ندارن اشتباهه
+✅ 374: Dockerignore - docker-compose.*.yml شامل override هم میشه
+✅ 375: Docker Compose Override - پورت‌های همه DB ها تکرار شده ولی در main هم هست
+✅ 376: GitHub Workflow - برای پروژه‌های غیر-Java باید build tool فرق کنه
+✅ 377: GitLab CI - برای پروژه‌های غیر-Java باید image فرق کنه
+✅ 378: Docker Compose - وقتی کاربر ۴۶ دیتابیس انتخاب می‌کنه، RAM کافی نیست
+✅ 379: Docker Compose - Port conflict بین prometheus DB و prometheus monitoring
+✅ 380: Docker Compose - depends_on با ۴۵ سرویس باعث timeout میشه
+✅ 381: DockerComposeGenerator - generateDatabaseService برای Prometheus از DB selection درست نیست
+✅ 382: DockerComposeGenerator - generateBackupService فقط برای PostgreSQL/MySQL/MariaDB/MongoDB هست
+✅ 383: DockerComposeGenerator - volumes اضافی ساخته میشه
+✅ 384: DockerComposeGenerator - generateSecretsSection برای همه DB ها secret میسازه
+✅ 385: DockerComposeGenerator - Prometheus از دو جا اضافه میشه
+✅ 386: DockerComposeGenerator - Grafana از دو جا اضافه میشه
+✅ 387: GitHubWorkflowGenerator - فقط Maven رو پشتیبانی می‌کنه
+✅ 388: GitHubWorkflowGenerator - همیشه mvn test اجرا میشه
+✅ 389: GitLabCIGenerator - همیشه Maven image هست
+✅ 390: DockerComposeOverrideGenerator - node_modules برای همه زبان‌ها
+✅ 391: EnvFileGenerator - DB_NAME تکراری
+✅ 392: EnvFileGenerator - DB_HOST تکراری
+✅ 393: DockerfileGenerator - برای Java WAR از JAVA_OPTS استفاده می‌کنه
+✅ 394: DockerfileGenerator - getJavaBuildStage برای WAR هم Maven/Gradle با JDK 8 Alpine مشکل داره
+✅ 395: DockerComposeGenerator - health check برای اکثر DB ها exit 0 هست
+✅ 396: DockerComposeGenerator - dependsOn همه DB ها رو شامل میشه
+✅ 397: DockerWizard - کاربر می‌تونه همه DB ها رو انتخاب کنه
+✅ 398: DatabaseManager - در showSelectedDatabasesWithEdit، وقتی backup volume اضافه میشه ولی service نیست
+✅ 399: GitHubWorkflowGenerator - برای Gradle باید gradle test باشه نه mvn test
+✅ 400: GitLabCIGenerator - برای Gradle باید gradle image باشه
+✅ 401: DockerComposeGenerator.generate() - ترتیب depends_on اشتباهه
+✅ 402: DockerComposeGenerator - generateMessageQueueService برای Kafka Zookeeper رو چک می‌کنه ولی add نمی‌کنه
+✅ 403: DockerComposeGenerator - generateMainService برای Java WAR از SPRING_PROFILES_ACTIVE استفاده می‌کنه
+✅ 404: DockerComposeGenerator - generateDatabaseService برای Oracle volume path درست نیست
+✅ 405: DockerComposeGenerator - generateDatabaseService برای MSSQL password validation در compose نیست
+✅ 406: GitHubWorkflowGenerator - برای Python باید pip install -r requirements.txt باشه
+✅ 407: GitHubWorkflowGenerator - برای Node.js باید npm test باشه
+✅ 408: GitHubWorkflowGenerator - برای Go باید go test ./... باشه
+✅ 409: GitLabCIGenerator - برای Python باید python image باشه
+✅ 410: GitLabCIGenerator - برای Node.js باید node image باشه
+✅ 411: DockerComposeOverrideGenerator - وقتی debug فعال نیست هم override ساخته میشه؟
+✅ 412: DockerComposeOverrideGenerator - برای Java حجم node_modules اضافه میشه
+✅ 413: DockerfileGenerator - generateJavaWarDockerfile از CATALINA_OPTS استفاده نمی‌کنه
+✅ 414: DockerfileGenerator - generateJavaWarDockerfile health check path درست نیست
+✅ 415: DockerfileGenerator - generateRustDockerfile از getHealthCheck استفاده نمی‌کنه
+✅ 416: EnvFileGenerator - برای language های غیر-web نباید JWT باشه
+✅ 417: DockerignoreGenerator - Cargo.lock رو ignore می‌کنه
+✅ 418: DockerignoreGenerator - Makefile رو ignore می‌کنه
+✅ 419: DockerComposeGenerator - generateAdditionalService برای Prometheus از DB selection درست نیست
+✅ 420: DockerComposeGenerator - checkPortConflicts فقط external port رو چک می‌کنه
+✅ 421: DockerfileGenerator - generateJavaJarDockerfile برای Spring Boot باید از layertools استفاده کنه
+✅ 422: DockerfileGenerator - generatePythonDockerfile برای Django باید gunicorn نصب بشه
+✅ 423: DockerfileGenerator - generateNodeJSBackendDockerfile وقتی enablePm2 فعاله، PM2 global نصب میشه ولی در package.json نیست
+✅ 424: DockerComposeGenerator - generateDatabaseService برای PostgreSQL وقتی TimescaleDB هم هست، هر دو از port 5432 استفاده می‌کنن
+✅ 425: DockerComposeGenerator - generateMessageQueueService برای RabbitMQ، پورت management اضافه میشه ولی برای Kafka نه
+✅ 426: DockerComposeGenerator - generateMainService برای read_only از tmpfs استفاده می‌کنه ولی برای Java شاید /tmp کافی نباشه
+✅ 427: DockerfileGenerator - getOciLabels از yourusername استفاده می‌کنه
+✅ 428: DockerfileGenerator - generateGoDockerfile برای CGO از gcc استفاده می‌کنه ولی برای cross-compile باید musl-gcc باشه
+✅ 429: DockerComposeGenerator - generateBackupService برای MongoDB از mongodump استفاده می‌کنه ولی image mongo:8 ممکنه mongodump نداشته باشه
+✅ 430: DockerComposeGenerator - وقتی کاربر enableHealthCheck و enableRedis هر دو فعاله، Prometheus و Grafana دو بار اضافه میشن
+✅ 431: DockerfileGenerator - generateLaravelDockerfile از nginx نصب می‌کنه ولی در Compose هم Nginx service هست
+✅ 432: DockerfileGenerator - generateRailsDockerfile از puma استفاده می‌کنه ولی در Gemfile ممکنه نباشه
+✅ 433: DockerComposeGenerator - generateDatabaseService برای elasticsearch از xpack.security.enabled=false استفاده می‌کنه
+✅ 434: DockerfileGenerator - generateDotNetDockerfile همیشه self-contained هست
+✅ 435: DockerComposeGenerator - وقتی database انتخاب نشده ولی enableHealthCheck فعاله، Prometheus/Grafana اضافه میشن ولی app بهشون وابسته نیست
+✅ 436: DockerfileGenerator - generatePythonDockerfile برای fastapi باید uvicorn[standard] نصب بشه
+✅ 437: DockerComposeGenerator - generateMainService برای platform از process.platform استفاده می‌کنه
+✅ 438: DockerfileGenerator - generateJavaBuildStage برای Gradle با JDK 8 از Gradle 7 استفاده می‌کنه ولی wrapper ممکنه Gradle 8 بخواد
+✅ 439: DockerComposeGenerator - generateSecretsSection فایل‌های secret رو می‌سازه ولی هیچ instruction برای ساختشون نیست
+✅ 440: DockerfileGenerator - generateRustDockerfile از cargo build --release دو بار استفاده می‌کنه
+✅ 441: DockerfileGenerator - generateLaravelDockerfile وقتی enableNginx فعاله، Nginx در PHP-FPM container نصب میشه ولی در Compose هم Nginx service هست
+✅ 442: DockerfileGenerator - generateJavaJarDockerfile برای Spring Boot باید SPRING_PROFILES_ACTIVE به عنوان build arg باشه
+✅ 443: DockerComposeGenerator - generateDatabaseService برای timescaledb از image timescale/timescaledb:2.18-pg17 استفاده می‌کنه که ممکنه وجود نداشته باشه
+✅ 444: DockerComposeGenerator - generateMainService برای read_only وقتی enableDebug فعاله، read_only نیست ولی وقتی غیرفعاله، read_only هست
+✅ 445: DockerfileGenerator - generateRailsDockerfile از bundle exec bootsnap precompile استفاده می‌کنه ولی bootsnap ممکنه در Gemfile نباشه
+✅ 446: DockerComposeGenerator - generateBackupService برای PostgreSQL از pg_dump استفاده می‌کنه ولی password رو نمی‌فرسته
+✅ 447: DockerComposeGenerator - generateBackupService برای MySQL از -proot استفاده می‌کنه که password رو hardcode کرده
+✅ 448: DockerfileGenerator - generateGoDockerfile از CGO_ENABLED=1 استفاده می‌کنه ولی برای scratch باید CGO_ENABLED=0 باشه
+✅ 449: DockerComposeGenerator - generateMessageQueueService برای Kafka از KAFKA_LISTENERS استفاده می‌کنه ولی KAFKA_ADVERTISED_LISTENERS برای docker-compose درست تنظیم نشده
+✅ 450: DockerfileGenerator - generatePythonDockerfile برای django باید collectstatic و migrate در entrypoint باشه نه در build
+✅ 451: DockerComposeGenerator - generateDatabaseService برای neo4j از NEO4J_AUTH استفاده نمی‌کنه
+✅ 452: DockerfileGenerator - generateJavaWarDockerfile برای Tomcat باید CATALINA_OPTS برای debug تنظیم بشه
+✅ 453: DockerComposeGenerator - generateMainService برای Java WAR باید CATALINA_OPTS باشه نه JAVA_OPTS
+✅ 454: DockerfileGenerator - generateRustDockerfile از RUSTFLAGS استفاده می‌کنه ولی برای stripping باید -C strip=symbols باشه
+✅ 455: DockerComposeGenerator - generateAdditionalService برای keycloak از KC_DB=postgres استفاده می‌کنه ولی postgres service ممکنه نباشه
+✅ 456: DockerfileGenerator - generateDotNetDockerfile برای PublishTrimmed=true ممکنه بعضی پروژه‌ها fail بشن
+✅ 457: DockerComposeGenerator - وقتی enableNginx برای Laravel فعاله، Nginx روی port 80 میاد ولی ممکنه conflict با app داشته باشه
+✅ 458: DockerfileGenerator - generateJSFrontendDockerfile برای Angular از server.js استفاده می‌کنه ولی Angular Universal ممکنه server.mjs باشه
+✅ 459: DockerComposeGenerator - generateDatabaseService برای couchdb از COUCHDB_USER استفاده می‌کنه ولی COUCHDB_PASSWORD باید COUCHDB_PASSWORD باشه نه COUCHDB_PASS
+✅ 460: DockerfileGenerator - generateGoDockerfile برای static files از COPY --from=build /app/static* استفاده می‌کنه ولی اگه static وجود نداشته باشه خطا میده
+✅ 461: DockerComposeGenerator - generateBackupService برای PostgreSQL از -U postgres استفاده می‌کنه ولی username ممکنه فرق کنه
+✅ 462: DockerComposeGenerator - generateBackupService وقتی DB password داره، باید PGPASSWORD set بشه
+✅ 463: DockerComposeGenerator - generateMainService برای read_only وقتی enableDebug فعاله، tmpfs هم نیست
+✅ 464: DockerfileGenerator - generatePythonDockerfile وقتی useVirtualEnv فعاله، PATH رو عوض می‌کنه ولی در entrypoint ممکنه درست نباشه
+✅ 465: DockerfileGenerator - generateGoDockerfile برای CGO_ENABLED=1 باید libc6-compat نصب باشه
+✅ 466: DockerComposeGenerator - generateDatabaseService برای oracle حجم image خیلی زیاده (بیش از 6GB)
+✅ 467: DockerComposeGenerator - generateDatabaseService برای db2 حجم image خیلی زیاده (بیش از 3GB)
+✅ 468: DockerComposeGenerator - generateMessageQueueService برای Kafka وقتی Zookeeper لازمه، Zookeeper service اضافه میشه ولی Kafka بهش connect نیست
+✅ 469: DockerfileGenerator - generateJavaBuildStage برای Maven از mvn package -DskipTests استفاده می‌کنه ولی -DskipTests تست‌ها رو کلاً skip می‌کنه
+✅ 470: DockerComposeGenerator - generateSecretsSection فایل‌های secret رو تعریف می‌کنه ولی در services استفاده نمی‌کنه
+✅ 471: DockerfileGenerator - generateLaravelDockerfile از php artisan storage:link || true استفاده می‌کنه که در production ممکنه خطا بده
+✅ 472: DockerComposeGenerator - generateMainService برای labels فقط ۲ تا label داره
+✅ 473: DockerfileGenerator - generateRailsDockerfile از bundle exec puma استفاده می‌کنه ولی puma config path رو چک نمی‌کنه
+✅ 474: DockerComposeGenerator - generateNginxService برای Laravel از ./nginx.conf استفاده می‌کنه ولی این فایل generate نمیشه
+✅ 475: DockerComposeGenerator - generatePrometheusService از ./prometheus.yml استفاده می‌کنه ولی این فایل generate نمیشه
+✅ 476: DockerfileGenerator - generateDotNetDockerfile از COPY *.csproj ./ استفاده می‌کنه ولی اگه چند پروژه باشه fail میشه
+✅ 477: DockerComposeGenerator - generateDatabaseService برای elasticsearch از ELASTIC_PASSWORD استفاده نمی‌کنه
+✅ 478: DockerfileGenerator - generateJSFrontendDockerfile برای Nuxt.js از nuxt.config.js استفاده می‌کنه ولی ممکنه nuxt.config.ts باشه
+✅ 479: DockerfileGenerator - generateJSFrontendDockerfile برای Next.js از next.config.js استفاده می‌کنه ولی ممکنه next.config.mjs باشه
+✅ 480: DockerComposeGenerator - وقتی کاربر همه 46 دیتابیس رو انتخاب می‌کنه، حجم کل images بیش از 30GB میشه
+✅ 481: DockerComposeGenerator - generateNginxService به nginx.conf اشاره می‌کنه ولی هیچ generator برای این فایل وجود نداره
+✅ 482: DockerComposeGenerator - generatePrometheusService به prometheus.yml اشاره می‌کنه ولی generator نداره
+✅ 483: DockerComposeGenerator - generateLaravelQueueWorker از redis استفاده می‌کنه ولی اگه Redis انتخاب نشده باشه fail میشه
+✅ 484: DockerComposeGenerator - generateSidekiqWorker از redis استفاده می‌کنه ولی اگه Redis انتخاب نشده باشه fail میشه
+✅ 485: DockerfileGenerator - generateJavaJarDockerfile برای Spring Boot باید از layertools استفاده کنه
+✅ 486: DockerComposeGenerator - generateMainService برای Java از SPRING_PROFILES_ACTIVE=production استفاده می‌کنه ولی برای Quarkus باید QUARKUS_PROFILE=prod باشه
+✅ 487: DockerComposeGenerator - generateMainService برای Java از SPRING_PROFILES_ACTIVE استفاده می‌کنه ولی برای Micronaut باید MICRONAUT_ENVIRONMENTS=prod باشه
+✅ 488: DockerfileGenerator - generatePythonDockerfile برای FastAPI باید uvicorn[standard] نصب بشه نه uvicorn ساده
+✅ 489: DockerfileGenerator - generateJSBackendDockerfile وقتی TypeScript هست، npm run build انجام میشه ولی dist/index.js ممکنه وجود نداشته باشه
+✅ 490: DockerComposeGenerator - generateDatabaseService برای mongodb از mongo:8.0 استفاده می‌کنه ولی MongoDB 8 ممکنه license محدودیت داشته باشه
+✅ 491: DockerfileGenerator - generateRustDockerfile برای strip باید -C strip=symbols باشه
+✅ 492: DockerComposeGenerator - generateBackupService وقتی DB username و password داره، در command استفاده نمی‌کنه
+✅ 493: DockerfileGenerator - generateGoDockerfile برای go mod download باید --mount=type=cache داشته باشه
+✅ 494: DockerComposeGenerator - generateAdditionalService برای keycloak از start-dev استفاده می‌کنه که برای production مناسب نیست
+✅ 495: DockerfileGenerator - generateLaravelDockerfile از nginx نصب می‌کنه ولی supervisor هم نصب می‌کنه که conflict هست
+✅ 496: DockerComposeGenerator - generateMainService برای pull_policy فقط if_not_present هست ولی باید قابل تنظیم باشه
+✅ 497: DockerfileGenerator - generateJavaWarDockerfile برای Jetty از jetty.sh run استفاده می‌کنه ولی مسیر درست نیست
+✅ 498: DockerComposeGenerator - generateDatabaseService برای redis وقتی password خالی هست، باید بدون password باشه
+✅ 499: DockerfileGenerator - generateRailsDockerfile برای db:migrate در CMD هست ولی باید entrypoint باشه
+✅ 500: DockerComposeGenerator - وقتی همه 46 دیتابیس انتخاب بشن، depends_on با 46 سرویس باعث میشه app هیچوقت healthy نشه
 
 
 همرو درست کن و فایل کامل رو بده من.

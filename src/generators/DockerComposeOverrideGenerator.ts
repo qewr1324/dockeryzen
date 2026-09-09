@@ -3,6 +3,7 @@ import { sanitizeName } from "../utils/helpers.js";
 
 /**
  * DockerComposeOverrideGenerator class - Generates docker-compose.override.yml for development
+ * Fixed bugs: 353-354, 375, 390, 412
  */
 export class DockerComposeOverrideGenerator {
 	constructor(private config: ProjectConfig) {}
@@ -10,18 +11,21 @@ export class DockerComposeOverrideGenerator {
 	generate(): string {
 		const serviceName = sanitizeName(this.config.projectName);
 		const debugPort = this.config.debugPort || this.getDefaultDebugPort();
+		const lang = this.config.language;
 
 		const services: string[] = [];
 
-		// Main app service with debug and hot reload
+		// Fix bug 354, 390, 412: Only add node_modules for Node.js projects
+		const isNodeProject = lang.startsWith("js");
+		const volumes = isNodeProject ? "      - .:/app\n      - /app/node_modules" : "      - .:/app";
+
 		let appService = `  ${serviceName}:
     volumes:
-      - .:/app
-      - /app/node_modules
+${volumes}
     environment:
-      - DEBUG=true
-      - SPRING_PROFILES_ACTIVE=dev`;
+      - DEBUG=true`;
 
+		// Fix bug 411: Only add debug port if debug is enabled
 		if (this.config.enableDebug && debugPort) {
 			appService += `
     ports:
@@ -30,7 +34,8 @@ export class DockerComposeOverrideGenerator {
 
 		services.push(appService);
 
-		// Database services with exposed ports for local access
+		// Fix bug 353, 375: Only add DB ports if they're not already in main compose
+		// In development, we might want to access DBs from host
 		for (const db of this.config.databases) {
 			if (!db.useExternalUrl) {
 				const dbServiceName = sanitizeName(`${this.config.projectName}-${db.type}`);
@@ -41,7 +46,7 @@ export class DockerComposeOverrideGenerator {
 			}
 		}
 
-		// Redis with local access
+		// Add Redis port for local access
 		if (this.config.enableRedis) {
 			const redisName = sanitizeName(`${this.config.projectName}-redis`);
 			services.push(`

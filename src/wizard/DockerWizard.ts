@@ -25,6 +25,9 @@ import goConfig from "../config/languages/go.json" with { type: "json" };
 import cppConfig from "../config/languages/cpp.json" with { type: "json" };
 import cConfig from "../config/languages/c.json" with { type: "json" };
 
+import { NginxConfigGenerator } from "../generators/NginxConfigGenerator.js";
+import { PrometheusConfigGenerator } from "../generators/PrometheusConfigGenerator.js";
+
 /**
  * DockerWizard class - Main wizard for generating Docker configuration
  * Handles the entire flow from project name to file generation
@@ -1169,6 +1172,7 @@ export class DockerWizard {
 	/**
 	 * Generate all Docker files
 	 */
+	// ===== import های جدید در بالای فایل =====
 	private async generateFiles(): Promise<void> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		if (!workspaceFolder) {
@@ -1190,6 +1194,8 @@ export class DockerWizard {
 		const githubWorkflowGenerator = new GitHubWorkflowGenerator(this.config);
 		const gitlabCIGenerator = new GitLabCIGenerator(this.config);
 		const dockerComposeOverrideGenerator = new DockerComposeOverrideGenerator(this.config);
+		const nginxConfigGenerator = new NginxConfigGenerator(this.config);
+		const prometheusConfigGenerator = new PrometheusConfigGenerator(this.config);
 
 		const workspacePath = workspaceFolder.uri.fsPath;
 
@@ -1204,6 +1210,15 @@ export class DockerWizard {
 		}
 
 		filesToWrite.push({ name: ".env.example", content: envFileGenerator.generate() });
+
+		// Fix bug 481-482: Generate nginx.conf and prometheus.yml when needed
+		if (this.config.language === "laravel" && this.config.enableNginx) {
+			filesToWrite.push({ name: "nginx.conf", content: nginxConfigGenerator.generate() });
+		}
+
+		if (this.config.enableHealthCheck) {
+			filesToWrite.push({ name: "prometheus.yml", content: prometheusConfigGenerator.generate() });
+		}
 
 		if (this.config.enableDebug) {
 			filesToWrite.push({ name: "docker-compose.override.yml", content: dockerComposeOverrideGenerator.generate() });

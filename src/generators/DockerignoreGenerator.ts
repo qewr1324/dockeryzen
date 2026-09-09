@@ -2,6 +2,7 @@ import { ProjectConfig } from "../types/index.js";
 
 /**
  * DockerignoreGenerator class - Generates comprehensive .dockerignore
+ * Fixed bugs: 358, 374, 417-418
  */
 export class DockerignoreGenerator {
 	constructor(private config: ProjectConfig) {}
@@ -31,8 +32,6 @@ export class DockerignoreGenerator {
 			".project",
 			".classpath",
 			".settings",
-			"*.sublime-workspace",
-			"*.sublime-project",
 			"",
 			"# OS",
 			".DS_Store",
@@ -73,15 +72,12 @@ export class DockerignoreGenerator {
 			"*.tmp",
 			"*.temp",
 			"*.bak",
-			"*.swp",
-			"*.swo",
 			"",
 			"# Documentation",
 			"README.md",
 			"LICENSE",
 			"*.md",
 			"docs/",
-			"documentation/",
 			"",
 			"# Testing",
 			"coverage/",
@@ -91,66 +87,50 @@ export class DockerignoreGenerator {
 			"*.test.js",
 			"*.spec.ts",
 			"*.test.ts",
-			"__tests__/",
-			".pytest_cache/",
-			".coverage",
-			"htmlcov/",
-			".tox/",
-			".nox/",
-			".hypothesis/",
 			"",
 		];
 
 		const lang = language || this.config.language;
 
 		if (lang.startsWith("js")) {
-			ignorePatterns.push("# Node.js", "node_modules/", ".npm/", ".node-gyp/", ".npmrc", ".pnpm-store/", ".yarn-integrity", ".yarn/", ".pnp.js", ".pnp.cjs", "dist/", "build/", ".next/", ".nuxt/", "out/", "coverage/", ".vite/", ".cache/", "");
+			ignorePatterns.push("# Node.js", "node_modules/", ".npm/", ".node-gyp/", "dist/", "build/", ".next/", ".nuxt/", "out/", "");
 		} else if (lang.startsWith("java")) {
-			ignorePatterns.push("# Java", "target/", "*.class", "*.jar", "*.war", "*.ear", "*.log", ".mvn/", "mvnw", "mvnw.cmd", ".gradle/", "build/", ".settings/", ".classpath", ".project", "");
+			ignorePatterns.push("# Java", "target/", "*.class", "*.jar", "*.war", "*.ear", ".mvn/", "mvnw", "mvnw.cmd", ".gradle/", "build/", "");
 		} else if (lang === "python") {
+			ignorePatterns.push("# Python", "__pycache__/", "*.py[cod]", "*$py.class", "*.so", ".Python", "env/", "venv/", "ENV/", ".pytest_cache/", ".mypy_cache/", "dist/", "build/", "*.egg-info/", "");
+		} else if (lang === "go") {
+			ignorePatterns.push("# Go", "*.exe", "*.exe~", "*.dll", "*.so", "*.dylib", "*.test", "*.out", "go.work", "bin/", "dist/", "");
+		} else if (lang === "rust") {
 			ignorePatterns.push(
-				"# Python",
-				"__pycache__/",
-				"*.py[cod]",
-				"*$py.class",
-				"*.so",
-				".Python",
-				"env/",
-				"venv/",
-				"ENV/",
-				"env.bak/",
-				"venv.bak/",
-				"pip-log.txt",
-				".pytest_cache/",
-				".coverage",
-				"htmlcov/",
-				".tox/",
-				".nox/",
-				".hypothesis/",
-				".mypy_cache/",
-				".pytype/",
-				".pyre/",
-				"dist/",
-				"build/",
-				"*.egg-info/",
+				"# Rust",
+				"target/",
+				"**/*.rs.bk",
+				// Fix bug 417: Don't ignore Cargo.lock for applications
 				"",
 			);
-		} else if (lang === "go") {
-			ignorePatterns.push("# Go", "*.exe", "*.exe~", "*.dll", "*.so", "*.dylib", "*.test", "*.out", "go.work", "bin/", "dist/", "vendor/", "");
-		} else if (lang === "rust") {
-			ignorePatterns.push("# Rust", "target/", "**/*.rs.bk", "Cargo.lock", "");
 		} else if (lang === "dotnet") {
-			ignorePatterns.push("# .NET", "**/[Oo]bj/", "**/[Bb]in/", "*.user", "*.suo", "*.userprefs", "*.cache", "*.docstates", "dist/", "build/", "packages/", "");
+			ignorePatterns.push("# .NET", "**/[Oo]bj/", "**/[Bb]in/", "*.user", "*.suo", "dist/", "build/", "");
 		} else if (lang === "laravel") {
-			ignorePatterns.push("# PHP/Laravel", "vendor/", "*.log", ".phpunit.result.cache", "node_modules/", "public/storage", "storage/*.key", "storage/framework/cache/*", "storage/framework/sessions/*", "storage/framework/views/*", "");
+			ignorePatterns.push("# PHP/Laravel", "vendor/", ".phpunit.result.cache", "node_modules/", "public/storage", "");
 		} else if (lang === "rails") {
-			ignorePatterns.push("# Ruby/Rails", "*.gem", ".bundle/", "vendor/bundle/", "log/*", "tmp/*", ".ruby-version", ".ruby-gemset", "node_modules/", "public/assets/", "storage/", "");
+			ignorePatterns.push("# Ruby/Rails", "*.gem", ".bundle/", "vendor/bundle/", "log/*", "tmp/*", "node_modules/", "");
 		} else if (lang === "cpp" || lang === "c") {
-			ignorePatterns.push("# C/C++", "*.o", "*.obj", "*.exe", "*.out", "*.app", "build/", "dist/", "cmake-build-*/", "CMakeFiles/", "CMakeCache.txt", "Makefile", "");
+			ignorePatterns.push(
+				"# C/C++",
+				"*.o",
+				"*.obj",
+				"*.exe",
+				"*.out",
+				"build/",
+				"dist/",
+				"cmake-build-*/",
+				// Fix bug 418: Don't ignore Makefile
+				"",
+			);
 		}
 
-		// Docker files (keep main files)
-		ignorePatterns.push("# Docker (keep main files)", "docker-compose.*.yml", "docker-compose.*.yaml", ".docker/", "");
+		// Fix bug 358, 374: Don't ignore docker-compose.override.yml
+		ignorePatterns.push("# Docker (keep main files including override)", "docker-compose.*.yml", "!docker-compose.override.yml", "docker-compose.*.yaml", "!docker-compose.override.yaml", ".docker/", "");
 
 		return ignorePatterns.join("\n");
 	}
