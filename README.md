@@ -1,6 +1,6 @@
-# 🍃 Code Facet Generator
+# 🧢 Dockeryzen
 
-> **Dynamic facet-based code generator for multiple languages and frameworks.**
+> **Automatic Dockerfile and Docker Compose build for multiple languages and frameworks.**
 
 <!-- <div align="center">
   <table>
@@ -49,8 +49,8 @@
     <span style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 20px; margin: 4px; font-size: 14px;">🛠️ 150+ Tools</span>
   </div>
   <div style="margin: 20px 0 0 0;">
-    <a href="https://github.com/qewr1324/code-facet-generator/stargazers">
-      <img src="https://img.shields.io/github/stars/qewr1324/code-facet-generator?style=for-the-badge&color=FFD700" alt="stars" />
+    <a href="https://github.com/qewr1324/dockeryzen/stargazers">
+      <img src="https://img.shields.io/github/stars/qewr1324/dockeryzen?style=for-the-badge&color=FFD700" alt="stars" />
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="license" />
@@ -66,51 +66,50 @@
 
 <!-- Image & Icon -->
 <div align="center">
-  <a href="https://github.com/qewr1324/code-facet-generator">
-    <img src="./res/facet-icon-big.png" alt="Code Facet Generator Icon" width="128" height="128" />
+  <a href="https://github.com/qewr1324/dockeryzen">
+    <img src="./res/dockeryzen-icon-big.png" alt="Dockeryzen Icon" width="128" height="128" />
   </a>
   
-  <h3>✨ Generate ready-to-use configuration files instantly ✨</h3>
+  <h3>✨ Generate complete Docker configurations in minutes ✨</h3>
 
 <!-- Static Badges -->
 
-[![Version](https://img.shields.io/github/v/release/qewr1324/code-facet-generator)](https://github.com/qewr1324/code-facet-generator)
+[![Version](https://img.shields.io/github/v/release/qewr1324/dockeryzen)](https://github.com/qewr1324/dockeryzen)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Languages](https://img.shields.io/badge/languages-32%20categories-orange.svg)](#supported-languages--frameworks)
-[![Files](https://img.shields.io/badge/facets-327%2B-purple.svg)](#statistics)
+[![Languages](https://img.shields.io/badge/languages-13-orange.svg)](#supported-languages--frameworks)
 
 <!-- Dynamic GitHub Badges -->
-<!-- [![GitHub release (latest)](https://img.shields.io/github/v/release/qewr1324/code-facet-generator?color=blue&label=latest%20release)](https://github.com/qewr1324/code-facet-generator/releases)
-[![GitHub Release Date](https://img.shields.io/github/release-date/qewr1324/code-facet-generator?label=last%20release)](https://github.com/qewr1324/code-facet-generator/releases)
-[![GitHub commits since latest release](https://img.shields.io/github/commits-since/qewr1324/code-facet-generator/latest?label=commits%20since%20release)](https://github.com/qewr1324/code-facet-generator/commits/main) -->
+<!-- [![GitHub release (latest)](https://img.shields.io/github/v/release/qewr1324/dockeryzen?color=blue&label=latest%20release)](https://github.com/qewr1324/dockeryzen/releases)
+[![GitHub Release Date](https://img.shields.io/github/release-date/qewr1324/dockeryzen?label=last%20release)](https://github.com/qewr1324/dockeryzen/releases)
+[![GitHub commits since latest release](https://img.shields.io/github/commits-since/qewr1324/dockeryzen/latest?label=commits%20since%20release)](https://github.com/qewr1324/dockeryzen/commits/main) -->
 
-[![GitHub stars](https://img.shields.io/github/stars/qewr1324/code-facet-generator?style=social)](https://github.com/qewr1324/code-facet-generator/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/qewr1324/code-facet-generator?style=social)](https://github.com/qewr1324/code-facet-generator/network/members)
-[![GitHub watchers](https://img.shields.io/github/watchers/qewr1324/code-facet-generator?style=social)](https://github.com/qewr1324/code-facet-generator/watchers)
+[![GitHub stars](https://img.shields.io/github/stars/qewr1324/dockeryzen?style=social)](https://github.com/qewr1324/dockeryzen/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/qewr1324/dockeryzen?style=social)](https://github.com/qewr1324/dockeryzen/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/qewr1324/dockeryzen?style=social)](https://github.com/qewr1324/dockeryzen/watchers)
 
-<!-- [![GitHub issues](https://img.shields.io/github/issues/qewr1324/code-facet-generator?color=red)](https://github.com/qewr1324/code-facet-generator/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/qewr1324/code-facet-generator?color=blueviolet)](https://github.com/qewr1324/code-facet-generator/pulls)
-[![GitHub closed issues](https://img.shields.io/github/issues-closed/qewr1324/code-facet-generator?color=green)](https://github.com/qewr1324/code-facet-generator/issues?q=is%3Aissue+is%3Aclosed)
-[![GitHub closed PRs](https://img.shields.io/github/issues-pr-closed/qewr1324/code-facet-generator?color=brightgreen)](https://github.com/qewr1324/code-facet-generator/pulls?q=is%3Apr+is%3Aclosed)
+<!-- [![GitHub issues](https://img.shields.io/github/issues/qewr1324/dockeryzen?color=red)](https://github.com/qewr1324/dockeryzen/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/qewr1324/dockeryzen?color=blueviolet)](https://github.com/qewr1324/dockeryzen/pulls)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/qewr1324/dockeryzen?color=green)](https://github.com/qewr1324/dockeryzen/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub closed PRs](https://img.shields.io/github/issues-pr-closed/qewr1324/dockeryzen?color=brightgreen)](https://github.com/qewr1324/dockeryzen/pulls?q=is%3Apr+is%3Aclosed)
 
-[![GitHub contributors](https://img.shields.io/github/contributors/qewr1324/code-facet-generator?color=orange)](https://github.com/qewr1324/code-facet-generator/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/qewr1324/code-facet-generator?color=blue)](https://github.com/qewr1324/code-facet-generator/commits/main)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/qewr1324/code-facet-generator?color=yellowgreen)](https://github.com/qewr1324/code-facet-generator/graphs/commit-activity)
-[![GitHub top language](https://img.shields.io/github/languages/top/qewr1324/code-facet-generator?color=purple)](https://github.com/qewr1324/code-facet-generator) -->
+[![GitHub contributors](https://img.shields.io/github/contributors/qewr1324/dockeryzen?color=orange)](https://github.com/qewr1324/dockeryzen/graphs/contributors)
+[![GitHub last commit](https://img.shields.io/github/last-commit/qewr1324/dockeryzen?color=blue)](https://github.com/qewr1324/dockeryzen/commits/main)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/qewr1324/dockeryzen?color=yellowgreen)](https://github.com/qewr1324/dockeryzen/graphs/commit-activity)
+[![GitHub top language](https://img.shields.io/github/languages/top/qewr1324/dockeryzen?color=purple)](https://github.com/qewr1324/dockeryzen) -->
 
-[![GitHub code size](https://img.shields.io/github/languages/code-size/qewr1324/code-facet-generator?color=lightgrey)](https://github.com/qewr1324/code-facet-generator)
-[![GitHub repo size](https://img.shields.io/github/repo-size/qewr1324/code-facet-generator?color=lightgrey)](https://github.com/qewr1324/code-facet-generator)
-[![GitHub file count](https://img.shields.io/github/directory-file-count/qewr1324/code-facet-generator?color=lightgrey)](https://github.com/qewr1324/code-facet-generator)
+[![GitHub code size](https://img.shields.io/github/languages/code-size/qewr1324/dockeryzen?color=lightgrey)](https://github.com/qewr1324/dockeryzen)
+[![GitHub repo size](https://img.shields.io/github/repo-size/qewr1324/dockeryzen?color=lightgrey)](https://github.com/qewr1324/dockeryzen)
+[![GitHub file count](https://img.shields.io/github/directory-file-count/qewr1324/dockeryzen?color=lightgrey)](https://github.com/qewr1324/dockeryzen)
 
 <!-- CI/CD Badges -->
-<!-- [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/qewr1324/code-facet-generator/main.yml?label=build)](https://github.com/qewr1324/code-facet-generator/actions)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/qewr1324/code-facet-generator/test.yml?label=tests)](https://github.com/qewr1324/code-facet-generator/actions) -->
+<!-- [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/qewr1324/dockeryzen/main.yml?label=build)](https://github.com/qewr1324/dockeryzen/actions)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/qewr1324/dockeryzen/test.yml?label=tests)](https://github.com/qewr1324/dockeryzen/actions) -->
 
 <!-- Marketplace Badges -->
-<!-- [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/qewr1324.code-facet-generator?label=vs%20code)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
-[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/qewr1324.code-facet-generator?label=installs)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
-[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/qewr1324.code-facet-generator?label=downloads)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
-[![VS Code Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/qewr1324.code-facet-generator?label=rating)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator) -->
+<!-- [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/qewr1324.dockeryzen?label=vs%20code)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
+[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/qewr1324.dockeryzen?label=installs)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
+[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/qewr1324.dockeryzen?label=downloads)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
+[![VS Code Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/qewr1324.dockeryzen?label=rating)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen) -->
 
 <!-- Social -->
 <!-- [![Twitter Follow](https://img.shields.io/twitter/follow/your-handle?style=social)](https://twitter.com/your-handle)
@@ -134,91 +133,113 @@
 
 <div align="center">
 
-![Demo](https://github.com/qewr1324/code-facet-generator/raw/main/res/review.gif)
+![Demo](https://github.com/qewr1324/dockeryzen/raw/main/res/review.gif)
 
 </div>
 
 ---
 
-## 📖 What is Code Facet Generator?
+## 📖 What is Dockeryzen?
 
-Code Facet Generator is a **VS Code extension** (or CLI tool) that generates ready-to-use configuration files for virtually any language, framework, or tool in your project.
-
-No more googling "spring boot application.yml example" or "next.config.js boilerplate". Just pick your language, framework, and version — and get a production-ready config file instantly.
-
----
+> Dockeryzen is a powerful `VSCode extension` that eliminates the boilerplate of setting up Docker for your projects. It provides an interactive wizard to generate production-ready `Dockerfile`, `docker-compose.yml`, and other essential configuration files for a wide variety of programming languages, databases, and services.
 
 ## ✨ Features
 
-- 🎯 **327+ ready-to-use configuration templates** across 32 categories
-- 🌍 **Multi-language support** — Java, JavaScript, Python, Go, Rust, C#, PHP, Ruby, and many more
-- 📦 **Multi-version support** — each tool has multiple version-specific templates
-- ⚡ **Instant generation** — select, click, done
-- 🎨 **Beautiful VS Code integration** with TreeView, StatusBar, and Command Palette
-- 🔧 **Fully configurable** via `info.json` — add your own templates easily
-- 🧩 **Modular architecture** — each facet is a standalone TypeScript file
+- 🗺️ **Interactive Wizard** — A step-by-step guide to configure your entire Docker setup.
+- 🚀 **Language & Framework Support** — Supports over 13 languages and their most popular frameworks.
+- 🗄️ **Database Selection** — Easily add and configure 30+ databases (SQL, NoSQL, Vector, Time-Series, etc.).
+- 📨 **Message Queues & Services** — Add message queues like Kafka, RabbitMQ and other services like Nginx or Grafana.
+- ⚙️ **Smart Defaults** Automatically detects your project's language and suggests optimal configurations.
+- 🔧 **Production-Ready Output**
+    - Optimized multi-stage `Dockerfiles` with security and performance in mind.
+    - Comprehensive `docker-compose.yml` with healthchecks, networks, and volumes.
+    - Pre-configured `.dockerignore`, `.env.example`, and CI/CD pipelines (GitHub Actions & GitLab CI).
+- 🧩 **Modular architecture** — Optionally enable remote debugging for your application.
+- ❤️ **Health Checks** — Add health check endpoints to your services for better monitoring.
+- 💾 **State Persistence** — our configuration state is saved automatically, so you can resume where you left off.
 
 <!-- Marketplace Badges -->
 
-[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/qewr1324.code-facet-generator?label=vs%20code)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
-[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/qewr1324.code-facet-generator?label=installs)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
-[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/qewr1324.code-facet-generator?label=downloads)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
-[![VS Code Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/qewr1324.code-facet-generator?label=rating)](https://marketplace.visualstudio.com/items?itemName=qewr1324.code-facet-generator)
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/qewr1324.dockeryzen?label=vs%20code)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
+[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/qewr1324.dockeryzen?label=installs)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
+[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/qewr1324.dockeryzen?label=downloads)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
+[![VS Code Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/qewr1324.dockeryzen?label=rating)](https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen)
 
 ---
 
 ## 📁 Project Structure
 
-```bash
-code-facet-generator/
-├── 📄 package.json                  # VS Code extension manifest
-├── 📄 tsconfig.json                 # TypeScript configuration
-├── 📄 info.json                     # All facet definitions (32 categories, 327+ facets)
-├── 📁 media/                        # Icons and branding
-│   ├── 🎨 facet-icon.svg
-│   └── 🎨 facet-icon.png
-├── 📁 lib/                          # Generated facet templates (327+ files)
-│   ├── 📁 java/                     # Maven, Gradle, Spring Boot, Quarkus, Hibernate...
-│   ├── 📁 javascript/               # React, Vue, Next.js, Nuxt, Node.js, Express...
-│   ├── 📁 python/                   # Django, Flask, FastAPI, Celery, Poetry...
-│   ├── 📁 csharp/                   # ASP.NET, Blazor, Entity Framework, WPF...
-│   ├── 📁 go/                       # Go modules, main.go, Docker...
-│   ├── 📁 rust/                     # Cargo.toml, main.rs...
-│   ├── 📁 ruby/                     # Gemfile, Rails, Sinatra, RSpec...
-│   ├── 📁 php/                      # Laravel, Symfony, Composer, PHPUnit...
-│   ├── 📁 kubernetes/               # Deployment, Service, Ingress, Helm...
-│   ├── 📁 database/                 # MySQL, PostgreSQL, MongoDB, Redis...
-│   ├── 📁 cicd/                     # GitHub Actions, GitLab CI, Jenkins...
-│   ├── 📁 infrastructure/           # Terraform, Ansible, Vagrant, CloudFormation...
-│   ├── 📁 monitoring/               # Prometheus, Grafana, ELK, Datadog...
-│   ├── 📁 mobile/                   # Flutter, React Native, Ionic, Kotlin, Swift...
-│   ├── 📁 config/                   # .gitignore, .editorconfig, README, LICENSE...
-│   ├── 📁 security/                 # SonarQube, Snyk, Trivy...
-│   ├── 📁 message-queue/            # RabbitMQ, Kafka, ActiveMQ...
-│   ├── 📁 testing/                  # K6, Postman, Cucumber...
-│   ├── 📁 documentation/            # AsyncAPI, JSDoc, Docusaurus...
-│   ├── 📁 game/                     # Unity, Unreal Engine, Godot...
-│   ├── 📁 embedded/                 # Arduino, PlatformIO...
-│   ├── 📁 desktop/                  # Tauri, Qt, GTK...
-│   ├── 📁 ai-ml/                    # TensorFlow, PyTorch, Hugging Face, MLflow...
-│   ├── 📁 blockchain/               # Hardhat, Truffle, Foundry, Anchor...
-│   ├── 📁 api-gateway/              # Kong, Traefik, Envoy, HAProxy, Caddy...
-│   ├── 📁 data-analytics/           # dbt, Spark, Flink, Debezium...
-│   ├── 📁 authentication/           # Keycloak, Auth0, Ory Kratos...
-│   ├── 📁 storage/                  # MinIO, Ceph...
-│   ├── 📁 build-tools/              # Make, CMake, Bazel, Rush, Pants...
-│   ├── 📁 package-managers/         # Conan, vcpkg, CocoaPods, CPM...
-│   └── 📁 graphics/                 # Unity Shader Graph, HLSL...
-├── 📁 src/                          # Extension source code
-│   ├── 📄 extension.ts              # Entry point
-│   ├── 📄 statusBarManager.ts       # Status bar integration
-│   ├── 📄 facetTreeProvider.ts      # Tree view provider
-│   ├── 📄 facetCommands.ts          # ⚡ Command handlers
-│   └── 📁 utils/                    # Utilities
-│       ├── 📄 configLoader.ts       # info.json parser
-│       ├── 📄 fileGenerator.ts      # File writer
-│       └── 📄 pathResolver.ts       # Path resolver
-└── 📄 .vscodeignore                 # VS Code ignore file
+```text
+dockeryzen/
+├─ .bunfig.toml
+├─ .npmrc
+├─ LICENSE
+├─ README.md
+├─ bugs.txt
+├─ bun.lock
+├─ eslint.config.js
+├─ package.json
+├─ pnpm-workspace.yaml
+├─ res/
+│  ├─ dockeryzen-icon-big.png
+│  ├─ facet-icon-big.svg
+│  ├─ review.gif
+│  └─ review.mp4
+├─ scripts/
+│  └─ clean-generated-meta.mjs
+├─ shared/
+│  └─ versions.ts
+├─ src/
+│  ├─ config/
+│  │  ├─ databases/
+│  │  │  ├─ graph.json
+│  │  │  ├─ key-value.json
+│  │  │  ├─ newsql.json
+│  │  │  ├─ nosql.json
+│  │  │  ├─ search-engines.json
+│  │  │  ├─ sql.json
+│  │  │  ├─ time-series.json
+│  │  │  ├─ vector.json
+│  │  │  └─ wide-column.json
+│  │  ├─ languages/
+│  │  │  ├─ c.json
+│  │  │  ├─ cpp.json
+│  │  │  ├─ dotnet.json
+│  │  │  ├─ go.json
+│  │  │  ├─ java.json
+│  │  │  ├─ nodejs.json
+│  │  │  ├─ php.json
+│  │  │  ├─ python.json
+│  │  │  ├─ ruby.json
+│  │  │  └─ rust.json
+│  │  ├─ message-queues.json
+│  │  └─ services.json
+│  ├─ extension.ts
+│  ├─ generators/
+│  │  ├─ DockerComposeGenerator.ts
+│  │  ├─ DockerComposeOverrideGenerator.ts
+│  │  ├─ DockerfileGenerator.ts
+│  │  ├─ DockerignoreGenerator.ts
+│  │  ├─ EnvFileGenerator.ts
+│  │  ├─ GitHubWorkflowGenerator.ts
+│  │  ├─ GitLabCIGenerator.ts
+│  │  ├─ NginxConfigGenerator.ts
+│  │  └─ PrometheusConfigGenerator.ts
+│  ├─ managers/
+│  │  ├─ DatabaseManager.ts
+│  │  ├─ MessageQueueManager.ts
+│  │  └─ ServiceManager.ts
+│  ├─ types/
+│  │  └─ index.ts
+│  ├─ utils/
+│  │  └─ helpers.ts
+│  └─ wizard/
+│     └─ DockerWizard.ts
+├─ taze.config.ts
+├─ test/
+│  └─ index.test.ts
+├─ tsconfig.json
+└─ tsdown.config.ts
 ```
 
 ---
@@ -226,144 +247,71 @@ code-facet-generator/
 ## 🚀 Supported Languages & Frameworks
 
 <details>
-<summary><b>☕ Java (17 tools, 68 variants)</b></summary>
+<summary><b>Dockeryzen can generate configurations for a wide array of technologies. Here are some of the key languages and frameworks supported:</b></summary>
 
-| Tool        | Config File                 | Versions                |
-| ----------- | --------------------------- | ----------------------- |
-| Maven       | `pom.xml`                   | 3.8, 3.9, 4.0           |
-| Gradle      | `build.gradle`              | 7.6, 8.0, 8.4           |
-| JPA         | `persistence.xml`           | 2.2, 3.0, 3.1           |
-| Hibernate   | `hibernate.cfg.xml`         | 5.4, 5.6, 6.0, 6.2, 6.3 |
-| Spring Boot | `application.yml`           | 2.7, 3.0, 3.1, 3.2      |
-| Quarkus     | `application.properties`    | 3.0, 3.2, 3.4           |
-| Micronaut   | `application.yml`           | 3.0, 4.0                |
-| MyBatis     | `mybatis-config.xml`        | 3.0, 3.5                |
-| Jakarta EE  | `web.xml`                   | 3.1, 4.0, 5.0           |
-| Logback     | `logback.xml`               | 1.2, 1.3, 1.4           |
-| Log4j2      | `log4j2.xml`                | 2.17, 2.20, 2.22        |
-| Liquibase   | `changelog.xml`             | 4.20, 4.23              |
-| Flyway      | `V1__init.sql`              | 9.0, 10.0               |
-| OpenAPI     | `openapi.yaml`              | 3.0, 3.1                |
-| Checkstyle  | `checkstyle.xml`            | 10.0, 10.12             |
-| PMD         | `pmd.xml`                   | 6.55, 7.0               |
-| Tomcat      | `server.xml`, `context.xml` | 9.0, 10.0               |
-
-</details>
-
-<details>
-<summary><b>💛 JavaScript / TypeScript (42 tools, 86 variants)</b></summary>
-
-| Tool       | Config File            | Versions      |
-| ---------- | ---------------------- | ------------- |
-| Next.js    | `next.config.js`       | 13, 14        |
-| Nuxt.js    | `nuxt.config.js`       | 3.0, 3.8      |
-| Gatsby     | `gatsby-config.js`     | 5.0           |
-| Svelte     | `svelte.config.js`     | 4.0           |
-| SvelteKit  | `svelte.config.js`     | 2.0           |
-| Astro      | `astro.config.mjs`     | 4.0           |
-| Remix      | `remix.config.js`      | 2.0           |
-| React      | `App.jsx`              | 18, 19        |
-| Vue        | `vue.config.js`        | 3.0, 3.3      |
-| Angular    | `angular.json`         | 17            |
-| Solid.js   | `vite.config.ts`       | 1.0           |
-| Qwik       | `qwik.config.ts`       | 1.0           |
-| Stencil    | `stencil.config.ts`    | 4.0           |
-| Ember.js   | `ember-cli-build.js`   | 5.0           |
-| NestJS     | `main.ts`              | 10.0          |
-| Express    | `app.ts`               | 4.18          |
-| Fastify    | `server.js`            | 4.0           |
-| Koa        | `app.js`               | 2.0           |
-| Webpack    | `webpack.config.js`    | 5.0, 5.89     |
-| Vite       | `vite.config.js`       | 4.0, 5.0      |
-| Rollup     | `rollup.config.js`     | 4.0           |
-| Parcel     | `.parcelrc`            | 2.0           |
-| Babel      | `babel.config.js`      | 7.0           |
-| ESLint     | `.eslintrc.json`       | 8.0, 9.0      |
-| Prettier   | `.prettierrc`          | 2.8, 3.0, 3.1 |
-| Jest       | `jest.config.js`       | 29, 30        |
-| Vitest     | `vitest.config.ts`     | 1.0, 1.2      |
-| Cypress    | `cypress.config.js`    | 12, 13        |
-| Playwright | `playwright.config.ts` | 1.40          |
-| Tailwind   | `tailwind.config.js`   | 3.0, 3.3      |
-| Prisma     | `schema.prisma`        | 5.0, 5.7      |
-| TypeORM    | `ormconfig.json`       | 0.3           |
-| Sequelize  | `.sequelizerc`         | 6.0           |
-| Drizzle    | `drizzle.config.ts`    | 0.29          |
-| Socket.io  | `server.js`            | 4.0           |
-| PM2        | `ecosystem.config.js`  | 5.0           |
-| NX         | `nx.json`              | 17.0          |
-| Turborepo  | `turbo.json`           | 1.0           |
-| Lerna      | `lerna.json`           | 7.0           |
-
-</details>
-
-<details>
-<summary><b>🐍 Python (18 tools, 28 variants)</b></summary>
-
-| Tool        | Config File        | Versions     |
-| ----------- | ------------------ | ------------ |
-| Django      | `settings.py`      | 4.2, 5.0     |
-| Flask       | `app.py`           | 2.3, 3.0     |
-| FastAPI     | `main.py`          | 0.100, 0.104 |
-| Pyramid     | `development.ini`  | 2.0          |
-| Django REST | `settings_rest.py` | 3.14         |
-| Celery      | `celery.py`        | 5.3          |
-| Alembic     | `alembic.ini`      | 1.12         |
-| Poetry      | `pyproject.toml`   | 1.5, 1.7     |
-| Pipenv      | `Pipfile`          | 2023         |
-| Tox         | `tox.ini`          | 4.0          |
-| PyTest      | `pytest.ini`       | 7.0, 8.0     |
-| Sphinx      | `conf.py`          | 7.0          |
-| MkDocs      | `mkdocs.yml`       | 1.5          |
-| Black       | `pyproject.toml`   | 23.0         |
-| isort       | `.isort.cfg`       | 5.0          |
-| MyPy        | `mypy.ini`         | 1.0          |
-| Flake8      | `.flake8`          | 6.0          |
-| Pylint      | `.pylintrc`        | 3.0          |
-
-</details>
-
-<details>
-<summary><b>🎮 More Categories</b></summary>
-
-- **C# / .NET** — ASP.NET, Blazor, Entity Framework, WPF, xUnit, Serilog (11 tools)
-- **Go** — Modules, main.go, Docker (3 tools)
-- **Rust** — Cargo, main.rs (2 tools)
-- **Ruby** — Gemfile, Rails, Sinatra, RSpec, RuboCop (5 tools)
-- **PHP** — Composer, Laravel, Symfony, PHPUnit, PHPStan, PHP-CS-Fixer (6 tools)
-- **Kubernetes** — Deployment, Service, ConfigMap, Ingress, Helm (7 tools)
-- **Mobile** — Flutter, React Native, Ionic, Cordova, Kotlin, Swift (6 tools)
-- **Game Development** — Unity, Unreal Engine, Godot, Shaders, Raylib (10 tools)
-- **AI / ML** — TensorFlow, PyTorch, Hugging Face, ONNX, MLflow, W&B (5 tools)
-- **Blockchain / Web3** — Hardhat, Truffle, Foundry, Anchor (4 tools)
-- **API Gateways** — Kong, Traefik, Envoy, HAProxy, Caddy, Apache (7 tools)
-- **Message Queue** — RabbitMQ, Kafka, ActiveMQ (3 tools)
-- **Desktop** — Tauri, Qt, GTK (4 tools)
-- **And many more...** — 32 categories total!
+| Category         | Languages / Frameworks   |
+| ---------------- | ------------------------ |
+| ☕ Java          | `pom.xml`                |
+| 💛 JavaScript/TS | `build.gradle`           |
+| 🐍 Python        | `persistence.xml`        |
+| ✨ Go            | `hibernate.cfg.xml`      |
+| 🦀 Rust          | `application.yml`        |
+| 🔷 C# / .NET     | `application.properties` |
+| 🧩 PHP           | `application.yml`        |
+| 💎 Ruby          | `mybatis-config.xml`     |
+| ⚙️ C/C++         | `web.xml`                |
 
 </details>
 
 ---
 
-## 📊 Statistics
+🗄️ Supported Databases & Services
 
-| Category                  | Count    |
-| ------------------------- | -------- |
-| 📦 **Total Categories**   | **32**   |
-| 📄 **Total Facet Files**  | **327+** |
-| 🌍 **Languages Covered**  | **15+**  |
-| 🛠️ **Frameworks & Tools** | **150+** |
-| 🔢 **Version Variants**   | **500+** |
+> You can easily integrate a wide range of databases and services into your Docker Compose setup.
+
+- **Databases (30+):**
+
+- `SQL`: PostgreSQL, MySQL, MariaDB, Oracle, MSSQL, IBM Db2
+
+- `NoSQL`: MongoDB, CouchDB, Couchbase, DynamoDB, RavenDB
+
+- `Key-Value`: Redis, Memcached, etcd, Aerospike
+
+- `Wide-Column`: Cassandra, ScyllaDB, HBase, Bigtable
+
+- `Graph`: Neo4j, ArangoDB, JanusGraph, Dgraph
+
+- `NewSQL`: CockroachDB, TiDB, YugabyteDB
+
+- `Time-Series`: InfluxDB, TimescaleDB, Prometheus, OpenTSDB
+
+- `Search Engine`: Elasticsearch, Solr, Meilisearch, Typesense
+
+- `Vector (AI/ML)`: Weaviate, Qdrant, Milvus, Chroma
+
+- **Message Queues & Services:**
+
+- `Message Queues`: Kafka, RabbitMQ, ActiveMQ Classic, ActiveMQ Artemis
+
+- `Services`: Nginx, Grafana, Prometheus, Keycloak, MinIO, and more.
 
 ---
 
-## 🔧 How It Works
+## 🔧 How to Use
 
-1. **Load** — Extension reads `info.json` on startup
-2. **Display** — TreeView shows all categories and facets
-3. **Select** — Click a facet, pick a version
-4. **Generate** — File is created at the correct path with boilerplate content
-5. **Done!** — Ready to use in your project
+1. Open your project in VS Code.
+2. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and search for `Dockeryzen: Generate`.
+3. A wizard will guide you through the following steps:
+    - Project Name: Set the name for your project.
+    - Language: Select your project's language (auto-detected).
+    - Application Port: Define the port your app will run on.
+    - General Options: Choose options like Alpine base images, Debug mode, and Health Checks.
+    - Language-Specific Settings: Configure your build tools, JDK version, frameworks, etc.
+    - Databases: Select and configure any databases you need.
+    - Message Queues: Select and configure any message queues.
+    - Services: Select and configure any additional services.
+
+4. The extension will automatically generate all required configuration files in your workspace.
 
 ### Example: Generating a `pom.xml`
 
@@ -377,61 +325,49 @@ code-facet-generator/
 
 ---
 
-## 🎨 VS Code Integration
+## ⚙️ Configuration
 
-- **📁 TreeView** — Browse all facets in the sidebar
-- **⚡ Command Palette** — `Ctrl+Shift+P` → "Generate Facet"
-- **📊 StatusBar** — Quick access to recent facets
-- **🔍 Search** — Filter facets by name or language
+> You can customize the default behavior of Dockeryzen via VS Code settings.
+
+1. Open the Command Palette (Ctrl+Shift+P or Cmd+Shift+P).
+
+2. Search for Dockeryzen: Open Settings.
+
+Some of the available settings include:
+
+- `dockeryzen.defaultPort`: The default port for the application.
+- `dockeryzen.useAlpineByDefault`: Whether to use Alpine-based images by default.
+- `dockeryzen.enableHealthCheckByDefault`: Whether to enable health checks by default.
+- `dockeryzen.enableDebugByDefault`: Whether to enable debug mode by default.
+- `dockeryzen.debugPort`: The debug port to use for applications.
+- `dockeryzen.generateDockerignore`: If `false`, it will not generate a `.dockerignore` file.
 
 ---
 
 ## 🛠️ Development
 
-```bash
-# Clone
-git clone https://github.com/user/code-facet-generator.git
+> Want to contribute or build the extension yourself? Here’s how to get started.
 
-# Install dependencies
-cd code-facet-generator
+```bash
+# Clone the repository
+git clone https://github.com/qewr1324/dockeryzen.git
+
+# Navigate to the project directory
+cd dockeryzen
+
+# Install dependencies (using bun is recommended)
+bun install
+# or
 npm install
 
-# Build
+# Build the extension
+bun run build
+# or
 npm run build
 
-# Run extension in VS Code
-# Press F5 in VS Code
+# Run the extension in a new VS Code window
+# Press F5 in VS Code after opening the project
 ```
-
-## Adding a New Facet
-
-#### 1.Create a new file in lib/<category>/<tool>/<version>.ts:
-
-```typescript
-export function generate(params: any): string {
-	return `your config content here`;
-}
-```
-
-#### 2.Add the facet to info.json:
-
-```json
-{
-	"category": {
-		"tool-name": {
-			"name": "filename",
-			"extension": ".ext",
-			"route": "./path/~",
-			"description": "Description",
-			"version": {
-				"1.0": "./lib/category/tool/v1.0.ts"
-			}
-		}
-	}
-}
-```
-
-#### 3.Done! The extension will pick it up automatically.
 
 # 📝 License
 
@@ -439,27 +375,17 @@ export function generate(params: any): string {
 
 # 🤝 Contributing
 
-[![GitHub issues](https://img.shields.io/github/issues/qewr1324/code-facet-generator?color=red)](https://github.com/qewr1324/code-facet-generator/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/qewr1324/code-facet-generator?color=blueviolet)](https://github.com/qewr1324/code-facet-generator/pulls)
-[![GitHub closed issues](https://img.shields.io/github/issues-closed/qewr1324/code-facet-generator?color=green)](https://github.com/qewr1324/code-facet-generator/issues?q=is%3Aissue+is%3Aclosed)
-[![GitHub closed PRs](https://img.shields.io/github/issues-pr-closed/qewr1324/code-facet-generator?color=brightgreen)](https://github.com/qewr1324/code-facet-generator/pulls?q=is%3Apr+is%3Aclosed)
+[![GitHub issues](https://img.shields.io/github/issues/qewr1324/dockeryzen?color=red)](https://github.com/qewr1324/dockeryzen/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/qewr1324/dockeryzen?color=blueviolet)](https://github.com/qewr1324/dockeryzen/pulls)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/qewr1324/dockeryzen?color=green)](https://github.com/qewr1324/dockeryzen/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub closed PRs](https://img.shields.io/github/issues-pr-closed/qewr1324/dockeryzen?color=brightgreen)](https://github.com/qewr1324/dockeryzen/pulls?q=is%3Apr+is%3Aclosed)
 
-[![GitHub contributors](https://img.shields.io/github/contributors/qewr1324/code-facet-generator?color=orange)](https://github.com/qewr1324/code-facet-generator/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/qewr1324/code-facet-generator?color=blue)](https://github.com/qewr1324/code-facet-generator/commits/main)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/qewr1324/code-facet-generator?color=yellowgreen)](https://github.com/qewr1324/code-facet-generator/graphs/commit-activity)
-[![GitHub top language](https://img.shields.io/github/languages/top/qewr1324/code-facet-generator?color=purple)](https://github.com/qewr1324/code-facet-generator)
+[![GitHub contributors](https://img.shields.io/github/contributors/qewr1324/dockeryzen?color=orange)](https://github.com/qewr1324/dockeryzen/graphs/contributors)
+[![GitHub last commit](https://img.shields.io/github/last-commit/qewr1324/dockeryzen?color=blue)](https://github.com/qewr1324/dockeryzen/commits/main)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/qewr1324/dockeryzen?color=yellowgreen)](https://github.com/qewr1324/dockeryzen/graphs/commit-activity)
+[![GitHub top language](https://img.shields.io/github/languages/top/qewr1324/dockeryzen?color=purple)](https://github.com/qewr1324/dockeryzen)
 
-### Contributions are welcome! Whether it's:
-
-- Adding new facets
-
-- Updating existing templates
-
-- Fixing bugs
-
-- Improving documentation
-
-### Check out CONTRIBUTING.md for guidelines.
+> Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are `greatly appreciated`. Check out the issues page to see where you can help.
 
 <!-- # ⭐ Support
 
@@ -479,4 +405,4 @@ export function generate(params: any): string {
 [![Bale](https://img.shields.io/badge/Bale-Channel-28A745?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz48L3N2Zz4=)](https://ble.ir/your-channel)
 [![Bale Group](https://img.shields.io/badge/Bale-Group-28A745?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz48L3N2Zz4=)](https://ble.ir/your-group) -->
 
-#### Made with ❤️ for developers who hate boilerplate.
+<p align="center">Made with ❤️ for developers who value their time.</p>
