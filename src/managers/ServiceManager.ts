@@ -4,6 +4,9 @@ import { validatePort } from "../utils/helpers.js";
 
 import servicesConfig from "../config/services.json" with { type: "json" };
 
+/**
+ * ServiceManager class - Manages additional service selection and configuration
+ */
 export class ServiceManager {
 	private services: ServiceConfig[] = [];
 

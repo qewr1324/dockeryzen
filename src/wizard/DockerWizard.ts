@@ -8,6 +8,10 @@ import { ServiceManager } from "../managers/ServiceManager.js";
 import { DockerfileGenerator } from "../generators/DockerfileGenerator.js";
 import { DockerComposeGenerator } from "../generators/DockerComposeGenerator.js";
 import { DockerignoreGenerator } from "../generators/DockerignoreGenerator.js";
+import { EnvFileGenerator } from "../generators/EnvFileGenerator.js";
+import { GitHubWorkflowGenerator } from "../generators/GitHubWorkflowGenerator.js";
+import { GitLabCIGenerator } from "../generators/GitLabCIGenerator.js";
+import { DockerComposeOverrideGenerator } from "../generators/DockerComposeOverrideGenerator.js";
 import { validatePort, validateProjectName, fileExists, safeWriteFile, isPortAvailable, findFreePort } from "../utils/helpers.js";
 
 import javaConfig from "../config/languages/java.json" with { type: "json" };
@@ -32,7 +36,6 @@ export class DockerWizard {
 	private languageConfigs: Map<string, any> = new Map();
 	private wizardState: Map<string, any> = new Map();
 	private context: vscode.ExtensionContext;
-	private progressIndicator: vscode.Progress<{ message?: string; increment?: number }> | null = null;
 	private timeoutId: NodeJS.Timeout | null = null;
 
 	constructor(context?: vscode.ExtensionContext) {
@@ -52,11 +55,15 @@ export class DockerWizard {
 			enableQueueWorker: false,
 			useVirtualEnv: true,
 			cgoEnabled: true,
+			enableNginx: false,
+			enableGunicorn: false,
+			enablePm2: false,
+			enableCelery: false,
+			enableHorizon: false,
 			databases: [],
 			messageQueues: [],
 			services: [],
 		};
-		// Load saved state if exists
 		this.loadState();
 	}
 
@@ -121,7 +128,6 @@ export class DockerWizard {
 
 		vscode.window.showInformationMessage("🚀 Welcome to Dockeryzen! Let's create your Docker configuration.");
 
-		// Show progress indicator
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.Notification,
@@ -129,8 +135,6 @@ export class DockerWizard {
 				cancellable: true,
 			},
 			async (progress, token) => {
-				this.progressIndicator = progress;
-
 				token.onCancellationRequested(() => {
 					vscode.window.showInformationMessage("❌ Operation cancelled by user");
 					throw new Error("Operation cancelled by user");
@@ -153,24 +157,18 @@ export class DockerWizard {
 					const step = steps[this.currentStep];
 					const stepKey = `step_${this.currentStep}`;
 
-					// Update progress
-					if (this.progressIndicator) {
-						const percentage = Math.round((this.currentStep / this.totalSteps) * 100);
-						this.progressIndicator.report({
-							message: `Step ${this.currentStep + 1}/${this.totalSteps}: ${step.name}`,
-							increment: percentage,
-						});
-					}
+					progress.report({
+						message: `Step ${this.currentStep + 1}/${this.totalSteps}: ${step.name}`,
+						increment: Math.round((this.currentStep / this.totalSteps) * 100),
+					});
 
-					// Restore state if available
 					if (this.wizardState.has(stepKey)) {
 						const savedState = this.wizardState.get(stepKey);
 						Object.assign(this.config, savedState);
 					}
 
 					try {
-						// Set timeout for user input
-						const result = await this.withTimeout(() => step.fn(), 300000); // 5 minutes timeout
+						const result = await this.withTimeout(() => step.fn(), 300000);
 
 						if (result === "back") {
 							this.currentStep = Math.max(0, this.currentStep - 1);
@@ -182,7 +180,6 @@ export class DockerWizard {
 							return;
 						}
 
-						// Save state for this step
 						this.wizardState.set(stepKey, { ...this.config });
 						await this.saveState();
 						this.currentStep++;
@@ -205,7 +202,7 @@ export class DockerWizard {
 	/**
 	 * Execute a function with timeout
 	 */
-	private withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+	private async withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
 		return Promise.race([
 			fn(),
 			new Promise<T>((_, reject) => {
@@ -292,7 +289,6 @@ export class DockerWizard {
 	 * Ask for language selection with auto-detection
 	 */
 	private async askLanguage(): Promise<"next" | "back" | "cancel"> {
-		// Auto-detect language from workspace
 		const detectedLanguage = await this.detectLanguage();
 
 		const languageConfigs: any[] = [javaConfig, dotnetConfig, pythonConfig, nodejsConfig, rubyConfig, phpConfig, rustConfig, goConfig, cppConfig, cConfig];
@@ -391,7 +387,6 @@ export class DockerWizard {
 
 		const rootPath = workspaceFolder.uri.fsPath;
 
-		// Check for language-specific files
 		const checks: Array<[string, string]> = [
 			["java-jar", "pom.xml"],
 			["java-jar", "build.gradle"],
@@ -434,7 +429,6 @@ export class DockerWizard {
 	private async askPort(): Promise<"next" | "back" | "cancel"> {
 		const defaultPort = this.getConfigValue<number>("defaultPort", 8080);
 
-		// Check if default port is available
 		const portAvailable = await isPortAvailable(defaultPort);
 		const suggestedPort = portAvailable ? defaultPort : findFreePort(defaultPort, new Set([defaultPort]));
 
@@ -499,13 +493,10 @@ export class DockerWizard {
 	}
 
 	/**
-	 * Ask for general options with additional settings
-	 */
-	/**
-	 * Ask for general options with additional settings
+	 * Ask for general options - language-specific options only
 	 */
 	private async askGeneralOptions(): Promise<"next" | "back" | "cancel"> {
-		const options = [
+		const options: any[] = [
 			{
 				label: "$(package) Use Alpine",
 				description: "Smaller image size (where available)",
@@ -524,25 +515,73 @@ export class DockerWizard {
 				detail: "Adds HEALTHCHECK to monitor application status",
 				picked: this.config.enableHealthCheck,
 			},
-			{
-				label: "$(database) Enable Redis",
-				description: "Add Redis for caching/background jobs",
-				detail: "Useful for Rails Sidekiq, Laravel queues, etc.",
-				picked: this.config.enableRedis,
-			},
-			{
-				label: "$(sync) Enable Queue Worker",
-				description: "Add queue worker for background jobs",
-				detail: "For Laravel queue, Rails Sidekiq, etc.",
-				picked: this.config.enableQueueWorker,
-			},
-			{
+		];
+
+		// Python-specific options
+		if (this.config.language === "python") {
+			options.push({
 				label: "$(terminal) Use Virtual Environment",
 				description: "Use Python virtual environment",
 				detail: "Recommended for Python projects",
 				picked: this.config.useVirtualEnv,
-			},
-		];
+			});
+			options.push({
+				label: "$(server) Use Gunicorn",
+				description: "Use Gunicorn WSGI server",
+				detail: "Production-grade server for Django/Flask",
+				picked: this.config.enableGunicorn,
+			});
+		}
+
+		// Redis for Rails, Laravel, Node.js
+		if (this.config.language === "rails" || this.config.language === "laravel" || this.config.language.startsWith("js")) {
+			options.push({
+				label: "$(database) Enable Redis",
+				description: "Add Redis for caching/background jobs",
+				detail: "Useful for Rails Sidekiq, Laravel queues, etc.",
+				picked: this.config.enableRedis,
+			});
+		}
+
+		// Queue Worker for Rails and Laravel
+		if (this.config.language === "rails" || this.config.language === "laravel") {
+			options.push({
+				label: "$(sync) Enable Queue Worker",
+				description: "Add queue worker for background jobs",
+				detail: "For Laravel queue, Rails Sidekiq, etc.",
+				picked: this.config.enableQueueWorker,
+			});
+		}
+
+		// CGO for Go
+		if (this.config.language === "go") {
+			options.push({
+				label: "$(tools) Enable CGO",
+				description: "Enable CGO for C dependencies",
+				detail: "Required for SQLite and some other packages",
+				picked: this.config.cgoEnabled,
+			});
+		}
+
+		// Nginx for Laravel
+		if (this.config.language === "laravel") {
+			options.push({
+				label: "$(globe) Enable Nginx",
+				description: "Add Nginx reverse proxy",
+				detail: "Required for Laravel PHP-FPM setup",
+				picked: this.config.enableNginx,
+			});
+		}
+
+		// PM2 for Node.js
+		if (this.config.language.startsWith("js")) {
+			options.push({
+				label: "$(server) Use PM2",
+				description: "Use PM2 process manager",
+				detail: "Production-grade process manager for Node.js",
+				picked: this.config.enablePm2,
+			});
+		}
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: General Options`;
@@ -564,9 +603,31 @@ export class DockerWizard {
 			this.config.useAlpine = selected.some((o) => o.label.includes("Alpine"));
 			this.config.enableDebug = selected.some((o) => o.label.includes("Debug"));
 			this.config.enableHealthCheck = selected.some((o) => o.label.includes("Health"));
-			this.config.enableRedis = selected.some((o) => o.label.includes("Redis"));
-			this.config.enableQueueWorker = selected.some((o) => o.label.includes("Queue Worker"));
-			this.config.useVirtualEnv = selected.some((o) => o.label.includes("Virtual Environment"));
+
+			if (this.config.language === "python") {
+				this.config.useVirtualEnv = selected.some((o) => o.label.includes("Virtual Environment"));
+				this.config.enableGunicorn = selected.some((o) => o.label.includes("Gunicorn"));
+			}
+
+			if (this.config.language === "rails" || this.config.language === "laravel" || this.config.language.startsWith("js")) {
+				this.config.enableRedis = selected.some((o) => o.label.includes("Redis"));
+			}
+
+			if (this.config.language === "rails" || this.config.language === "laravel") {
+				this.config.enableQueueWorker = selected.some((o) => o.label.includes("Queue Worker"));
+			}
+
+			if (this.config.language === "go") {
+				this.config.cgoEnabled = selected.some((o) => o.label.includes("CGO"));
+			}
+
+			if (this.config.language === "laravel") {
+				this.config.enableNginx = selected.some((o) => o.label.includes("Nginx"));
+			}
+
+			if (this.config.language.startsWith("js")) {
+				this.config.enablePm2 = selected.some((o) => o.label.includes("PM2"));
+			}
 
 			const selectedLabels = selected.map((o) => o.label.split(" ")[1]).join(", ");
 			if (selectedLabels) {
@@ -620,19 +681,11 @@ export class DockerWizard {
 	}
 
 	/**
-	 * Ask for language-specific settings with skip option
+	 * Ask for language-specific settings
 	 */
 	private async askLanguageSpecificSettings(): Promise<"next" | "back" | "cancel"> {
 		const langConfig = this.languageConfigs.get(this.config.language);
 		if (!langConfig) return "next";
-
-		// Add skip option
-		const skipOption = {
-			label: "$(chevron-right) Skip - Use Defaults",
-			description: "Skip language-specific settings",
-			detail: "Use default settings for this language",
-			value: "skip",
-		};
 
 		switch (this.config.language) {
 			case "java-jar":
@@ -682,15 +735,21 @@ export class DockerWizard {
 			if (buildTool?.value) this.config.buildTool = buildTool.value as "maven" | "gradle";
 		}
 
-		// JDK Version with custom option
-		const jdkVersions = langConfig.jdkVersions.map((v: any) => ({
+		// JDK Version with custom option - filter incompatible versions
+		const availableJdkVersions = langConfig.jdkVersions.filter((v: any) => {
+			if (this.config.buildTool === "gradle" && v.value === "8") return false;
+			if (this.config.buildTool === "gradle" && v.value === "25") return false;
+			if (this.config.buildTool === "maven" && v.value === "25") return false;
+			return true;
+		});
+
+		const jdkVersions = availableJdkVersions.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description,
 			detail: v.detail,
 			value: v.value,
 		}));
 
-		// Add custom JDK option
 		jdkVersions.push({
 			label: "$(edit) Custom JDK Version",
 			description: "Enter a custom JDK version",
@@ -782,7 +841,14 @@ export class DockerWizard {
 		}
 
 		// Node version with LTS distinction
-		const nodeVersions = langConfig.versions.map((v: any) => ({
+		const framework = this.config.framework;
+		const availableVersions = langConfig.versions.filter((v: any) => {
+			if (framework === "angular" && parseInt(v.value) < 18) return false;
+			if (framework === "nextjs" && parseInt(v.value) < 18) return false;
+			return true;
+		});
+
+		const nodeVersions = availableVersions.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description === "LTS" ? "$(check) LTS" : v.description,
 			detail: v.detail,
@@ -804,10 +870,10 @@ export class DockerWizard {
 				value: f.value,
 			}));
 
-			const framework = await this.showQuickPickWithBack("Select Framework", frameworks);
-			if (framework === "back") return "back";
-			if (framework === "cancel") return "cancel";
-			if (framework?.value) this.config.framework = framework.value;
+			const frameworkPick = await this.showQuickPickWithBack("Select Framework", frameworks);
+			if (frameworkPick === "back") return "back";
+			if (frameworkPick === "cancel") return "cancel";
+			if (frameworkPick?.value) this.config.framework = frameworkPick.value;
 		}
 
 		return "next";
@@ -817,7 +883,6 @@ export class DockerWizard {
 	 * Ask for Python settings
 	 */
 	private async askPythonSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
-		// Framework
 		const frameworks = langConfig.frameworks.map((f: any) => ({
 			label: `$(${f.icon}) ${f.label}`,
 			description: f.description,
@@ -830,7 +895,6 @@ export class DockerWizard {
 		if (framework === "cancel") return "cancel";
 		if (framework?.value) this.config.framework = framework.value;
 
-		// Python version
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description,
@@ -880,15 +944,6 @@ export class DockerWizard {
 		if (version === "back") return "back";
 		if (version === "cancel") return "cancel";
 		if (version?.value) this.config.goVersion = version.value;
-
-		// CGO option
-		const cgoOption = await this.showQuickPickWithBack("Enable CGO?", [
-			{ label: "$(check) Yes", description: "Enable CGO for SQLite and other C dependencies", value: "yes" },
-			{ label: "$(x) No", description: "Disable CGO for static binaries", value: "no" },
-		]);
-		if (cgoOption === "back") return "back";
-		if (cgoOption === "cancel") return "cancel";
-		if (cgoOption?.value) this.config.cgoEnabled = cgoOption.value === "yes";
 
 		return "next";
 	}
@@ -947,17 +1002,6 @@ export class DockerWizard {
 		if (version === "cancel") return "cancel";
 		if (version?.value) this.config.rubyVersion = version.value;
 
-		// Ask about Sidekiq
-		if (this.config.enableQueueWorker) {
-			const sidekiqOption = await this.showQuickPickWithBack("Enable Sidekiq?", [
-				{ label: "$(check) Yes", description: "Add Sidekiq for background jobs", value: "yes" },
-				{ label: "$(x) No", description: "Skip Sidekiq", value: "no" },
-			]);
-			if (sidekiqOption === "back") return "back";
-			if (sidekiqOption === "cancel") return "cancel";
-			if (sidekiqOption?.value) this.config.enableSidekiq = sidekiqOption.value === "yes";
-		}
-
 		return "next";
 	}
 
@@ -981,7 +1025,7 @@ export class DockerWizard {
 	}
 
 	/**
-	 * Ask for databases with category grouping
+	 * Ask for databases
 	 */
 	private async askDatabases(): Promise<"next" | "back" | "cancel"> {
 		const databaseManager = new DatabaseManager();
@@ -1123,7 +1167,7 @@ export class DockerWizard {
 	}
 
 	/**
-	 * Generate Docker files
+	 * Generate all Docker files
 	 */
 	private async generateFiles(): Promise<void> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -1142,9 +1186,14 @@ export class DockerWizard {
 		const dockerfileGenerator = new DockerfileGenerator(this.config, langConfig);
 		const dockerComposeGenerator = new DockerComposeGenerator(this.config);
 		const dockerignoreGenerator = new DockerignoreGenerator(this.config);
+		const envFileGenerator = new EnvFileGenerator(this.config);
+		const githubWorkflowGenerator = new GitHubWorkflowGenerator(this.config);
+		const gitlabCIGenerator = new GitLabCIGenerator(this.config);
+		const dockerComposeOverrideGenerator = new DockerComposeOverrideGenerator(this.config);
 
 		const workspacePath = workspaceFolder.uri.fsPath;
-		const filesToWrite = [
+
+		const filesToWrite: Array<{ name: string; content: string }> = [
 			{ name: "Dockerfile", content: dockerfileGenerator.generate() },
 			{ name: "docker-compose.yml", content: dockerComposeGenerator.generate() },
 		];
@@ -1154,15 +1203,31 @@ export class DockerWizard {
 			filesToWrite.push({ name: ".dockerignore", content: dockerignoreGenerator.generate(this.config.language) });
 		}
 
+		filesToWrite.push({ name: ".env.example", content: envFileGenerator.generate() });
+
+		if (this.config.enableDebug) {
+			filesToWrite.push({ name: "docker-compose.override.yml", content: dockerComposeOverrideGenerator.generate() });
+		}
+
+		filesToWrite.push({
+			name: path.join(".github", "workflows", "docker-build.yml"),
+			content: githubWorkflowGenerator.generate(),
+		});
+		filesToWrite.push({
+			name: ".gitlab-ci.yml",
+			content: gitlabCIGenerator.generate(),
+		});
+
 		try {
 			const writtenFiles: string[] = [];
 			for (const file of filesToWrite) {
 				const filePath = path.join(workspacePath, file.name);
+				const dir = path.dirname(filePath);
+				await fs.ensureDir(dir);
 				await safeWriteFile(filePath, file.content);
 				writtenFiles.push(file.name);
 			}
 
-			// Clean up state file
 			const statePath = path.join(workspacePath, ".dockeryzen-state.json");
 			if (await fileExists(statePath)) {
 				await fs.remove(statePath);
@@ -1170,7 +1235,7 @@ export class DockerWizard {
 
 			const showNotification = this.getConfigValue<boolean>("showSuccessNotification", true);
 			if (showNotification) {
-				const action = await vscode.window.showInformationMessage(`🎉 Docker files generated successfully! (${writtenFiles.join(", ")})`, "Open Dockerfile", "Open docker-compose.yml");
+				const action = await vscode.window.showInformationMessage(`🎉 Docker files generated successfully! (${writtenFiles.length} files)`, "Open Dockerfile", "Open docker-compose.yml");
 
 				if (action === "Open Dockerfile") {
 					const doc = await vscode.workspace.openTextDocument(path.join(workspacePath, "Dockerfile"));

@@ -23,7 +23,8 @@ export function sanitizeName(name: string): string {
 	return name
 		.toLowerCase()
 		.replace(/[^a-z0-9-_]/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replace(/^-+|-+$/g, "")
+		.substring(0, 63); // Docker container name limit
 }
 
 /**
@@ -70,29 +71,6 @@ export async function fileExists(filePath: string): Promise<boolean> {
 }
 
 /**
- * Get Docker image name for a service type
- */
-export function getImageName(type: string, version?: string): string {
-	const imageMap: Record<string, string> = {
-		postgresql: "postgres",
-		mysql: "mysql",
-		mariadb: "mariadb",
-		redis: "redis",
-		mongodb: "mongo",
-		elasticsearch: "elasticsearch",
-		kafka: "apache/kafka",
-		rabbitmq: "rabbitmq",
-		nginx: "nginx",
-		grafana: "grafana/grafana",
-		prometheus: "prom/prometheus",
-		keycloak: "quay.io/keycloak/keycloak",
-		minio: "minio/minio",
-	};
-	const baseImage = imageMap[type] || type;
-	return version ? `${baseImage}:${version}` : baseImage;
-}
-
-/**
  * Safely write a file with backup and user confirmation
  */
 export async function safeWriteFile(filePath: string, content: string): Promise<void> {
@@ -129,7 +107,7 @@ export async function safeWriteFile(filePath: string, content: string): Promise<
 }
 
 /**
- * Find a free port starting from a given port
+ * Find a free port
  */
 export function findFreePort(startPort: number, usedPorts: Set<number>): number {
 	let port = startPort;
@@ -140,7 +118,7 @@ export function findFreePort(startPort: number, usedPorts: Set<number>): number 
 }
 
 /**
- * Check if a port is available on the system
+ * Check if a port is available
  */
 export async function isPortAvailable(port: number): Promise<boolean> {
 	const net = await import("net");

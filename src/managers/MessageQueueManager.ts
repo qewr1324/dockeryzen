@@ -4,6 +4,9 @@ import { validatePort } from "../utils/helpers.js";
 
 import messageQueuesConfig from "../config/message-queues.json" with { type: "json" };
 
+/**
+ * MessageQueueManager class - Manages message queue selection and configuration
+ */
 export class MessageQueueManager {
 	private queues: MessageQueueConfig[] = [];
 

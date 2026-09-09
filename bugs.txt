@@ -1,5 +1,7 @@
 همه این چیزایی که گفتی رو درست کن:
 
+Part-1---------------------------------------------------------------------
+
 ✅ 1. استفاده از onDidAccept در QuickPick با canSelectMany
 ✅ 2. بازگشت بی‌نهایت در showSelectedDatabasesWithEdit
 ✅ 3. نشت حافظه (Memory Leak) در Event Handlers
@@ -149,5 +151,200 @@
 ✅ 148. مشکل در DockerComposeGenerator - No Network Isolation Option
 ✅ 149. باگ در generateDatabaseService - Elasticsearch Missing Memory Settings
 ✅ 150. مشکل نهایی - No Documentation in Code
+
+Part-2---------------------------------------------------------------------
+
+✅ 151. Virtual Environment نمایش داده می‌شه برای Java
+✅ 152. Redis نمایش داده می‌شه برای همه زبان‌ها
+✅ 153. Queue Worker نمایش داده می‌شه برای همه زبان‌ها
+✅ 154. CGO نمایش داده می‌شه برای همه زبان‌ها
+✅ 155. COPY JAR با دو wildcard مشکل داره
+✅ 156. خط خالی برای Health Check وقتی غیرفعاله
+✅ 157. Gradle COPY با پوشه ناموجود
+✅ 158. Maven COPY با پوشه ناموجود
+✅ 159. JDK 8 با Gradle 8 ناسازگار هست
+✅ 160. Tomcat با JDK 8 ناسازگار هست
+✅ 161. Health Check خط خالی در Dockerfile
+✅ 162. Gradle Wrapper با JDK 8
+✅ 163. Maven با JDK 8 و Multi-module
+✅ 164. Docker Compose بدون version
+✅ 165. Volume برای MySQL در Alpine
+✅ 166. PostgreSQL با JDK 8 در Docker Compose
+✅ 167. Angular با Node 18
+✅ 168. Next.js با Node 18
+✅ 169. Python با Alpine و Pillow
+✅ 170. Rust با Alpine و musl
+✅ 171. Go با CGO و Alpine
+✅ 172. Docker Compose با depends_on و health check
+✅ 173. Laravel بدون Nginx در Docker Compose
+✅ 174. Rails بدون PostgreSQL در Docker Compose
+✅ 175. Java با Gradle و JDK 25
+✅ 176. Maven با JDK 25
+✅ 177. Docker Compose با نام‌های طولانی
+✅ 178. Volume Path برای برخی دیتابیس‌ها اشتباهه
+✅ 179. Dockerfile برای Java WAR بدون Tomcat Manager
+✅ 180. Docker Compose بدون network aliases
+✅ 181. Dockerfile برای Java WAR با JDK 25 به Tomcat 11 نگاشت می‌شه
+✅ 182. Python با Django و Gunicorn
+✅ 183. Flask با Gunicorn
+✅ 184. FastAPI با Uvicorn Workers
+✅ 185. Node.js Backend با PM2 یا similar
+✅ 186. Laravel بدون Storage Link
+✅ 187. Rails بدون Assets Precompile در Build Stage
+✅ 188. Go بدون Version Info
+✅ 189. Rust بدون Build Args
+✅ 190. .NET بدون Self-contained Publish
+✅ 191. Java بدون JVM Options در Docker Compose
+✅ 192. Kafka بدون Zookeeper برای نسخه‌های قدیمی
+✅ 193. RabbitMQ بدون Management Plugin
+✅ 194. ActiveMQ بدون Web Console
+✅ 195. PostgreSQL بدون Extension
+✅ 196. MySQL بدون Character Set
+✅ 197. MongoDB بدون Authentication Database
+✅ 198. Redis بدون Maxmemory
+✅ 199. Elasticsearch بدون Security
+✅ 200. Cassandra بدون Replication Factor
+✅ 201. Docker Compose بدون Logging Configuration
+✅ 202. Docker Compose بدون Resource Limits
+✅ 203. Dockerfile بدون .dockerignore context
+✅ 204. Docker Compose بدون Environment File
+✅ 205. Java بدون Spring Boot DevTools Exclusion
+✅ 206. Python بدون pip cache cleanup
+✅ 207. Node.js بدون npm cache cleanup
+✅ 208. Go بدون Build Cache Cleanup
+✅ 209. Rust بدون Target Cleanup
+✅ 210. Java بدون Maven Repository Cleanup
+✅ 211. Docker Compose بدون Network Policy
+✅ 212. Dockerfile بدون Security Scanning
+✅ 213. Docker Compose بدون Backup Strategy
+✅ 214. Dockerfile بدون Health Check برای Build Stage
+✅ 215. Docker Compose بدون Service Discovery
+✅ 216. Java بدون JVM Heap Size
+✅ 217. Python بدون Gunicorn Workers Count
+✅ 218. Node.js بدون Cluster Mode
+✅ 219. Laravel بدون Queue Worker در Compose
+✅ 220. Rails بدون Sidekiq در Compose
+✅ 221. Dockerfile برای Java WAR با Jetty و JDK 8
+✅ 222. Python با Django و Static Files
+✅ 223. Python با Django و Migrations
+✅ 224. Node.js با Next.js و Image Optimization
+✅ 225. Laravel بدون Composer Autoload Optimization
+✅ 226. Rails بدون Bootsnap Cache
+✅ 227. Go بدون Cross-compilation برای Scratch
+✅ 228. Rust بدون Static Linking
+✅ 229. .NET بدون ReadyToRun
+✅ 230. Docker Compose بدون Read-only Filesystem
+✅ 231. Dockerfile بدون USER بعد از COPY
+✅ 232. Docker Compose بدون Init Process
+✅ 233. PostgreSQL بدون Connection Pooling
+✅ 234. MySQL بدون Slow Query Log
+✅ 235. MongoDB بدون Replica Set
+✅ 236. Redis بدون Persistence Config
+✅ 237. Elasticsearch بدون Index Settings
+✅ 238. Kafka بدون Topic Retention
+✅ 239. RabbitMQ بدون Queue Durability
+✅ 240. Docker Compose بدون Volume Backup
+✅ 241. Dockerfile بدون ARG برای Version
+✅ 242. Docker Compose بدون Image Version Pinning
+✅ 243. Java بدون Garbage Collection Tuning
+✅ 244. Python بدون GIL Optimization
+✅ 245. Node.js بدون Memory Limit
+✅ 246. Docker Compose بدون Service Dependencies Health Check
+✅ 247. Laravel بدون Nginx در Compose (تکرار)
+✅ 248. Rails بدون Puma Workers
+✅ 249. Dockerfile بدون Multi-stage برای Python
+✅ 250. Dockerfile بدون Multi-stage برای Node.js
+✅ 251. Docker Compose بدون Network Encryption
+✅ 252. Dockerfile بدون Security Scan
+✅ 253. Docker Compose بدون Secret Management
+✅ 254. PostgreSQL بدون SSL
+✅ 255. MySQL بدون SSL
+✅ 256. MongoDB بدون Authentication
+✅ 257. Redis بدون Authentication
+✅ 258. Docker Compose بدون Resource Monitoring
+✅ 259. Dockerfile بدون Layer Caching Optimization
+✅ 260. Docker Compose بدون Service Restart Limits
+✅ 261. Dockerfile برای Java با Spring Boot و Layered JAR
+✅ 262. Python با Django و WhiteNoise
+✅ 263. Node.js با Express و Helmet
+✅ 264. Laravel بدون Queue Connection
+✅ 265. Rails بدون Action Cable
+✅ 266. Go بدون Graceful Shutdown
+✅ 267. Rust بدون Graceful Shutdown
+✅ 268. .NET بدون Health Check Middleware
+✅ 269. Docker Compose بدون Readiness Probe
+✅ 270. PostgreSQL بدون Vacuum Settings
+✅ 271. MySQL بدون Buffer Pool Size
+✅ 272. MongoDB بدون WiredTiger Cache
+✅ 273. Redis بدون Eviction Policy
+✅ 274. Elasticsearch بدون Heap Size درصدی
+✅ 275. Kafka بدون Replication Factor
+✅ 276. RabbitMQ بدون Memory Threshold
+✅ 277. Docker Compose بدون Volume Encryption
+✅ 278. Dockerfile بدون .dockerignore کامل
+✅ 279. Docker Compose بدون Service Namespace
+✅ 280. Java بدون Spring Boot Actuator
+✅ 281. Python بدون Sentry Integration
+✅ 282. Node.js بدون Winston Logging
+✅ 283. Laravel بدون Telescope
+✅ 284. Rails بدون Skylight
+✅ 285. Docker Compose بدون Prometheus Exporter
+✅ 286. PostgreSQL بدون pg_stat_statements
+✅ 287. MySQL بدون Performance Schema
+✅ 288. MongoDB بدون Profiler
+✅ 289. Redis بدون Slowlog
+✅ 290. Docker Compose بدون Backup Container
+✅ 291. Dockerfile بدون BuildKit Features
+✅ 292. Docker Compose بدون BuildKit
+✅ 293. Java بدون Class Data Sharing
+✅ 294. Python بدون Bytecode Cache
+✅ 295. Node.js بدون V8 Code Cache
+✅ 296. Docker Compose بدون Horizontal Scaling
+✅ 297. Dockerfile بدون OCI Labels
+✅ 298. Docker Compose بدون Service Labels
+✅ 299. Java بدون JMX
+✅ 300. Docker Compose بدون DNS Configuration
+✅ 301. Dockerfile برای Java با Quarkus و Native Image
+✅ 302. Dockerfile برای Java با Micronaut و GraalVM
+✅ 303. Python با Django و Channels
+✅ 304. Node.js با Socket.IO
+✅ 305. Laravel بدون Echo Server
+✅ 306. Rails بدون Action Cable Redis
+✅ 307. Go بدون WebSocket Support
+✅ 308. Docker Compose بدون Service Mesh
+✅ 309. PostgreSQL بدون Logical Replication
+✅ 310. MySQL بدون Replication
+✅ 311. MongoDB بدون Sharding
+✅ 312. Redis بدون Cluster Mode
+✅ 313. Docker Compose بدون Rolling Updates
+✅ 314. Dockerfile بدون Multi-arch Support
+✅ 315. Docker Compose بدون Platform Specification
+✅ 316. Java بدون JVM Flight Recorder
+✅ 317. Python بدون ASGI Server
+✅ 318. Node.js بدون Worker Threads
+✅ 319. Docker Compose بدون Config Validation
+✅ 320. Dockerfile بدون Lint
+✅ 321. Dockerfile برای Java با Spring Boot و Docker Layers
+✅ 322. Python با Celery و Redis
+✅ 323. Node.js با Bull Queue و Redis
+✅ 324. Laravel بدون Horizon
+✅ 325. Rails بدون Sidekiq Web UI
+✅ 326. Docker Compose بدون Service Account
+✅ 327. PostgreSQL بدون Point-in-Time Recovery
+✅ 328. MySQL بدون Binary Log
+✅ 329. MongoDB بدون Oplog
+✅ 330. Redis بدون RDB Snapshotting
+✅ 331. Docker Compose بدون Config Map
+✅ 332. Dockerfile بدون Build-time Secrets
+✅ 333. Docker Compose بدون Runtime Secrets
+✅ 334. Java بدون Security Manager
+✅ 335. Python بدون Virtual Environment Isolation
+✅ 336. Node.js بدون Package Lock
+✅ 337. Docker Compose بدون Zero Downtime Deployment
+✅ 338. Dockerfile بدون Immutable Tags
+✅ 339. Docker Compose بدون Image Pull Policy
+✅ 340. Dockerfile بدون Base Image Update Check
+
+
 
 همرو درست کن و فایل کامل رو بده من.

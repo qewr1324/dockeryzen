@@ -9,24 +9,10 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log("Dockeryzen is now active!");
 
 	try {
-		// Telemetry setup
-		const telemetry = {
-			activationTime: Date.now(),
-			vscodeVersion: vscode.version,
-			platform: process.platform,
-			nodeVersion: process.version,
-		};
-		console.log("Dockeryzen telemetry:", telemetry);
-
-		/**
-		 * Command: Generate Docker files from wizard
-		 */
 		const generateCommand = vscode.commands.registerCommand("dockeryzen.generateFromConfig", async () => {
 			try {
-				const startTime = Date.now();
 				const wizard = new DockerWizard(context);
 				await wizard.start();
-				console.log(`Dockeryzen generation completed in ${Date.now() - startTime}ms`);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Unknown error occurred";
 				vscode.window.showErrorMessage(`Dockeryzen Error: ${message}`);
@@ -34,9 +20,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		/**
-		 * Command: Open VSCode settings for Dockeryzen
-		 */
 		const settingsCommand = vscode.commands.registerCommand("dockeryzen.openSettings", async () => {
 			try {
 				await vscode.commands.executeCommand("workbench.action.openSettings", "@ext:GhurbeSABZI.dockeryzen");
@@ -47,9 +30,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		/**
-		 * Command: Open or create Dockeryzen config file
-		 */
 		const configSettingsCommand = vscode.commands.registerCommand("dockeryzen.openConfigSettings", async () => {
 			try {
 				const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -84,7 +64,6 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 
 		context.subscriptions.push(generateCommand, settingsCommand, configSettingsCommand);
-		console.log("Dockeryzen commands registered successfully");
 	} catch (error) {
 		console.error("Failed to activate Dockeryzen:", error);
 		vscode.window.showErrorMessage("Failed to activate Dockeryzen extension");
@@ -93,9 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 /**
  * Deactivates the Dockeryzen extension
- * Cleans up any resources
  */
 export function deactivate() {
 	console.log("Dockeryzen is now deactivated!");
-	// Cleanup logic if needed
 }

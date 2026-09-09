@@ -120,9 +120,6 @@ export class DatabaseManager {
 		});
 	}
 
-	/**
-	 * Get all databases from config files
-	 */
 	private getAllDatabases(): any[] {
 		const allDatabases: any[] = [];
 		const configs: any[] = [sqlDatabases, nosqlDatabases, keyValueDatabases, wideColumnDatabases, graphDatabases, timeSeriesDatabases, searchEngineDatabases, newsqlDatabases, vectorDatabases];
@@ -141,9 +138,6 @@ export class DatabaseManager {
 		return allDatabases;
 	}
 
-	/**
-	 * Show selected databases for editing
-	 */
 	private async showSelectedDatabasesWithEdit(selectedDbs: any[], currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Databases`;
@@ -187,7 +181,6 @@ export class DatabaseManager {
 						cleanup();
 
 						if (selected.removed) {
-							// Skip removed items
 							const remaining = selectedDbs.filter((d: any) => d.value !== selected.value);
 							const result = await this.showSelectedDatabasesWithEdit(remaining, currentStep, totalSteps);
 							resolve(result);
@@ -225,15 +218,9 @@ export class DatabaseManager {
 					if (button.tooltip === "Remove Selected") {
 						const selected = quickPick.selectedItems[0] as any;
 						if (selected) {
-							// Mark as removed
 							selected.removed = true;
-							selected.label = `$(x) ${selected.label}`;
-							selected.description = "Will be removed";
-
-							// Remove from databases list
 							this.databases = this.databases.filter((d) => d.type !== selected.value);
 
-							// Refresh items
 							quickPick.items = selectedDbs
 								.filter((d: any) => !d.removed)
 								.map((db) => ({
@@ -293,9 +280,6 @@ export class DatabaseManager {
 		});
 	}
 
-	/**
-	 * Get volume path for database type
-	 */
 	private getVolumePath(dbType: string): string {
 		const volumePaths: Record<string, string> = {
 			postgresql: "/var/lib/postgresql/data",
@@ -322,13 +306,24 @@ export class DatabaseManager {
 			memcached: "/data",
 			etcd: "/etcd-data",
 			aerospike: "/opt/aerospike/data",
+			hbase: "/data",
+			bigtable: "/data",
+			janusgraph: "/var/lib/janusgraph",
+			dgraph: "/dgraph",
+			prometheus: "/prometheus",
+			opentsdb: "/data",
+			solr: "/var/solr",
+			meilisearch: "/meili_data",
+			typesense: "/data",
+			tidb: "/data",
+			ravendb: "/opt/RavenDB/Server/RavenData",
+			couchbase: "/opt/couchbase/var",
+			dynamodb: "/home/dynamodblocal/data",
+			db2: "/database",
 		};
 		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
-	/**
-	 * Ask for database configuration
-	 */
 	private async askDatabaseConfig(db: any, currentStep: number, totalSteps: number): Promise<DatabaseConfig | "back" | "cancel" | undefined> {
 		const configMethod = await this.showQuickPickWithBack(
 			`Configure ${db.label}`,
@@ -374,8 +369,7 @@ export class DatabaseManager {
 				return undefined;
 			}
 
-			// Test connection with timeout
-			const connectionTest = await this.testConnection(url, db.value);
+			const connectionTest = await this.testConnection(url);
 			if (!connectionTest) {
 				const proceed = await vscode.window.showWarningMessage("Could not connect to the database. Do you want to continue anyway?", "Yes", "No");
 				if (proceed !== "Yes") {
@@ -409,7 +403,6 @@ export class DatabaseManager {
 		if (version === "cancel") return "cancel";
 		if (!version) return undefined;
 
-		// Internal port
 		const internalPort = await this.showInputBoxWithBack(`Enter ${db.label} Internal Port`, db.defaultPort.toString(), currentStep, totalSteps);
 		if (internalPort === "back") return "back";
 		if (internalPort === "cancel") return "cancel";
@@ -421,7 +414,6 @@ export class DatabaseManager {
 			return undefined;
 		}
 
-		// External port
 		const externalPort = await this.showInputBoxWithBack(`Enter ${db.label} External Port`, internalPort, currentStep, totalSteps);
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
@@ -433,7 +425,6 @@ export class DatabaseManager {
 			return undefined;
 		}
 
-		// Database name
 		let databaseName: string | undefined;
 		if (db.defaultDatabase) {
 			const dbName = await this.showInputBoxWithBack(`Enter Database Name for ${db.label}`, db.defaultDatabase, currentStep, totalSteps);
@@ -442,13 +433,11 @@ export class DatabaseManager {
 			databaseName = dbName;
 		}
 
-		// Username
 		const username = await this.showInputBoxWithBack(`Enter Username for ${db.label}`, db.defaultUser, currentStep, totalSteps);
 		if (username === "back") return "back";
 		if (username === "cancel") return "cancel";
 		if (!username) return undefined;
 
-		// Password
 		const password = await this.showInputBoxWithBack(`Enter Password for ${db.label}`, db.value === "mssql" ? "Root1234!" : "root", currentStep, totalSteps, true);
 		if (password === "back") return "back";
 		if (password === "cancel") return "cancel";
@@ -462,7 +451,6 @@ export class DatabaseManager {
 			}
 		}
 
-		// Alpine option
 		const useAlpine = await this.showQuickPickWithBack(
 			`Use Alpine Version for ${db.label}?`,
 			[
@@ -490,18 +478,12 @@ export class DatabaseManager {
 		};
 	}
 
-	/**
-	 * Validate URL format
-	 */
 	private validateUrl(url: string): boolean {
 		const urlPattern = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s]+$/;
 		return urlPattern.test(url);
 	}
 
-	/**
-	 * Test database connection with timeout
-	 */
-	private async testConnection(url: string, dbType: string): Promise<boolean> {
+	private async testConnection(url: string): Promise<boolean> {
 		try {
 			const net = await import("net");
 			const urlObj = new URL(url);
@@ -530,9 +512,6 @@ export class DatabaseManager {
 		}
 	}
 
-	/**
-	 * Validate MSSQL password
-	 */
 	private validateMssqlPassword(password: string): string | null {
 		if (password.length < 8) {
 			return "MSSQL password must be at least 8 characters long";
@@ -552,9 +531,6 @@ export class DatabaseManager {
 		return null;
 	}
 
-	/**
-	 * Show quick pick with back button
-	 */
 	private showQuickPickWithBack(title: string, items: any[], currentStep: number, totalSteps: number): Promise<any> {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: ${title}`;
@@ -601,9 +577,6 @@ export class DatabaseManager {
 		});
 	}
 
-	/**
-	 * Show input box with back button
-	 */
 	private showInputBoxWithBack(title: string, value: string, currentStep: number, totalSteps: number, isPassword = false): Promise<string | "back" | "cancel"> {
 		const inputBox = vscode.window.createInputBox();
 		inputBox.title = `Step ${currentStep + 1}/${totalSteps}: ${title}`;
