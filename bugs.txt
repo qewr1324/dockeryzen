@@ -1,0 +1,155 @@
+همه این چیزایی که گفتی رو درست کن:
+
+1. استفاده از onDidAccept در QuickPick با canSelectMany
+2. بازگشت بی‌نهایت در showSelectedDatabasesWithEdit
+3. نشت حافظه (Memory Leak) در Event Handlers
+4. مشکل در askJavaSettings - نوع buildTool
+5. پورت‌های تکراری در Debug Mode
+6. عدم اعتبارسنجی در askServiceConfig
+7. مشکل در generateDatabaseService - Volume Path
+8. عدم بررسی وجود فایل‌های موجود
+9. مشکل در askVersionSettings
+10. باگ در DockerWizard.start() - Navigation
+11. مشکل در Event Handler های onDidHide
+12. عدم استفاده از تنظیمات VSCode
+13. باگ در getJavaBuildStage - Gradle
+14. مشکل در Health Check برای برخی زبان‌ها
+15. مشکل در askGeneralOptions - عدم همگام‌سازی انتخاب‌ها
+16. باگ در showQuickPickWithBack - عدم بازگشت به مرحله قبلی در Sub-Steps
+17. مشکل در ServiceManager - Duplicate Services
+18. عدم پاکسازی this.databases در DatabaseManager
+19. باگ در DockerWizard.start() - State Preservation
+20. مشکل در generateMainService() - Environment Variables
+21. باگ در generateDatabaseService() - Volume Mount برای برخی دیتابیس‌ها
+22. مشکل در Dockerfile برای Python - Alpine
+23. باگ در generateRustDockerfile() - Build Cache Issue
+24. مشکل در generateDotNetDockerfile() - Project Name with Spaces
+25. عدم بررسی workspaceFolder در ابتدای wizard
+26. باگ در askLanguage() - Duplicate Labels
+27. مشکل در getImageName() - استفاده از Type Alias نادرست
+28. عدم پشتیبانی از Docker Compose v2 syntax
+29. باگ در generateJavaWarDockerfile() - Non-root user
+30. مشکل در askDatabaseConfig() - Password Validation:
+31. باگ در generateMessageQueueService() - Kafka Configuration
+32. عدم مدیریت خطا در fs.writeFile
+33. مشکل در DockerignoreGenerator - Static Content
+34. باگ در activate() - Duplicate Command Registration
+35. عدم استفاده از context.subscriptions برای همه resources
+36. مشکل در askJavaSettings - عدم پشتیبانی از Kotlin DSL
+37. باگ در generateJSFrontendDockerfile - Angular SSR
+38. مشکل در generatePythonDockerfile - Missing requirements.txt
+39. باگ در getHealthCheck - Port Mismatch برای Docker Compose
+40. مشکل در checkPortConflicts - Debug Port Conflict
+41. باگ در generateDatabaseService - Volume برای External URL
+42. مشکل در DockerWizard.start() - No Validation for Required Fields
+43. باگ در showSelectedDatabasesWithEdit - Endless Loop
+44. مشکل در generateRailsDockerfile - Missing Database Config
+45. باگ در generateLaravelDockerfile - Missing Nginx
+46. مشکل در askNodeSettings - عدم تشخیص package manager
+47. باگ در generateGoDockerfile - Missing CA Certificates for Scratch
+48. مشکل در generateCppDockerfile - Wrong Compile Command
+49. باگ در generateAdditionalService - Missing Command for Some Services
+50. مشکل در askDatabaseConfig - URL Validation
+51. باگ در DockerComposeGenerator - Missing Health Check
+52. مشکل در askGeneralOptions - Default Values Not Applied
+53. باگ در askPort - Default Port from Config Not Used
+54. مشکل در activate() - Missing openConfigSettings Command
+55. باگ در generateDockerignore - Overly Aggressive Ignoring
+56. مشکل در askProjectName - Race Condition در InputBox
+57. باگ در generateJavaJarDockerfile - Hardcoded JAR Name
+58. مشکل در askVersionSettings - Wrong Property Assignment
+59. باگ در generateMessageQueueService - Missing Zookeeper
+60. مشکل در generateDatabaseService - MSSQL Password Requirements
+61. باگ در generatePythonDockerfile - Wrong Start Command
+62. مشکل در askLanguageSpecificSettings - Switch Case Coverage
+63. باگ در generateRustDockerfile - Binary Name Mismatch
+64. مشکل در DockerComposeGenerator.generate - Empty Volumes
+65. باگ در generateDatabaseService - InfluxDB Version Compatibility
+66. مشکل در generateGoDockerfile - Missing Static Files
+67. باگ در askNodeSettings - Missing TypeScript Support
+68. مشکل در generateDotNetDockerfile - Missing Solution File
+69. باگ در showInputBoxWithBack - No Port Validation
+70. مشکل در generateAdditionalService - Nginx Missing Volume
+71. باگ در askDatabases - Duplicate Selection
+72. مشکل در generateLaravelDockerfile - Missing Storage Permissions
+73. باگ در DockerWizard - No Progress Indicator
+74. مشکل در generateFiles - No Atomic Write
+75. باگ در activate - No Error Handling for Deactivate
+76. مشکل در getNodeImage - Bookworm vs Slim
+77. باگ در generateMainService - Missing Depends On
+78. مشکل در askQueueConfig - Missing Validation
+79. باگ در generateDatabaseService - Volume for Keycloak
+80. مشکل در generateJSBackendDockerfile - Missing Build Step
+81. باگ در askGeneralOptions - Missing Visual Feedback
+82. مشکل در generateJavaBuildStage - Maven Wrapper Not Detected
+83. باگ در getServerImage - Tomcat Version Mapping
+84. مشکل در generateRailsDockerfile - Missing Node.js for Assets
+85. باگ در askJavaSettings - No Validation for Custom JDK
+86. مشکل در generatePythonDockerfile - Missing System Dependencies
+87. باگ در generateDatabaseService - PostgreSQL Volume Path
+88. مشکل در askLanguage - No Search/Filter
+89. باگ در generateDotNetDockerfile - Missing Runtime Dependencies
+90. مشکل در showSelectedServicesWithEdit - State Loss on Back
+91. باگ در generateMainService - Hardcoded Container Name
+92. مشکل در askDatabaseConfig - No Timeout for External URL
+93. باگ در generateJSFrontendDockerfile - Next.js Static Export
+94. مشکل در DockerComposeGenerator - No DNS Resolution Between Services
+95. باگ در generateGoDockerfile - Missing GOPROXY for Private Repos
+96. مشکل در askNodeSettings - No LTS vs Current Distinction
+97. باگ در generateRustDockerfile - Missing Build Cache Optimization
+98. مشکل در generateLaravelDockerfile - Missing Queue Worker
+99. باگ در activate - No Telemetry or Analytics
+100. مشکل در generateDatabaseService - Missing Health Check
+101. باگ در askPort - No Reserve Port Check
+102. مشکل در generateGenericDockerfile - No Actual Build
+103. باگ در DockerWizard.start() - No Save/Load State
+104. مشکل در askLanguageSpecificSettings - No Skip Option
+105. باگ در generateDatabaseService - Missing depends_on
+106. مشکل در generateMessageQueueService - Kafka Missing Topics
+107. باگ در generatePythonDockerfile - Missing Virtual Environment
+108. مشکل در askJavaSettings - No Multi-Module Support
+109. باگ در generateDotNetDockerfile - Hardcoded Project Name
+110. مشکل در DockerComposeGenerator - No Restart Policy Options
+111. باگ در generateRailsDockerfile - Missing Redis/Sidekiq
+112. مشکل در askDatabases - No Category Grouping
+113. باگ در generateGoDockerfile - Missing Timezone Data
+114. مشکل در generateJSFrontendDockerfile - Angular Missing SSR Files
+115. باگ در activate - No Error Recovery
+116. مشکل در generateDatabaseService - Oracle Volume Path
+117. باگ در askGeneralOptions - No Tooltip
+118. مشکل در generateCppDockerfile - Missing Build Tools
+119. باگ در showQuickPickWithBack - No Multi-select Support
+121. باگ در generateDatabaseService - Cassandra Missing JVM Options
+122. مشکل در generateLaravelDockerfile - No Supervisor
+123. باگ در DockerWizard - No Validation Before Generate
+124. مشکل در generateNodeJSFrontend - Missing Environment Variables
+125. باگ در generateGoDockerfile - Missing Static Files from Build
+126. مشکل در DockerWizard.start() - No Timeout for User Input
+127. باگ در askJavaSettings - No Kotlin/Groovy Support
+128. مشکل در generateDatabaseService - Missing MongoDB Auth Database
+129. باگ در askNodeSettings - Missing Bun/Deno Support
+130. مشکل در generateRustDockerfile - Missing Health Check
+131. باگ در askGeneralOptions - No Custom Debug Port
+132. مشکل در generatePythonDockerfile - No Non-root User
+133. باگ در DockerComposeGenerator.generate() - No Validation for Duplicate Names
+134. مشکل در generateLaravelDockerfile - Missing Composer Optimize
+135. باگ در askDatabaseConfig - No Connection Test
+136. مشکل در generateJSFrontendDockerfile - Angular Build Output Path
+137. باگ در generateDotNetDockerfile - Missing NuGet Config
+138. مشکل در showSelectedDatabasesWithEdit - No Remove Option
+139. باگ در generateMainService - No Volume for Development
+140. مشکل در askLanguage - No Framework Detection
+141. باگ در generateRailsDockerfile - Missing Database Migration
+142. مشکل در generateDatabaseService - Redis Missing Persistence
+143. باگ در askPort - No Dynamic Port Suggestion
+144. مشکل در generateGoDockerfile - Missing CGO_ENABLED for Some Projects
+145. باگ در activate - Missing Command for openConfigSettings
+دستور dockeryzen.openConfigSettings در activationEvents تعریف شده اما در activate() ثبت نشده است.
+146. مشکل در generateCppDockerfile - Missing Debug Support
+147. باگ در askGeneralOptions - No Alpine Warning
+148. مشکل در DockerComposeGenerator - No Network Isolation Option
+149. باگ در generateDatabaseService - Elasticsearch Missing Memory Settings
+150. مشکل نهایی - No Documentation in Code
+
+
+همرو درست کن و فایل کامل رو بده من.

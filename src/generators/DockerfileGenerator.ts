@@ -38,8 +38,11 @@ export class DockerfileGenerator {
 	}
 
 	private getDebugPort(): string {
-		const lang = this.config.language;
+		if (this.config.debugPort) {
+			return this.config.debugPort.toString();
+		}
 
+		const lang = this.config.language;
 		if (lang.startsWith("java")) return "5005";
 		if (lang.startsWith("js")) return "9229";
 		if (lang === "python") return "5678";
@@ -47,16 +50,15 @@ export class DockerfileGenerator {
 		if (lang === "go") return "2345";
 		if (lang === "laravel") return "9003";
 		if (lang === "rails") return "1234";
+		if (lang === "cpp" || lang === "c") return "1234";
 
 		return "";
 	}
 
 	private getDebugExpose(): string {
 		if (!this.config.enableDebug) return "";
-
 		const debugPort = this.getDebugPort();
 		if (!debugPort) return "";
-
 		return `
 # Debug port
 EXPOSE ${debugPort}`;
@@ -69,7 +71,6 @@ EXPOSE ${debugPort}`;
 		const port = this.config.port;
 		const lang = this.config.language;
 
-		// Python روی Alpine: wget نیست، از python استفاده کن
 		if (lang === "python" && this.config.useAlpine) {
 			return `
 # Health check
@@ -77,19 +78,31 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${port}${healthPath}')" || exit 1`;
 		}
 
-		// Laravel: پورت 9000
 		if (lang === "laravel") {
 			return `
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
-  CMD wget -q --spider http://localhost:9000${healthPath} || exit 1`;
+  CMD php -r "echo @file_get_contents('http://localhost:9000${healthPath}') ? 'ok' : exit(1);" || exit 1`;
 		}
 
-		// پیشفرض: wget
-		return `
+		if (this.config.useAlpine) {
+			return `
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD wget -q --spider http://localhost:${port}${healthPath} || exit 1`;
+		}
+
+		return `
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
+  CMD curl -f http://localhost:${port}${healthPath} || exit 1`;
+	}
+
+	private getInstallCommand(): string {
+		if (this.config.useAlpine) {
+			return "RUN apk add --no-cache curl wget ca-certificates";
+		}
+		return "RUN apt-get update && apt-get install -y --no-install-recommends curl wget ca-certificates && rm -rf /var/lib/apt/lists/*";
 	}
 
 	private generateJavaJarDockerfile(): string {
@@ -108,18 +121,20 @@ FROM ${baseImage}
 
 WORKDIR /app
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 # Copy JAR from build stage
 COPY --from=build ${jarPath} app.jar
 
 # Create non-root user
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app && \\
-    chmod -R 755 /app
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app && chmod -R 755 /app"}
 
 USER appuser
 
 # Expose application port
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+
 # Run application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 	}
@@ -142,6 +157,9 @@ ${this.getJavaBuildStage()}
 # Runtime stage
 FROM ${serverImage}
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 # Remove default applications
 RUN rm -rf ${webappsPath}/*
 
@@ -150,6 +168,7 @@ COPY --from=build ${warPath} ${webappsPath}/ROOT.war
 
 # Expose application port
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+
 # Start server
 CMD ${startCommand}`;
 	}
@@ -200,27 +219,32 @@ CMD ${startCommand}`;
 			const gradleImages = useAlpine ? this.langConfig?.gradleAlpineImages : this.langConfig?.gradleImages;
 			const image = gradleImages?.[version] || `gradle:8-jdk${version}${useAlpine ? "-alpine" : ""}`;
 
+			// Support both build.gradle and build.gradle.kts
 			return `FROM ${image} AS build
 WORKDIR /app
 
-COPY build.gradle settings.gradle gradlew ./
+COPY build.gradle* settings.gradle* gradlew* ./
 COPY gradle ./gradle
 COPY src ./src
 
-RUN gradle build -x test --no-daemon && \\
+RUN if [ -f gradlew ]; then ./gradlew build -x test --no-daemon; else gradle build -x test --no-daemon; fi && \\
     rm -rf /root/.gradle/caches`;
 		} else {
 			const mavenImages = useAlpine ? this.langConfig?.mavenAlpineImages : this.langConfig?.mavenImages;
 			const image = mavenImages?.[version] || `maven:3.9-jdk-${version}${useAlpine ? "-alpine" : ""}`;
 
+			// Support Maven wrapper
 			return `FROM ${image} AS build
 WORKDIR /app
 
-COPY pom.xml .
-RUN mvn dependency:go-offline
+COPY pom.xml ./
+COPY .mvn .mvn
+COPY mvnw* ./
+
+RUN if [ -f mvnw ]; then ./mvnw dependency:go-offline; else mvn dependency:go-offline; fi
 
 COPY src ./src
-RUN mvn package -DskipTests && \\
+RUN if [ -f mvnw ]; then ./mvnw package -DskipTests; else mvn package -DskipTests; fi && \\
     rm -rf /root/.m2/repository`;
 		}
 	}
@@ -282,12 +306,41 @@ RUN mvn package -DskipTests && \\
 		return `node:${version}${this.config.useAlpine ? "-alpine" : ""}`;
 	}
 
+	private getPackageInstallCommand(): string {
+		const pm = this.config.packageManager || "npm";
+		switch (pm) {
+			case "yarn":
+				return "yarn install --frozen-lockfile";
+			case "pnpm":
+				return "pnpm install --frozen-lockfile";
+			case "bun":
+				return "bun install";
+			default:
+				return "npm ci || npm install";
+		}
+	}
+
+	private getRunCommand(): string {
+		const pm = this.config.packageManager || "npm";
+		switch (pm) {
+			case "yarn":
+				return "yarn start";
+			case "pnpm":
+				return "pnpm start";
+			case "bun":
+				return "bun start";
+			default:
+				return "npm start";
+		}
+	}
+
 	private generateJSFrontendDockerfile(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
 		const image = this.getNodeImage(nodeVersion);
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 		const framework = this.config.framework;
+		const installCmd = this.getPackageInstallCommand();
 
 		if (framework === "angular") {
 			return `# Build stage
@@ -298,8 +351,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY yarn.lock* ./
 COPY pnpm-lock.yaml* ./
+COPY bun.lockb* ./
 
-RUN npm install
+RUN ${installCmd}
 
 COPY . .
 
@@ -310,16 +364,20 @@ FROM ${image}
 
 WORKDIR /app
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 ENV NODE_ENV=production
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package*.json ./
-COPY --from=build /app/angular.json ./angular.json
-COPY --from=build /app/server.js ./server.js
 
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
+# Copy Angular SSR files if they exist
+COPY --from=build /app/server.js* ./
+COPY --from=build /app/angular.json* ./
+
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
 USER appuser
 
@@ -335,8 +393,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY yarn.lock* ./
 COPY pnpm-lock.yaml* ./
+COPY bun.lockb* ./
 
-RUN npm install
+RUN ${installCmd}
 
 COPY . .
 
@@ -347,7 +406,11 @@ FROM ${image}
 
 WORKDIR /app
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 ENV NODE_ENV=production
+ENV PORT=${this.config.port}
 
 COPY --from=build /app/.nuxt ./.nuxt
 COPY --from=build /app/node_modules ./node_modules
@@ -355,16 +418,15 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/public ./public
 COPY --from=build /app/nuxt.config.js ./nuxt.config.js
 
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
 USER appuser
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-CMD ["npm", "start"]`;
+CMD ["${this.getRunCommand().split(" ")[0]}", "${this.getRunCommand().split(" ").slice(1).join(" ")}"]`;
 		} else {
-			// Next.js (پیشفرض)
+			// Next.js (default)
 			return `# Build stage
 FROM ${image} AS build
 
@@ -373,8 +435,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY yarn.lock* ./
 COPY pnpm-lock.yaml* ./
+COPY bun.lockb* ./
 
-RUN npm install
+RUN ${installCmd}
 
 COPY . .
 
@@ -385,7 +448,11 @@ FROM ${image}
 
 WORKDIR /app
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 ENV NODE_ENV=production
+ENV PORT=${this.config.port}
 
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/node_modules ./node_modules
@@ -393,8 +460,7 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/public ./public
 COPY --from=build /app/next.config.js ./next.config.js
 
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
 USER appuser
 
@@ -409,29 +475,38 @@ CMD ["npm", "start"]`;
 		const image = this.getNodeImage(nodeVersion);
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
+		const installCmd = this.getPackageInstallCommand();
 
 		return `FROM ${image}
 
 WORKDIR /app
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 COPY package*.json ./
 COPY yarn.lock* ./
 COPY pnpm-lock.yaml* ./
+COPY bun.lockb* ./
+COPY tsconfig.json* ./
 
-RUN npm install --production
+RUN ${installCmd}
 
 COPY . .
 
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
+# Build TypeScript if needed
+RUN if [ -f tsconfig.json ]; then npm run build || true; fi
+
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
 USER appuser
 
 ENV NODE_ENV=production
+ENV PORT=${this.config.port}
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-CMD ["node", "index.js"]`;
+CMD ["node", "dist/index.js"]`;
 	}
 
 	private getPythonImage(version: string): string {
@@ -458,23 +533,42 @@ CMD ["node", "index.js"]`;
 		const image = this.getPythonImage(pythonVersion);
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
+		const framework = this.config.framework;
 
-		const installCmd = this.config.useAlpine ? "RUN apk add --no-cache gcc musl-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*";
+		const installCmd = this.config.useAlpine ? "RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev zlib-dev jpeg-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev default-libmysqlclient-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*";
+
+		let startCmd = 'CMD ["python", "app.py"]';
+		if (framework === "django") {
+			startCmd = `CMD ["python", "manage.py", "runserver", "0.0.0.0:${this.config.port}"]`;
+		} else if (framework === "flask") {
+			startCmd = `CMD ["flask", "run", "--host=0.0.0.0", "--port=${this.config.port}"]`;
+		} else if (framework === "fastapi") {
+			startCmd = `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${this.config.port}"]`;
+		}
 
 		return `FROM ${image}
 
 WORKDIR /app
 
+# Install system dependencies
 ${installCmd}
 
-COPY requirements.txt .
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements files
+COPY requirements.txt* ./
+COPY pyproject.toml* ./
+COPY setup.py* ./
+
+# Install Python dependencies
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; \\
+    elif [ -f pyproject.toml ]; then pip install --no-cache-dir .; \\
+    elif [ -f setup.py ]; then pip install --no-cache-dir .; fi
 
 COPY . .
 
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
 USER appuser
 
@@ -483,11 +577,11 @@ ENV PYTHONUNBUFFERED=1 \\
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-CMD ["python", "app.py"]`;
+${startCmd}`;
 	}
 
 	private generateGoDockerfile(): string {
-		const goVersion = this.config.framework || "1.21";
+		const goVersion = this.config.goVersion || "1.21";
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
@@ -499,27 +593,46 @@ CMD ["python", "app.py"]`;
 			}
 		}
 
+		const runtimeBase = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
+
 		return `# Build stage
 FROM ${buildImage} AS build
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+# Set Go proxy for private repos
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOPRIVATE=
+
+COPY go.mod go.sum* ./
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+# Build with CGO support
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Runtime stage
-FROM ${this.config.useAlpine ? "alpine:latest" : "scratch"}
+FROM ${runtimeBase}
 
 WORKDIR /app
 
-${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates\n" : ""}
+# Install CA certificates and timezone data
+${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates tzdata" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*"}
+
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 COPY --from=build /app/main .
 
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "USER 1001"}
+# Copy static files if they exist
+COPY --from=build /app/static* ./static/ 2>/dev/null || true
+COPY --from=build /app/templates* ./templates/ 2>/dev/null || true
+COPY --from=build /app/config* ./config/ 2>/dev/null || true
+
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
+
+USER appuser
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
@@ -527,7 +640,7 @@ CMD ["./main"]`;
 	}
 
 	private generateRustDockerfile(): string {
-		const rustVersion = this.config.framework || "latest";
+		const rustVersion = this.config.rustVersion || "latest";
 
 		let buildImage = `rust:${rustVersion}`;
 		if (this.langConfig?.versions) {
@@ -548,14 +661,18 @@ FROM ${buildImage} AS build
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock ./
+# Copy manifests for caching
+COPY Cargo.toml Cargo.lock* ./
 
+# Create dummy source for dependency caching
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 RUN rm -rf src
 
+# Copy actual source
 COPY . .
 
+# Build with cache
 RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
@@ -563,18 +680,25 @@ FROM ${runtimeImage}
 
 WORKDIR /app
 
-${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates\n" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*\n"}
+# Install CA certificates
+${this.config.useAlpine ? "RUN apk --no-cache add ca-certificates" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*"}
+
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 COPY --from=build /app/target/release/${this.config.projectName} .
 
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
-EXPOSE ${this.config.port}
+USER appuser
+
+EXPOSE ${this.config.port}${this.getHealthCheck()}
 
 CMD ["./${this.config.projectName}"]`;
 	}
 
 	private generateDotNetDockerfile(): string {
-		const dotnetVersion = this.config.framework || "8.0";
+		const dotnetVersion = this.config.dotnetVersion || "8.0";
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
@@ -589,12 +713,18 @@ CMD ["./${this.config.projectName}"]`;
 			}
 		}
 
+		const safeProjectName = this.config.projectName.replace(/[^a-zA-Z0-9]/g, "");
+
 		return `# Build stage
 FROM ${sdkImage} AS build
 
 WORKDIR /app
 
+# Copy project files
 COPY *.csproj ./
+COPY *.sln ./
+COPY NuGet.config* ./
+
 RUN dotnet restore
 
 COPY . .
@@ -606,20 +736,22 @@ FROM ${aspnetImage}
 
 WORKDIR /app
 
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
 COPY --from=build /app/out .
 
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
 USER appuser
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
+ENTRYPOINT ["dotnet", "${safeProjectName}.dll"]`;
 	}
 
 	private generateLaravelDockerfile(): string {
-		const phpVersion = this.config.framework || "8.3";
+		const phpVersion = this.config.phpVersion || "8.3";
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
@@ -639,7 +771,8 @@ ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
     oniguruma-dev \\
     libxml2-dev \\
     zip \\
-    unzip`
+    unzip \\
+    supervisor`
 			: `RUN apt-get update && apt-get install -y --no-install-recommends \\
     git \\
     curl \\
@@ -648,6 +781,8 @@ ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
     libxml2-dev \\
     zip \\
     unzip \\
+    supervisor \\
+    nginx \\
     && rm -rf /var/lib/apt/lists/*`;
 
 		return `FROM ${phpImage}
@@ -662,7 +797,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 COPY . .
 
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+# Create storage directories if they don't exist
+RUN mkdir -p /var/www/html/storage/framework/views \\
+    /var/www/html/storage/framework/cache \\
+    /var/www/html/storage/framework/sessions \\
+    /var/www/html/bootstrap/cache
 
 RUN chown -R www-data:www-data /var/www/html \\
     && chmod -R 755 /var/www/html/storage \\
@@ -674,7 +815,7 @@ CMD ["php-fpm"]`;
 	}
 
 	private generateRailsDockerfile(): string {
-		const rubyVersion = this.config.framework || "3.3";
+		const rubyVersion = this.config.rubyVersion || "3.3";
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
@@ -696,8 +837,13 @@ CMD ["php-fpm"]`;
 
 WORKDIR /app
 
-${this.config.useAlpine ? "RUN apk add --no-cache build-base postgresql-dev nodejs yarn tzdata\n" : "RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev nodejs yarn tzdata && rm -rf /var/lib/apt/lists/*\n"}
-COPY Gemfile Gemfile.lock ./
+# Install dependencies including Node.js for assets
+${this.config.useAlpine ? "RUN apk add --no-cache build-base postgresql-dev nodejs yarn tzdata git" : "RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev nodejs yarn tzdata git && rm -rf /var/lib/apt/lists/*"}
+
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+
+COPY Gemfile Gemfile.lock* ./
 
 RUN gem install bundler && bundle install --without development test
 
@@ -705,15 +851,21 @@ COPY . .
 
 RUN RAILS_ENV=production bundle exec rake assets:precompile
 
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app\nUSER appuser"}
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
+
+USER appuser
+
+ENV RAILS_ENV=production \\
+    RAILS_SERVE_STATIC_FILES=true
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "${this.config.port}"]`;
+CMD ["sh", "-c", "bundle exec rails db:migrate && bundle exec rails server -b 0.0.0.0 -p ${this.config.port}"]`;
 	}
 
 	private generateCppDockerfile(): string {
-		const gccVersion = this.config.framework || "13";
+		const gccVersion = this.config.gccVersion || "13";
+		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
 		let gccImage = `gcc:${gccVersion}`;
@@ -737,25 +889,40 @@ WORKDIR /app
 
 COPY . .
 
-RUN g++ -o app main.cpp
+# Support CMake, Makefile, or direct compile
+RUN if [ -f CMakeLists.txt ]; then \\
+        cmake -B build && cmake --build build -j$(nproc); \\
+    elif [ -f Makefile ]; then \\
+        make -j$(nproc); \\
+    else \\
+        g++ -o app main.cpp; \\
+    fi
 
 # Runtime stage
 FROM ${runtimeImage}
 
 WORKDIR /app
 
-${this.config.useAlpine ? "RUN apk --no-cache add libstdc++\n" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*\n"}
-COPY --from=build /app/app .
+# Install runtime dependencies
+${this.config.useAlpine ? "RUN apk --no-cache add libstdc++" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*"}
 
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
-EXPOSE ${this.config.port}${healthCheck}
+COPY --from=build /app/app* ./
+
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
+
+USER appuser
+
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
 CMD ["./app"]`;
 	}
 
 	private generateCDockerfile(): string {
-		const gccVersion = this.config.framework || "13";
+		const gccVersion = this.config.gccVersion || "13";
+		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
 		let gccImage = `gcc:${gccVersion}`;
@@ -779,19 +946,31 @@ WORKDIR /app
 
 COPY . .
 
-RUN gcc -o app main.c
+RUN if [ -f CMakeLists.txt ]; then \\
+        cmake -B build && cmake --build build -j$(nproc); \\
+    elif [ -f Makefile ]; then \\
+        make -j$(nproc); \\
+    else \\
+        gcc -o app main.c; \\
+    fi
 
 # Runtime stage
 FROM ${runtimeImage}
 
 WORKDIR /app
 
-${this.config.useAlpine ? "RUN apk --no-cache add musl\n" : "RUN apt-get update && apt-get install -y --no-install-recommends libc6 && rm -rf /var/lib/apt/lists/*\n"}
-COPY --from=build /app/app .
+${this.config.useAlpine ? "RUN apk --no-cache add musl" : "RUN apt-get update && apt-get install -y --no-install-recommends libc6 && rm -rf /var/lib/apt/lists/*"}
 
-${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
-EXPOSE ${this.config.port}${healthCheck}
+COPY --from=build /app/app* ./
+
+${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
+
+USER appuser
+
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
 CMD ["./app"]`;
 	}
@@ -802,6 +981,9 @@ CMD ["./app"]`;
 		return `FROM ${this.config.useAlpine ? "alpine:latest" : "ubuntu:22.04"}
 
 WORKDIR /app
+
+# Install health check tools if needed
+${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
 COPY . .
 

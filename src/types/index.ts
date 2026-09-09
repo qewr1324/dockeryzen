@@ -5,6 +5,7 @@ export interface ProjectConfig {
 	useAlpine: boolean;
 	enableDebug: boolean;
 	enableHealthCheck: boolean;
+	debugPort?: number;
 	buildTool?: "maven" | "gradle";
 	jdkVersion?: string;
 	jdkVendor?: string;
@@ -12,6 +13,13 @@ export interface ProjectConfig {
 	server?: string;
 	nodeVersion?: string;
 	pythonVersion?: string;
+	goVersion?: string;
+	rustVersion?: string;
+	dotnetVersion?: string;
+	phpVersion?: string;
+	rubyVersion?: string;
+	gccVersion?: string;
+	packageManager?: "npm" | "yarn" | "pnpm" | "bun";
 	healthCheckPath?: string;
 	databases: DatabaseConfig[];
 	messageQueues: MessageQueueConfig[];
@@ -31,6 +39,7 @@ export interface DatabaseConfig {
 	url?: string;
 	image?: string;
 	alpineImage?: string;
+	volumePath?: string;
 }
 
 export interface MessageQueueConfig {
@@ -41,6 +50,7 @@ export interface MessageQueueConfig {
 	useAlpine: boolean;
 	image?: string;
 	alpineImage?: string;
+	topics?: string[];
 }
 
 export interface ServiceConfig {
@@ -51,4 +61,5 @@ export interface ServiceConfig {
 	useAlpine: boolean;
 	image?: string;
 	alpineImage?: string;
+	command?: string;
 }

@@ -1,16 +1,6 @@
 import * as vscode from "vscode";
 import { DatabaseConfig } from "../types/index.js";
-
-// Use require with any type
-// const sqlDatabases: any = require("../config/databases/sql.json");
-// const nosqlDatabases: any = require("../config/databases/nosql.json");
-// const keyValueDatabases: any = require("../config/databases/key-value.json");
-// const wideColumnDatabases: any = require("../config/databases/wide-column.json");
-// const graphDatabases: any = require("../config/databases/graph.json");
-// const timeSeriesDatabases: any = require("../config/databases/time-series.json");
-// const searchEngineDatabases: any = require("../config/databases/search-engines.json");
-// const newsqlDatabases: any = require("../config/databases/newsql.json");
-// const vectorDatabases: any = require("../config/databases/vector.json");
+import { validatePort } from "../utils/helpers.js";
 
 import sqlDatabases from "../config/databases/sql.json" with { type: "json" };
 import nosqlDatabases from "../config/databases/nosql.json" with { type: "json" };
@@ -52,34 +42,20 @@ export class DatabaseManager {
 		];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
-			quickPick.onDidAccept(() => {
-				if (isResolved) return;
-				isResolved = true;
-				const selected = quickPick.selectedItems as any[];
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
+			};
 
-				if (selected.length === 0) {
-					resolve([]);
-					return;
-				}
-
-				const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
-				resolve(result);
-			});
-
-			quickPick.onDidTriggerButton((button) => {
-				if (isResolved) return;
-
-				if (button.tooltip === "Back") {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("back");
-				} else if (button.tooltip === "OK") {
+			disposables.push(
+				quickPick.onDidAccept(() => {
+					if (isResolved) return;
 					isResolved = true;
 					const selected = quickPick.selectedItems as any[];
-					quickPick.dispose();
+					cleanup();
 
 					if (selected.length === 0) {
 						resolve([]);
@@ -88,16 +64,36 @@ export class DatabaseManager {
 
 					const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
 					resolve(result);
-				}
-			});
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (isResolved) return;
 
-			quickPick.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("cancel");
-				}
-			});
+					if (button.tooltip === "Back") {
+						isResolved = true;
+						cleanup();
+						resolve("back");
+					} else if (button.tooltip === "OK") {
+						isResolved = true;
+						const selected = quickPick.selectedItems as any[];
+						cleanup();
+
+						if (selected.length === 0) {
+							resolve([]);
+							return;
+						}
+
+						const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
+						resolve(result);
+					}
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
@@ -105,7 +101,6 @@ export class DatabaseManager {
 
 	private getAllDatabases(): any[] {
 		const allDatabases: any[] = [];
-
 		const configs: any[] = [sqlDatabases, nosqlDatabases, keyValueDatabases, wideColumnDatabases, graphDatabases, timeSeriesDatabases, searchEngineDatabases, newsqlDatabases, vectorDatabases];
 
 		for (const config of configs) {
@@ -145,85 +140,136 @@ export class DatabaseManager {
 		];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
-			quickPick.onDidAccept(async () => {
-				if (isResolved) return;
-
-				const selected = quickPick.selectedItems[0] as any;
-				if (selected) {
-					isResolved = true;
-					quickPick.dispose();
-
-					const config = await this.askDatabaseConfig(selected, currentStep, totalSteps);
-
-					if (config === "back") {
-						resolve("back");
-						return;
-					}
-					if (config === "cancel") {
-						resolve("cancel");
-						return;
-					}
-					if (config) {
-						const exists = this.databases.some((d) => d.type === config.type);
-						if (!exists) {
-							this.databases.push(config);
-						} else {
-							const index = this.databases.findIndex((d) => d.type === config.type);
-							this.databases[index] = config;
-						}
-						selected.configured = true;
-					}
-
-					const result = await this.showSelectedDatabasesWithEdit(selectedDbs, currentStep, totalSteps);
-					resolve(result);
-				}
-			});
-
-			quickPick.onDidTriggerButton((button) => {
-				if (isResolved) return;
-
-				isResolved = true;
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
+			};
 
-				if (button.tooltip === "Back") {
-					resolve("back");
-				} else {
-					// OK - Continue with defaults for unconfigured databases
-					for (const db of selectedDbs) {
-						if (!db.configured) {
-							const exists = this.databases.some((d) => d.type === db.value);
+			disposables.push(
+				quickPick.onDidAccept(async () => {
+					if (isResolved) return;
+
+					const selected = quickPick.selectedItems[0] as any;
+					if (selected) {
+						isResolved = true;
+						cleanup();
+
+						const config = await this.askDatabaseConfig(selected, currentStep, totalSteps);
+
+						if (config === "back") {
+							resolve("back");
+							return;
+						}
+						if (config === "cancel") {
+							resolve("cancel");
+							return;
+						}
+						if (config) {
+							const exists = this.databases.some((d) => d.type === config.type);
 							if (!exists) {
-								this.databases.push({
-									type: db.value,
-									version: db.versions[0].value,
-									internalPort: db.defaultPort,
-									externalPort: db.defaultPort,
-									databaseName: db.defaultDatabase,
-									username: db.defaultUser,
-									password: "root",
-									useAlpine: false,
-									image: db.versions[0].image,
-									alpineImage: db.versions[0].alpineImage,
-								});
+								this.databases.push(config);
+							} else {
+								const index = this.databases.findIndex((d) => d.type === config.type);
+								this.databases[index] = config;
+							}
+							selected.configured = true;
+						}
+
+						const result = await this.showSelectedDatabasesWithEdit(selectedDbs, currentStep, totalSteps);
+						resolve(result);
+					}
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (isResolved) return;
+
+					isResolved = true;
+					cleanup();
+
+					if (button.tooltip === "Back") {
+						resolve("back");
+					} else {
+						for (const db of selectedDbs) {
+							if (!db.configured) {
+								const exists = this.databases.some((d) => d.type === db.value);
+								if (!exists) {
+									this.databases.push({
+										type: db.value,
+										version: db.versions[0].value,
+										internalPort: db.defaultPort,
+										externalPort: db.defaultPort,
+										databaseName: db.defaultDatabase,
+										username: db.defaultUser,
+										password: db.value === "mssql" ? "Root1234!" : "root",
+										useAlpine: false,
+										image: db.versions[0].image,
+										alpineImage: db.versions[0].alpineImage,
+										volumePath: this.getVolumePath(db.value),
+									});
+								}
 							}
 						}
+						resolve(this.databases);
 					}
-					resolve(this.databases);
-				}
-			});
-
-			quickPick.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("cancel");
-				}
-			});
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
+	}
+
+	private getVolumePath(dbType: string): string {
+		const volumePaths: Record<string, string> = {
+			postgresql: "/var/lib/postgresql/data",
+			timescaledb: "/var/lib/postgresql/data",
+			mysql: "/var/lib/mysql",
+			mariadb: "/var/lib/mysql",
+			mongodb: "/data/db",
+			redis: "/data",
+			neo4j: "/data",
+			elasticsearch: "/usr/share/elasticsearch/data",
+			cassandra: "/var/lib/cassandra",
+			influxdb: "/var/lib/influxdb",
+			couchdb: "/opt/couchdb/data",
+			keycloak: "/opt/jboss/keycloak/standalone/data",
+			mssql: "/var/opt/mssql",
+			oracle: "/opt/oracle/oradata",
+			arangodb: "/var/lib/arangodb3",
+			qdrant: "/qdrant/storage",
+			weaviate: "/var/lib/weaviate",
+			milvus: "/var/lib/milvus",
+			chroma: "/chroma/data",
+			cockroachdb: "/cockroach/cockroach-data",
+			yugabytedb: "/home/yugabyte/data",
+			scylladb: "/var/lib/scylla",
+			memcached: "/data",
+			etcd: "/etcd-data",
+			aerospike: "/opt/aerospike/data",
+			hbase: "/data",
+			bigtable: "/data",
+			janusgraph: "/var/lib/janusgraph",
+			dgraph: "/dgraph",
+			prometheus: "/prometheus",
+			opentsdb: "/data",
+			solr: "/var/solr",
+			meilisearch: "/meili_data",
+			typesense: "/data",
+			tidb: "/data",
+			ravendb: "/opt/RavenDB/Server/RavenData",
+			couchbase: "/opt/couchbase/var",
+			dynamodb: "/home/dynamodblocal/data",
+			db2: "/database",
+		};
+		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
 	private async askDatabaseConfig(db: any, currentStep: number, totalSteps: number): Promise<DatabaseConfig | "back" | "cancel" | undefined> {
@@ -251,10 +297,11 @@ export class DatabaseManager {
 				externalPort: db.defaultPort,
 				databaseName: db.defaultDatabase,
 				username: db.defaultUser,
-				password: "root",
+				password: db.value === "mssql" ? "Root1234!" : "root",
 				useAlpine: false,
 				image: defaultVersion.image,
 				alpineImage: defaultVersion.alpineImage,
+				volumePath: this.getVolumePath(db.value),
 			};
 		}
 
@@ -264,6 +311,11 @@ export class DatabaseManager {
 			if (url === "back") return "back";
 			if (url === "cancel") return "cancel";
 			if (!url) return undefined;
+
+			if (!this.validateUrl(url)) {
+				vscode.window.showErrorMessage("Invalid URL format. Please use format: protocol://user:pass@host:port/dbname");
+				return undefined;
+			}
 
 			return {
 				type: db.value,
@@ -297,11 +349,23 @@ export class DatabaseManager {
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
 
+		const internalPortValidation = validatePort(internalPort);
+		if (internalPortValidation) {
+			vscode.window.showErrorMessage(internalPortValidation);
+			return undefined;
+		}
+
 		// External port
 		const externalPort = await this.showInputBoxWithBack(`Enter ${db.label} External Port`, internalPort, currentStep, totalSteps);
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
+
+		const externalPortValidation = validatePort(externalPort);
+		if (externalPortValidation) {
+			vscode.window.showErrorMessage(externalPortValidation);
+			return undefined;
+		}
 
 		// Database name
 		let databaseName: string | undefined;
@@ -319,9 +383,18 @@ export class DatabaseManager {
 		if (!username) return undefined;
 
 		// Password
-		const password = await this.showInputBoxWithBack(`Enter Password for ${db.label}`, "root", currentStep, totalSteps, true);
+		const password = await this.showInputBoxWithBack(`Enter Password for ${db.label}`, db.value === "mssql" ? "Root1234!" : "root", currentStep, totalSteps, true);
 		if (password === "back") return "back";
 		if (password === "cancel") return "cancel";
+		if (!password) return undefined;
+
+		if (db.value === "mssql") {
+			const passwordValidation = this.validateMssqlPassword(password);
+			if (passwordValidation) {
+				vscode.window.showErrorMessage(passwordValidation);
+				return undefined;
+			}
+		}
 
 		// Alpine option
 		const useAlpine = await this.showQuickPickWithBack(
@@ -343,11 +416,36 @@ export class DatabaseManager {
 			externalPort: parseInt(externalPort),
 			databaseName: databaseName,
 			username: username,
-			password: password || "root",
+			password: password,
 			useAlpine: useAlpine?.value === "yes",
 			image: version.image,
 			alpineImage: version.alpineImage,
+			volumePath: this.getVolumePath(db.value),
 		};
+	}
+
+	private validateUrl(url: string): boolean {
+		const urlPattern = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s]+$/;
+		return urlPattern.test(url);
+	}
+
+	private validateMssqlPassword(password: string): string | null {
+		if (password.length < 8) {
+			return "MSSQL password must be at least 8 characters long";
+		}
+		if (!/[A-Z]/.test(password)) {
+			return "MSSQL password must contain at least one uppercase letter";
+		}
+		if (!/[a-z]/.test(password)) {
+			return "MSSQL password must contain at least one lowercase letter";
+		}
+		if (!/[0-9]/.test(password)) {
+			return "MSSQL password must contain at least one number";
+		}
+		if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+			return "MSSQL password must contain at least one special character";
+		}
+		return null;
 	}
 
 	private showQuickPickWithBack(title: string, items: any[], currentStep: number, totalSteps: number): Promise<any> {
@@ -359,32 +457,38 @@ export class DatabaseManager {
 		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
-			quickPick.onDidAccept(() => {
-				if (!isResolved) {
-					isResolved = true;
-					const selected = quickPick.selectedItems[0];
-					quickPick.dispose();
-					resolve(selected);
-				}
-			});
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
+				quickPick.dispose();
+			};
 
-			quickPick.onDidTriggerButton((button) => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("back");
-				}
-			});
-
-			quickPick.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("cancel");
-				}
-			});
+			disposables.push(
+				quickPick.onDidAccept(() => {
+					if (!isResolved) {
+						isResolved = true;
+						const selected = quickPick.selectedItems[0];
+						cleanup();
+						resolve(selected);
+					}
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("back");
+					}
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
@@ -401,38 +505,44 @@ export class DatabaseManager {
 		];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
+				inputBox.dispose();
+			};
+
 			const acceptValue = () => {
 				if (!isResolved) {
 					isResolved = true;
 					const value = inputBox.value;
-					inputBox.dispose();
+					cleanup();
 					resolve(value);
 				}
 			};
 
-			inputBox.onDidAccept(acceptValue);
-
-			inputBox.onDidTriggerButton((button) => {
-				if (!isResolved) {
-					if (button.tooltip === "Back") {
-						isResolved = true;
-						inputBox.dispose();
-						resolve("back");
-					} else if (button.tooltip === "OK") {
-						acceptValue();
+			disposables.push(
+				inputBox.onDidAccept(acceptValue),
+				inputBox.onDidTriggerButton((button) => {
+					if (!isResolved) {
+						if (button.tooltip === "Back") {
+							isResolved = true;
+							cleanup();
+							resolve("back");
+						} else if (button.tooltip === "OK") {
+							acceptValue();
+						}
 					}
-				}
-			});
-
-			inputBox.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					inputBox.dispose();
-					resolve("cancel");
-				}
-			});
+				}),
+				inputBox.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			inputBox.show();
 		});

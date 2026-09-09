@@ -3,8 +3,8 @@ import { ProjectConfig } from "../types/index.js";
 export class DockerignoreGenerator {
 	constructor(private config: ProjectConfig) {}
 
-	generate(): string {
-		const ignorePatterns = [
+	generate(language?: string): string {
+		const ignorePatterns: string[] = [
 			"# Version Control",
 			".git",
 			".gitignore",
@@ -21,114 +21,6 @@ export class DockerignoreGenerator {
 			".DS_Store",
 			"Thumbs.db",
 			"",
-			"# Dependencies",
-			"node_modules",
-			"npm-debug.log*",
-			"yarn-debug.log*",
-			"yarn-error.log*",
-			"pnpm-debug.log*",
-			"",
-			"# Build outputs",
-			"dist",
-			"build",
-			"out",
-			"target",
-			"bin",
-			"obj",
-			"*.class",
-			"*.jar",
-			"*.war",
-			"*.ear",
-			"*.zip",
-			"*.tar.gz",
-			"*.rar",
-			"",
-			"# Python",
-			"__pycache__",
-			"*.py[cod]",
-			"*$py.class",
-			"*.so",
-			".Python",
-			"env",
-			"venv",
-			"ENV",
-			"env.bak",
-			"venv.bak",
-			"pip-log.txt",
-			"pip-delete-this-directory.txt",
-			".pytest_cache",
-			".coverage",
-			".coverage.*",
-			"htmlcov",
-			".tox",
-			".nox",
-			".hypothesis",
-			".mypy_cache",
-			".pytype",
-			".pyre",
-			"",
-			"# Node.js",
-			".npm",
-			".node-gyp",
-			".npmrc",
-			".pnpm-store",
-			"npm-debug.log",
-			"yarn-error.log",
-			".pnpm-debug.log",
-			".yarn-integrity",
-			"",
-			"# Java",
-			"*.class",
-			"*.log",
-			"*.ctxt",
-			".mtj.tmp",
-			"hs_err_pid*",
-			"replay_pid*",
-			".mvn",
-			"mvnw",
-			"mvnw.cmd",
-			".gradle",
-			"gradle-app.setting",
-			"!gradle-wrapper.jar",
-			"!gradle-wrapper.properties",
-			"",
-			"# Go",
-			"*.exe",
-			"*.exe~",
-			"*.dll",
-			"*.so",
-			"*.dylib",
-			"*.test",
-			"*.out",
-			"go.work",
-			"",
-			"# Rust",
-			"target/",
-			"**/*.rs.bk",
-			"",
-			"# .NET",
-			"**/[Oo]bj/",
-			"**/[Bb]in/",
-			"*.user",
-			"*.suo",
-			"*.userprefs",
-			"*.cache",
-			"*.docstates",
-			"",
-			"# Ruby",
-			"*.gem",
-			".bundle",
-			"vendor/bundle",
-			"log/*",
-			"tmp/*",
-			".ruby-version",
-			".ruby-gemset",
-			"",
-			"# PHP",
-			"vendor/",
-			"*.log",
-			".phpunit.result.cache",
-			"",
 			"# Environment",
 			".env",
 			".env.local",
@@ -136,12 +28,36 @@ export class DockerignoreGenerator {
 			".env.test.local",
 			".env.production.local",
 			"",
+		];
+
+		// Language-specific patterns
+		const lang = language || this.config.language;
+
+		if (lang.startsWith("js")) {
+			ignorePatterns.push("# Node.js", "node_modules", "npm-debug.log*", "yarn-debug.log*", "yarn-error.log*", "pnpm-debug.log*", ".npm", ".node-gyp", ".npmrc", ".pnpm-store", ".yarn-integrity", "dist", "build", ".next", ".nuxt", "out", "");
+		} else if (lang.startsWith("java")) {
+			ignorePatterns.push("# Java", "target", "*.class", "*.jar", "*.war", "*.ear", "*.log", ".mvn", "mvnw", "mvnw.cmd", ".gradle", "build", "");
+		} else if (lang === "python") {
+			ignorePatterns.push("# Python", "__pycache__", "*.py[cod]", "*$py.class", "*.so", ".Python", "env", "venv", "ENV", "env.bak", "venv.bak", "pip-log.txt", ".pytest_cache", ".coverage", "htmlcov", ".tox", ".nox", ".hypothesis", ".mypy_cache", "dist", "build", "");
+		} else if (lang === "go") {
+			ignorePatterns.push("# Go", "*.exe", "*.exe~", "*.dll", "*.so", "*.dylib", "*.test", "*.out", "go.work", "bin", "dist", "");
+		} else if (lang === "rust") {
+			ignorePatterns.push("# Rust", "target/", "**/*.rs.bk", "");
+		} else if (lang === "dotnet") {
+			ignorePatterns.push("# .NET", "**/[Oo]bj/", "**/[Bb]in/", "*.user", "*.suo", "*.userprefs", "*.cache", "dist", "build", "");
+		} else if (lang === "laravel") {
+			ignorePatterns.push("# PHP/Laravel", "vendor/", "*.log", ".phpunit.result.cache", "node_modules", "");
+		} else if (lang === "rails") {
+			ignorePatterns.push("# Ruby/Rails", "*.gem", ".bundle", "vendor/bundle", "log/*", "tmp/*", ".ruby-version", ".ruby-gemset", "node_modules", "");
+		} else if (lang === "cpp" || lang === "c") {
+			ignorePatterns.push("# C/C++", "*.o", "*.obj", "*.exe", "*.out", "*.app", "build", "dist", "cmake-build-*", "");
+		}
+
+		// Docker files (not ignored so they can be built)
+		ignorePatterns.push(
 			"# Docker",
-			"Dockerfile",
-			"docker-compose.yml",
-			"docker-compose.yaml",
-			".dockerignore",
 			"docker-compose.*.yml",
+			"docker-compose.*.yaml",
 			"",
 			"# Documentation",
 			"README.md",
@@ -155,15 +71,12 @@ export class DockerignoreGenerator {
 			".cache",
 			"*.spec.js",
 			"*.test.js",
+			"*.spec.ts",
+			"*.test.ts",
 			"",
 			"# Logs",
 			"logs",
 			"*.log",
-			"npm-debug.log*",
-			"yarn-debug.log*",
-			"yarn-error.log*",
-			"pnpm-debug.log*",
-			"lerna-debug.log*",
 			"",
 			"# Temp files",
 			"tmp",
@@ -171,12 +84,7 @@ export class DockerignoreGenerator {
 			"*.tmp",
 			"*.temp",
 			"",
-			"# Optional: Remove or comment out if you need these files",
-			"# .env",
-			"# config.json",
-			"# credentials.json",
-			"# secrets.json",
-		];
+		);
 
 		return ignorePatterns.join("\n");
 	}

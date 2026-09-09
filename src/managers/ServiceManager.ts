@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ServiceConfig } from "../types/index.js";
-// const servicesConfig: any = require("../config/services.json");
+import { validatePort } from "../utils/helpers.js";
+
 import servicesConfig from "../config/services.json" with { type: "json" };
 
 export class ServiceManager {
@@ -31,34 +32,20 @@ export class ServiceManager {
 		];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
-			quickPick.onDidAccept(() => {
-				if (isResolved) return;
-				isResolved = true;
-				const selected = quickPick.selectedItems as any[];
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
+			};
 
-				if (selected.length === 0) {
-					resolve([]);
-					return;
-				}
-
-				const result = this.showSelectedServicesWithEdit(selected, currentStep, totalSteps);
-				resolve(result);
-			});
-
-			quickPick.onDidTriggerButton((button) => {
-				if (isResolved) return;
-
-				if (button.tooltip === "Back") {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("back");
-				} else if (button.tooltip === "OK") {
+			disposables.push(
+				quickPick.onDidAccept(() => {
+					if (isResolved) return;
 					isResolved = true;
 					const selected = quickPick.selectedItems as any[];
-					quickPick.dispose();
+					cleanup();
 
 					if (selected.length === 0) {
 						resolve([]);
@@ -67,16 +54,36 @@ export class ServiceManager {
 
 					const result = this.showSelectedServicesWithEdit(selected, currentStep, totalSteps);
 					resolve(result);
-				}
-			});
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (isResolved) return;
 
-			quickPick.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("cancel");
-				}
-			});
+					if (button.tooltip === "Back") {
+						isResolved = true;
+						cleanup();
+						resolve("back");
+					} else if (button.tooltip === "OK") {
+						isResolved = true;
+						const selected = quickPick.selectedItems as any[];
+						cleanup();
+
+						if (selected.length === 0) {
+							resolve([]);
+							return;
+						}
+
+						const result = this.showSelectedServicesWithEdit(selected, currentStep, totalSteps);
+						resolve(result);
+					}
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
@@ -103,70 +110,84 @@ export class ServiceManager {
 		];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
-			quickPick.onDidAccept(async () => {
-				if (isResolved) return;
-
-				const selected = quickPick.selectedItems[0] as any;
-				if (selected) {
-					isResolved = true;
-					quickPick.dispose();
-
-					const config = await this.askServiceConfig(selected, currentStep, totalSteps);
-
-					if (config === "back") {
-						resolve("back");
-						return;
-					}
-					if (config === "cancel") {
-						resolve("cancel");
-						return;
-					}
-					if (config) {
-						this.services.push(config);
-						selected.configured = true;
-					}
-
-					const result = await this.showSelectedServicesWithEdit(selectedServices, currentStep, totalSteps);
-					resolve(result);
-				}
-			});
-
-			quickPick.onDidTriggerButton((button) => {
-				if (isResolved) return;
-
-				isResolved = true;
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
+			};
 
-				if (button.tooltip === "Back") {
-					resolve("back");
-				} else {
-					// OK - Continue with defaults for unconfigured services
-					for (const service of selectedServices) {
-						if (!service.configured) {
-							this.services.push({
-								type: service.value,
-								version: service.versions[0].value,
-								internalPort: service.defaultPort,
-								externalPort: service.defaultPort,
-								useAlpine: false,
-								image: service.versions[0].image,
-								alpineImage: service.versions[0].alpineImage,
-							});
+			disposables.push(
+				quickPick.onDidAccept(async () => {
+					if (isResolved) return;
+
+					const selected = quickPick.selectedItems[0] as any;
+					if (selected) {
+						isResolved = true;
+						cleanup();
+
+						const config = await this.askServiceConfig(selected, currentStep, totalSteps);
+
+						if (config === "back") {
+							resolve("back");
+							return;
 						}
-					}
-					resolve(this.services);
-				}
-			});
+						if (config === "cancel") {
+							resolve("cancel");
+							return;
+						}
+						if (config) {
+							const exists = this.services.some((s) => s.type === config.type);
+							if (!exists) {
+								this.services.push(config);
+							} else {
+								const index = this.services.findIndex((s) => s.type === config.type);
+								this.services[index] = config;
+							}
+							selected.configured = true;
+						}
 
-			quickPick.onDidHide(() => {
-				if (!isResolved) {
+						const result = await this.showSelectedServicesWithEdit(selectedServices, currentStep, totalSteps);
+						resolve(result);
+					}
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (isResolved) return;
+
 					isResolved = true;
-					quickPick.dispose();
-					resolve("cancel");
-				}
-			});
+					cleanup();
+
+					if (button.tooltip === "Back") {
+						resolve("back");
+					} else {
+						for (const service of selectedServices) {
+							if (!service.configured) {
+								const exists = this.services.some((s) => s.type === service.value);
+								if (!exists) {
+									this.services.push({
+										type: service.value,
+										version: service.versions[0].value,
+										internalPort: service.defaultPort,
+										externalPort: service.defaultPort,
+										useAlpine: false,
+										image: service.versions[0].image,
+										alpineImage: service.versions[0].alpineImage,
+									});
+								}
+							}
+						}
+						resolve(this.services);
+					}
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
@@ -192,10 +213,22 @@ export class ServiceManager {
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
 
+		const internalPortValidation = validatePort(internalPort);
+		if (internalPortValidation) {
+			vscode.window.showErrorMessage(internalPortValidation);
+			return undefined;
+		}
+
 		const externalPort = await this.showInputBoxWithBack(`Enter ${service.label} External Port`, internalPort, currentStep, totalSteps);
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
+
+		const externalPortValidation = validatePort(externalPort);
+		if (externalPortValidation) {
+			vscode.window.showErrorMessage(externalPortValidation);
+			return undefined;
+		}
 
 		const useAlpine = await this.showQuickPickWithBack(
 			`Use Alpine Version for ${service.label}?`,
@@ -229,32 +262,38 @@ export class ServiceManager {
 		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
-			quickPick.onDidAccept(() => {
-				if (!isResolved) {
-					isResolved = true;
-					const selected = quickPick.selectedItems[0];
-					quickPick.dispose();
-					resolve(selected);
-				}
-			});
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
+				quickPick.dispose();
+			};
 
-			quickPick.onDidTriggerButton((button) => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("back");
-				}
-			});
-
-			quickPick.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					quickPick.dispose();
-					resolve("cancel");
-				}
-			});
+			disposables.push(
+				quickPick.onDidAccept(() => {
+					if (!isResolved) {
+						isResolved = true;
+						const selected = quickPick.selectedItems[0];
+						cleanup();
+						resolve(selected);
+					}
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("back");
+					}
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
@@ -270,38 +309,44 @@ export class ServiceManager {
 		];
 
 		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
 
 		return new Promise((resolve) => {
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
+				inputBox.dispose();
+			};
+
 			const acceptValue = () => {
 				if (!isResolved) {
 					isResolved = true;
 					const value = inputBox.value;
-					inputBox.dispose();
+					cleanup();
 					resolve(value);
 				}
 			};
 
-			inputBox.onDidAccept(acceptValue);
-
-			inputBox.onDidTriggerButton((button) => {
-				if (!isResolved) {
-					if (button.tooltip === "Back") {
-						isResolved = true;
-						inputBox.dispose();
-						resolve("back");
-					} else if (button.tooltip === "OK") {
-						acceptValue();
+			disposables.push(
+				inputBox.onDidAccept(acceptValue),
+				inputBox.onDidTriggerButton((button) => {
+					if (!isResolved) {
+						if (button.tooltip === "Back") {
+							isResolved = true;
+							cleanup();
+							resolve("back");
+						} else if (button.tooltip === "OK") {
+							acceptValue();
+						}
 					}
-				}
-			});
-
-			inputBox.onDidHide(() => {
-				if (!isResolved) {
-					isResolved = true;
-					inputBox.dispose();
-					resolve("cancel");
-				}
-			});
+				}),
+				inputBox.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
 
 			inputBox.show();
 		});
