@@ -72,8 +72,12 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		const allPorts = new Map<number, string>();
 
 		allPorts.set(this.config.port, "Main Application");
-		if (this.config.enableDebug && this.config.language.startsWith("java")) {
-			allPorts.set(5005, "Debug Port");
+
+		if (this.config.enableDebug) {
+			const debugPort = this.getDebugPort();
+			if (debugPort) {
+				allPorts.set(debugPort, "Debug Port");
+			}
 		}
 
 		for (const db of this.config.databases) {
@@ -108,52 +112,118 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		return port;
 	}
 
+	private getDebugPort(): number | null {
+		const lang = this.config.language;
+
+		if (lang.startsWith("java")) return 5005;
+		if (lang.startsWith("js")) return 9229;
+		if (lang === "python") return 5678;
+		if (lang === "dotnet") return 5000;
+		if (lang === "go") return 2345;
+		if (lang === "laravel") return 9003;
+		if (lang === "rails") return 1234;
+
+		return null;
+	}
+
 	private generateMainService(): string {
 		const serviceName = this.config.projectName.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
 		const ports = [`      - "${this.config.port}:${this.config.port}"`];
 
-		// Debug port فقط برای Java
-		if (this.config.enableDebug && this.config.language.startsWith("java")) {
-			ports.push(`      - "5005:5005"`);
-		}
-
 		let envVars = "";
 		const lang = this.config.language;
 
+		// Java
 		if (lang.startsWith("java")) {
 			let javaOpts = "-Xms512m -Xmx1024m";
 			if (this.config.enableDebug) {
+				ports.push('      - "5005:5005"');
 				javaOpts += " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005";
 			}
 			envVars = `
       - SPRING_PROFILES_ACTIVE=production
       - JAVA_OPTS=${javaOpts}`;
-		} else if (lang.startsWith("js")) {
+		}
+		// Node.js
+		else if (lang.startsWith("js")) {
+			if (this.config.enableDebug) {
+				ports.push('      - "9229:9229"');
+			}
 			envVars = `
       - NODE_ENV=${this.config.enableDebug ? "development" : "production"}
       - PORT=${this.config.port}`;
-		} else if (lang === "python") {
+			if (this.config.enableDebug) {
+				envVars += `
+      - NODE_OPTIONS=--inspect=0.0.0.0:9229`;
+			}
+		}
+		// Python
+		else if (lang === "python") {
+			if (this.config.enableDebug) {
+				ports.push('      - "5678:5678"');
+			}
 			envVars = `
       - PYTHONUNBUFFERED=1
       - PORT=${this.config.port}`;
-		} else if (lang === "dotnet") {
+			if (this.config.enableDebug) {
+				envVars += `
+      - PYTHONPATH=/app`;
+			}
+		}
+		// .NET
+		else if (lang === "dotnet") {
+			if (this.config.enableDebug) {
+				ports.push('      - "5000:5000"');
+			}
 			envVars = `
       - ASPNETCORE_ENVIRONMENT=${this.config.enableDebug ? "Development" : "Production"}
       - ASPNETCORE_URLS=http://+:${this.config.port}`;
-		} else if (lang === "go") {
+			if (this.config.enableDebug) {
+				envVars += `
+      - DOTNET_USE_POLLING_FILE_WATCHER=1`;
+			}
+		}
+		// Go
+		else if (lang === "go") {
+			if (this.config.enableDebug) {
+				ports.push('      - "2345:2345"');
+			}
 			envVars = `
       - GIN_MODE=${this.config.enableDebug ? "debug" : "release"}`;
-		} else if (lang === "rust") {
-			envVars = `
-      - RUST_LOG=${this.config.enableDebug ? "debug" : "info"}`;
-		} else if (lang === "laravel") {
+		}
+		// PHP Laravel
+		else if (lang === "laravel") {
+			if (this.config.enableDebug) {
+				ports.push('      - "9003:9003"');
+			}
 			envVars = `
       - APP_ENV=${this.config.enableDebug ? "local" : "production"}
       - APP_DEBUG=${this.config.enableDebug ? "true" : "false"}`;
-		} else if (lang === "rails") {
+			if (this.config.enableDebug) {
+				envVars += `
+      - XDEBUG_MODE=debug
+      - XDEBUG_CONFIG=client_host=host.docker.internal client_port=9003`;
+			}
+		}
+		// Ruby on Rails
+		else if (lang === "rails") {
+			if (this.config.enableDebug) {
+				ports.push('      - "1234:1234"');
+			}
 			envVars = `
       - RAILS_ENV=${this.config.enableDebug ? "development" : "production"}`;
-		} else if (lang === "cpp" || lang === "c") {
+			if (this.config.enableDebug) {
+				envVars += `
+      - RUBY_DEBUG_PORT=1234`;
+			}
+		}
+		// Rust
+		else if (lang === "rust") {
+			envVars = `
+      - RUST_LOG=${this.config.enableDebug ? "debug" : "info"}`;
+		}
+		// C++ / C
+		else if (lang === "cpp" || lang === "c") {
 			envVars = `
       - DEBUG=${this.config.enableDebug ? "1" : "0"}`;
 		}

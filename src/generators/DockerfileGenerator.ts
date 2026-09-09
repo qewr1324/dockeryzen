@@ -37,11 +37,68 @@ export class DockerfileGenerator {
 		}
 	}
 
+	private getDebugPort(): string {
+		const lang = this.config.language;
+
+		if (lang.startsWith("java")) return "5005";
+		if (lang.startsWith("js")) return "9229";
+		if (lang === "python") return "5678";
+		if (lang === "dotnet") return "5000";
+		if (lang === "go") return "2345";
+		if (lang === "laravel") return "9003";
+		if (lang === "rails") return "1234";
+
+		return "";
+	}
+
+	private getDebugExpose(): string {
+		if (!this.config.enableDebug) return "";
+
+		const debugPort = this.getDebugPort();
+		if (!debugPort) return "";
+
+		return `
+# Debug port
+EXPOSE ${debugPort}`;
+	}
+
+	private getHealthCheck(): string {
+		if (!this.config.enableHealthCheck) return "";
+
+		const healthPath = this.config.healthCheckPath || "/health";
+		const port = this.config.port;
+		const lang = this.config.language;
+
+		// Python روی Alpine: wget نیست، از python استفاده کن
+		if (lang === "python" && this.config.useAlpine) {
+			return `
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${port}${healthPath}')" || exit 1`;
+		}
+
+		// Laravel: پورت 9000
+		if (lang === "laravel") {
+			return `
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
+  CMD wget -q --spider http://localhost:9000${healthPath} || exit 1`;
+		}
+
+		// پیشفرض: wget
+		return `
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
+  CMD wget -q --spider http://localhost:${port}${healthPath} || exit 1`;
+	}
+
 	private generateJavaJarDockerfile(): string {
 		const baseImage = this.getJavaBaseImage();
 		const buildStage = this.getJavaBuildStage();
-		const debugExpose = this.config.enableDebug ? "\n# Debug port\nEXPOSE 5005" : "";
-		const healthCheck = this.config.enableHealthCheck ? this.getHealthCheck() : "";
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
+
+		const jarPath = this.config.buildTool === "gradle" ? "/app/build/libs/*.jar" : "/app/target/*.jar";
 
 		return `# Build stage
 ${buildStage}
@@ -52,7 +109,7 @@ FROM ${baseImage}
 WORKDIR /app
 
 # Copy JAR from build stage
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build ${jarPath} app.jar
 
 # Create non-root user
 RUN useradd -r -u 1001 -g root appuser && \\
@@ -70,12 +127,14 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 	private generateJavaWarDockerfile(): string {
 		const server = this.config.server || "tomcat";
 		const serverImage = this.getServerImage(server);
-		const debugExpose = this.config.enableDebug ? "\n# Debug port\nEXPOSE 5005" : "";
-		const healthCheck = this.config.enableHealthCheck ? this.getHealthCheck() : "";
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
 
 		const isJetty = server === "jetty";
 		const webappsPath = isJetty ? "/var/lib/jetty/webapps" : "/usr/local/tomcat/webapps";
 		const startCommand = isJetty ? '["jetty.sh", "run"]' : '["catalina.sh", "run"]';
+
+		const warPath = this.config.buildTool === "gradle" ? "/app/build/libs/*.war" : "/app/target/*.war";
 
 		return `# Build stage
 ${this.getJavaBuildStage()}
@@ -87,7 +146,7 @@ FROM ${serverImage}
 RUN rm -rf ${webappsPath}/*
 
 # Copy WAR file
-COPY --from=build /app/target/*.war ${webappsPath}/ROOT.war
+COPY --from=build ${warPath} ${webappsPath}/ROOT.war
 
 # Expose application port
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
@@ -129,7 +188,12 @@ CMD ${startCommand}`;
 	}
 
 	private getJavaBuildStage(): string {
-		const version = this.config.jdkVersion || "17";
+		let version = this.config.jdkVersion || "17";
+
+		if (this.config.language === "java-war" && version === "25") {
+			version = "21";
+		}
+
 		const useAlpine = this.config.useAlpine;
 
 		if (this.config.buildTool === "gradle") {
@@ -139,12 +203,10 @@ CMD ${startCommand}`;
 			return `FROM ${image} AS build
 WORKDIR /app
 
-# Copy build files
 COPY build.gradle settings.gradle gradlew ./
 COPY gradle ./gradle
 COPY src ./src
 
-# Build application
 RUN gradle build -x test --no-daemon && \\
     rm -rf /root/.gradle/caches`;
 		} else {
@@ -154,11 +216,9 @@ RUN gradle build -x test --no-daemon && \\
 			return `FROM ${image} AS build
 WORKDIR /app
 
-# Copy POM and download dependencies in one layer
 COPY pom.xml .
 RUN mvn dependency:go-offline
 
-# Copy source code and build
 COPY src ./src
 RUN mvn package -DskipTests && \\
     rm -rf /root/.m2/repository`;
@@ -206,101 +266,6 @@ RUN mvn package -DskipTests && \\
 		}
 	}
 
-	private getHealthCheck(): string {
-		const healthPath = this.config.healthCheckPath || "/health";
-
-		return `
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
-  CMD wget -q --spider http://localhost:${this.config.port}${healthPath} || exit 1`;
-	}
-
-	private generateJSFrontendDockerfile(): string {
-		const nodeVersion = this.config.nodeVersion || "18";
-		const image = this.getNodeImage(nodeVersion);
-
-		return `# Build stage
-FROM ${image} AS build
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY yarn.lock* ./
-COPY pnpm-lock.yaml* ./
-
-# Install dependencies
-RUN npm install
-
-# Copy source code
-COPY . .
-
-# Build application
-RUN npm run build
-
-# Runtime stage
-FROM ${image}
-
-WORKDIR /app
-
-# Set environment to production
-ENV NODE_ENV=production
-
-# Copy built application
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/public ./public
-COPY --from=build /app/next.config.js ./next.config.js
-
-# Create non-root user
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
-
-USER appuser
-
-# Expose port
-EXPOSE ${this.config.port}
-
-# Start application
-CMD ["npm", "start"]`;
-	}
-
-	private generateJSBackendDockerfile(): string {
-		const nodeVersion = this.config.nodeVersion || "18";
-		const image = this.getNodeImage(nodeVersion);
-
-		return `FROM ${image}
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY yarn.lock* ./
-COPY pnpm-lock.yaml* ./
-
-# Install production dependencies
-RUN npm install --production
-
-# Copy source code
-COPY . .
-
-# Create non-root user
-RUN useradd -r -u 1001 -g root appuser && \\
-    chown -R appuser:root /app
-
-USER appuser
-
-# Set environment to production
-ENV NODE_ENV=production
-
-# Expose port
-EXPOSE ${this.config.port}
-
-# Start application
-CMD ["node", "index.js"]`;
-	}
-
 	private getNodeImage(version: string): string {
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);
@@ -317,43 +282,156 @@ CMD ["node", "index.js"]`;
 		return `node:${version}${this.config.useAlpine ? "-alpine" : ""}`;
 	}
 
-	private generatePythonDockerfile(): string {
-		const pythonVersion = this.config.pythonVersion || "3.11";
-		const image = this.getPythonImage(pythonVersion);
+	private generateJSFrontendDockerfile(): string {
+		const nodeVersion = this.config.nodeVersion || "18";
+		const image = this.getNodeImage(nodeVersion);
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
+		const framework = this.config.framework;
 
-		return `FROM ${image}
+		if (framework === "angular") {
+			return `# Build stage
+FROM ${image} AS build
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \\
-    gcc \\
-    && rm -rf /var/lib/apt/lists/*
+COPY package*.json ./
+COPY yarn.lock* ./
+COPY pnpm-lock.yaml* ./
 
-# Copy requirements
-COPY requirements.txt .
+RUN npm install
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application
 COPY . .
 
-# Create non-root user
+RUN npm run build
+
+# Runtime stage
+FROM ${image}
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/angular.json ./angular.json
+COPY --from=build /app/server.js ./server.js
+
 RUN useradd -r -u 1001 -g root appuser && \\
     chown -R appuser:root /app
 
 USER appuser
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \\
-    PYTHONDONTWRITEBYTECODE=1
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-# Expose port
-EXPOSE ${this.config.port}
+CMD ["node", "server.js"]`;
+		} else if (framework === "nuxtjs") {
+			return `# Build stage
+FROM ${image} AS build
 
-# Run application
-CMD ["python", "app.py"]`;
+WORKDIR /app
+
+COPY package*.json ./
+COPY yarn.lock* ./
+COPY pnpm-lock.yaml* ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+# Runtime stage
+FROM ${image}
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=build /app/.nuxt ./.nuxt
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/public ./public
+COPY --from=build /app/nuxt.config.js ./nuxt.config.js
+
+RUN useradd -r -u 1001 -g root appuser && \\
+    chown -R appuser:root /app
+
+USER appuser
+
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+
+CMD ["npm", "start"]`;
+		} else {
+			// Next.js (پیشفرض)
+			return `# Build stage
+FROM ${image} AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY yarn.lock* ./
+COPY pnpm-lock.yaml* ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+# Runtime stage
+FROM ${image}
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/public ./public
+COPY --from=build /app/next.config.js ./next.config.js
+
+RUN useradd -r -u 1001 -g root appuser && \\
+    chown -R appuser:root /app
+
+USER appuser
+
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+
+CMD ["npm", "start"]`;
+		}
+	}
+
+	private generateJSBackendDockerfile(): string {
+		const nodeVersion = this.config.nodeVersion || "18";
+		const image = this.getNodeImage(nodeVersion);
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
+
+		return `FROM ${image}
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY yarn.lock* ./
+COPY pnpm-lock.yaml* ./
+
+RUN npm install --production
+
+COPY . .
+
+RUN useradd -r -u 1001 -g root appuser && \\
+    chown -R appuser:root /app
+
+USER appuser
+
+ENV NODE_ENV=production
+
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+
+CMD ["node", "index.js"]`;
 	}
 
 	private getPythonImage(version: string): string {
@@ -375,8 +453,43 @@ CMD ["python", "app.py"]`;
 		return `python:${version}${this.config.useAlpine ? "-alpine" : "-slim"}`;
 	}
 
+	private generatePythonDockerfile(): string {
+		const pythonVersion = this.config.pythonVersion || "3.11";
+		const image = this.getPythonImage(pythonVersion);
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
+
+		const installCmd = this.config.useAlpine ? "RUN apk add --no-cache gcc musl-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*";
+
+		return `FROM ${image}
+
+WORKDIR /app
+
+${installCmd}
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+RUN useradd -r -u 1001 -g root appuser && \\
+    chown -R appuser:root /app
+
+USER appuser
+
+ENV PYTHONUNBUFFERED=1 \\
+    PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
+
+CMD ["python", "app.py"]`;
+	}
+
 	private generateGoDockerfile(): string {
 		const goVersion = this.config.framework || "1.21";
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
 
 		let buildImage = `golang:${goVersion}`;
 		if (this.langConfig?.versions) {
@@ -391,14 +504,11 @@ FROM ${buildImage} AS build
 
 WORKDIR /app
 
-# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
 COPY . .
 
-# Build application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Runtime stage
@@ -411,10 +521,8 @@ COPY --from=build /app/main .
 
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "USER 1001"}
 
-# Expose port
-EXPOSE ${this.config.port}
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-# Run application
 CMD ["./main"]`;
 	}
 
@@ -440,18 +548,14 @@ FROM ${buildImage} AS build
 
 WORKDIR /app
 
-# Copy Cargo files
 COPY Cargo.toml Cargo.lock ./
 
-# Create dummy main.rs to cache dependencies
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 RUN rm -rf src
 
-# Copy source code
 COPY . .
 
-# Build application
 RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
@@ -464,15 +568,15 @@ COPY --from=build /app/target/release/${this.config.projectName} .
 
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
 
-# Expose port
 EXPOSE ${this.config.port}
 
-# Run application
 CMD ["./${this.config.projectName}"]`;
 	}
 
 	private generateDotNetDockerfile(): string {
 		const dotnetVersion = this.config.framework || "8.0";
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
 
 		let sdkImage = `mcr.microsoft.com/dotnet/sdk:${dotnetVersion}`;
 		let aspnetImage = `mcr.microsoft.com/dotnet/aspnet:${dotnetVersion}`;
@@ -490,14 +594,11 @@ FROM ${sdkImage} AS build
 
 WORKDIR /app
 
-# Copy project files
 COPY *.csproj ./
 RUN dotnet restore
 
-# Copy source code
 COPY . .
 
-# Build application
 RUN dotnet publish -c Release -o out
 
 # Runtime stage
@@ -505,24 +606,22 @@ FROM ${aspnetImage}
 
 WORKDIR /app
 
-# Copy published application
 COPY --from=build /app/out .
 
-# Create non-root user
 RUN useradd -r -u 1001 -g root appuser && \\
     chown -R appuser:root /app
 
 USER appuser
 
-# Expose port
-EXPOSE ${this.config.port}
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-# Run application
 ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
 	}
 
 	private generateLaravelDockerfile(): string {
 		const phpVersion = this.config.framework || "8.3";
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
 
 		let phpImage = `php:${phpVersion}-fpm`;
 		if (this.langConfig?.versions) {
@@ -532,11 +631,16 @@ ENTRYPOINT ["dotnet", "${this.config.projectName}.dll"]`;
 			}
 		}
 
-		return `FROM ${phpImage}
-
-WORKDIR /var/www/html
-
-RUN apt-get update && apt-get install -y --no-install-recommends \\
+		const installCmd = this.config.useAlpine
+			? `RUN apk add --no-cache \\
+    git \\
+    curl \\
+    libpng-dev \\
+    oniguruma-dev \\
+    libxml2-dev \\
+    zip \\
+    unzip`
+			: `RUN apt-get update && apt-get install -y --no-install-recommends \\
     git \\
     curl \\
     libpng-dev \\
@@ -544,7 +648,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     libxml2-dev \\
     zip \\
     unzip \\
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*`;
+
+		return `FROM ${phpImage}
+
+WORKDIR /var/www/html
+
+${installCmd}
 
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
@@ -558,13 +668,15 @@ RUN chown -R www-data:www-data /var/www/html \\
     && chmod -R 755 /var/www/html/storage \\
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-EXPOSE 9000
+EXPOSE 9000${debugExpose}${healthCheck}
 
 CMD ["php-fpm"]`;
 	}
 
 	private generateRailsDockerfile(): string {
 		const rubyVersion = this.config.framework || "3.3";
+		const debugExpose = this.getDebugExpose();
+		const healthCheck = this.getHealthCheck();
 
 		let rubyImage = `ruby:${rubyVersion}`;
 		if (this.langConfig?.versions) {
@@ -595,13 +707,14 @@ RUN RAILS_ENV=production bundle exec rake assets:precompile
 
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app\nUSER appuser"}
 
-EXPOSE ${this.config.port}
+EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "${this.config.port}"]`;
 	}
 
 	private generateCppDockerfile(): string {
 		const gccVersion = this.config.framework || "13";
+		const healthCheck = this.getHealthCheck();
 
 		let gccImage = `gcc:${gccVersion}`;
 		if (this.langConfig?.versions) {
@@ -636,13 +749,14 @@ COPY --from=build /app/app .
 
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
 
-EXPOSE ${this.config.port}
+EXPOSE ${this.config.port}${healthCheck}
 
 CMD ["./app"]`;
 	}
 
 	private generateCDockerfile(): string {
 		const gccVersion = this.config.framework || "13";
+		const healthCheck = this.getHealthCheck();
 
 		let gccImage = `gcc:${gccVersion}`;
 		if (this.langConfig?.versions) {
@@ -677,19 +791,21 @@ COPY --from=build /app/app .
 
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser\nUSER appuser" : "RUN useradd -r -u 1001 -g root appuser\nUSER appuser"}
 
-EXPOSE ${this.config.port}
+EXPOSE ${this.config.port}${healthCheck}
 
 CMD ["./app"]`;
 	}
 
 	private generateGenericDockerfile(): string {
+		const healthCheck = this.getHealthCheck();
+
 		return `FROM ${this.config.useAlpine ? "alpine:latest" : "ubuntu:22.04"}
 
 WORKDIR /app
 
 COPY . .
 
-EXPOSE ${this.config.port}
+EXPOSE ${this.config.port}${healthCheck}
 
 CMD ["sh", "-c", "echo 'Please configure your application startup command'"]`;
 	}
