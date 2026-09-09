@@ -2,15 +2,25 @@ import * as vscode from "vscode";
 import { DatabaseConfig } from "../types/index.js";
 
 // Use require with any type
-const sqlDatabases: any = require("../config/databases/sql.json");
-const nosqlDatabases: any = require("../config/databases/nosql.json");
-const keyValueDatabases: any = require("../config/databases/key-value.json");
-const wideColumnDatabases: any = require("../config/databases/wide-column.json");
-const graphDatabases: any = require("../config/databases/graph.json");
-const timeSeriesDatabases: any = require("../config/databases/time-series.json");
-const searchEngineDatabases: any = require("../config/databases/search-engines.json");
-const newsqlDatabases: any = require("../config/databases/newsql.json");
-const vectorDatabases: any = require("../config/databases/vector.json");
+// const sqlDatabases: any = require("../config/databases/sql.json");
+// const nosqlDatabases: any = require("../config/databases/nosql.json");
+// const keyValueDatabases: any = require("../config/databases/key-value.json");
+// const wideColumnDatabases: any = require("../config/databases/wide-column.json");
+// const graphDatabases: any = require("../config/databases/graph.json");
+// const timeSeriesDatabases: any = require("../config/databases/time-series.json");
+// const searchEngineDatabases: any = require("../config/databases/search-engines.json");
+// const newsqlDatabases: any = require("../config/databases/newsql.json");
+// const vectorDatabases: any = require("../config/databases/vector.json");
+
+import sqlDatabases from "../config/databases/sql.json" with { type: "json" };
+import nosqlDatabases from "../config/databases/nosql.json" with { type: "json" };
+import keyValueDatabases from "../config/databases/key-value.json" with { type: "json" };
+import wideColumnDatabases from "../config/databases/wide-column.json" with { type: "json" };
+import graphDatabases from "../config/databases/graph.json" with { type: "json" };
+import timeSeriesDatabases from "../config/databases/time-series.json" with { type: "json" };
+import searchEngineDatabases from "../config/databases/search-engines.json" with { type: "json" };
+import newsqlDatabases from "../config/databases/newsql.json" with { type: "json" };
+import vectorDatabases from "../config/databases/vector.json" with { type: "json" };
 
 export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];

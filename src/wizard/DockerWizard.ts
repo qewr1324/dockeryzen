@@ -10,16 +10,27 @@ import { DockerComposeGenerator } from "../generators/DockerComposeGenerator.js"
 import { DockerignoreGenerator } from "../generators/DockerignoreGenerator.js";
 
 // Import JSON configs directly
-const javaConfig: any = require("../config/languages/java.json");
-const dotnetConfig: any = require("../config/languages/dotnet.json");
-const pythonConfig: any = require("../config/languages/python.json");
-const nodejsConfig: any = require("../config/languages/nodejs.json");
-const rubyConfig: any = require("../config/languages/ruby.json");
-const phpConfig: any = require("../config/languages/php.json");
-const rustConfig: any = require("../config/languages/rust.json");
-const goConfig: any = require("../config/languages/go.json");
-const cppConfig: any = require("../config/languages/cpp.json");
-const cConfig: any = require("../config/languages/c.json");
+// const javaConfig: any = require("../config/languages/java.json");
+// const dotnetConfig: any = require("../config/languages/dotnet.json");
+// const pythonConfig: any = require("../config/languages/python.json");
+// const nodejsConfig: any = require("../config/languages/nodejs.json");
+// const rubyConfig: any = require("../config/languages/ruby.json");
+// const phpConfig: any = require("../config/languages/php.json");
+// const rustConfig: any = require("../config/languages/rust.json");
+// const goConfig: any = require("../config/languages/go.json");
+// const cppConfig: any = require("../config/languages/cpp.json");
+// const cConfig: any = require("../config/languages/c.json");
+
+import javaConfig from "../config/languages/java.json" with { type: "json" };
+import dotnetConfig from "../config/languages/dotnet.json" with { type: "json" };
+import pythonConfig from "../config/languages/python.json" with { type: "json" };
+import nodejsConfig from "../config/languages/nodejs.json" with { type: "json" };
+import rubyConfig from "../config/languages/ruby.json" with { type: "json" };
+import phpConfig from "../config/languages/php.json" with { type: "json" };
+import rustConfig from "../config/languages/rust.json" with { type: "json" };
+import goConfig from "../config/languages/go.json" with { type: "json" };
+import cppConfig from "../config/languages/cpp.json" with { type: "json" };
+import cConfig from "../config/languages/c.json" with { type: "json" };
 
 export class DockerWizard {
 	private config: ProjectConfig;

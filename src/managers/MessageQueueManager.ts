@@ -1,13 +1,14 @@
 import * as vscode from "vscode";
 import { MessageQueueConfig } from "../types/index.js";
-const messageQueuesConfig: any = require("../config/message-queues.json");
+// const messageQueuesConfig: any = require("../config/message-queues.json");
+import messageQueuesConfig from "../config/message-queues.json" with { type: "json" };
 
 export class MessageQueueManager {
 	private queues: MessageQueueConfig[] = [];
 
 	async selectMessageQueues(currentStep: number, totalSteps: number): Promise<MessageQueueConfig[] | "back" | "cancel"> {
 		this.queues = [];
-		const allQueues: any[] = messageQueuesConfig.queues;
+		const allQueues = messageQueuesConfig.queues;
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Select Message Queues`;

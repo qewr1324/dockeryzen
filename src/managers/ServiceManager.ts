@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ServiceConfig } from "../types/index.js";
-const servicesConfig: any = require("../config/services.json");
+// const servicesConfig: any = require("../config/services.json");
+import servicesConfig from "../config/services.json" with { type: "json" };
 
 export class ServiceManager {
 	private services: ServiceConfig[] = [];
