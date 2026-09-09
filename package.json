@@ -2,8 +2,8 @@
 	"name": "dockeryzen",
 	"type": "module",
 	"displayName": "Dockeryzen",
-	"description": "🧢 Dockeryzen - Automatic Dockerfile and Docker Compose build for multiple languages and frameworks for 💠 VSCode.",
-	"version": "0.160.913",
+	"description": "🐋 Dockeryzen - Automatic Dockerfile and Docker Compose build for multiple languages and frameworks for 💠 VSCode.",
+	"version": "0.162.915",
 	"private": false,
 	"publisher": "GhurbeSABZI",
 	"packageManager": "bun@1.3.14",
@@ -62,7 +62,7 @@
 		"Other"
 	],
 	"galleryBanner": {
-		"color": "#0D1117",
+		"color": "#2496ED",
 		"theme": "dark"
 	},
 	"preview": false,
