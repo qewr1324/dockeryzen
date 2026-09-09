@@ -1,12 +1,8 @@
 import * as vscode from "vscode";
 import { MessageQueueConfig } from "../types/index.js";
 import { validatePort } from "../utils/helpers.js";
-
 import messageQueuesConfig from "../config/message-queues.json" with { type: "json" };
 
-/**
- * MessageQueueManager class - Manages message queue selection and configuration
- */
 export class MessageQueueManager {
 	private queues: MessageQueueConfig[] = [];
 
@@ -49,18 +45,15 @@ export class MessageQueueManager {
 					isResolved = true;
 					const selected = quickPick.selectedItems as any[];
 					cleanup();
-
 					if (selected.length === 0) {
 						resolve([]);
 						return;
 					}
-
 					const result = this.showSelectedQueuesWithEdit(selected, currentStep, totalSteps);
 					resolve(result);
 				}),
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
-
 					if (button.tooltip === "Back") {
 						isResolved = true;
 						cleanup();
@@ -69,12 +62,10 @@ export class MessageQueueManager {
 						isResolved = true;
 						const selected = quickPick.selectedItems as any[];
 						cleanup();
-
 						if (selected.length === 0) {
 							resolve([]);
 							return;
 						}
-
 						const result = this.showSelectedQueuesWithEdit(selected, currentStep, totalSteps);
 						resolve(result);
 					}
@@ -87,7 +78,6 @@ export class MessageQueueManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -96,6 +86,7 @@ export class MessageQueueManager {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Message Queues`;
 		quickPick.placeholder = "Click on a message queue to edit it, or press Enter to continue with defaults";
+
 		quickPick.items = selectedQueues.map((mq) => ({
 			label: `$(${mq.icon}) ${mq.label}`,
 			description: mq.configured ? "$(check) Configured" : "$(gear) Click to Edit",
@@ -105,6 +96,7 @@ export class MessageQueueManager {
 			versions: mq.versions,
 			configured: mq.configured || false,
 		}));
+
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [
@@ -124,14 +116,14 @@ export class MessageQueueManager {
 			disposables.push(
 				quickPick.onDidAccept(async () => {
 					if (isResolved) return;
-
 					const selected = quickPick.selectedItems[0] as any;
 					if (selected) {
 						isResolved = true;
 						cleanup();
 
-						const config = await this.askQueueConfig(selected, currentStep, totalSteps);
-
+						// باگ 522: حفظ تنظیمات قبلی هنگام back
+						const existingConfig = this.queues.find((q) => q.type === selected.value);
+						const config = await this.askQueueConfig(selected, currentStep, totalSteps, existingConfig);
 						if (config === "back") {
 							resolve("back");
 							return;
@@ -150,17 +142,14 @@ export class MessageQueueManager {
 							}
 							selected.configured = true;
 						}
-
 						const result = await this.showSelectedQueuesWithEdit(selectedQueues, currentStep, totalSteps);
 						resolve(result);
 					}
 				}),
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
-
 					isResolved = true;
 					cleanup();
-
 					if (button.tooltip === "Back") {
 						resolve("back");
 					} else {
@@ -174,7 +163,8 @@ export class MessageQueueManager {
 										internalPort: mq.defaultPort,
 										externalPort: mq.defaultPort,
 										useAlpine: false,
-										image: mq.versions[0].image,
+										// باگ 525: اطمینان از وجود image
+										image: mq.versions[0].image || `${mq.value}:${mq.versions[0].value}`,
 										alpineImage: mq.versions[0].alpineImage,
 									});
 								}
@@ -191,12 +181,11 @@ export class MessageQueueManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
 
-	private async askQueueConfig(mq: any, currentStep: number, totalSteps: number): Promise<MessageQueueConfig | "back" | "cancel" | undefined> {
+	private async askQueueConfig(mq: any, currentStep: number, totalSteps: number, existingConfig?: MessageQueueConfig): Promise<MessageQueueConfig | "back" | "cancel" | undefined> {
 		const versionItems = mq.versions.map((v: any) => ({
 			label: `$(tag) ${v.label}`,
 			description: `Version ${v.value}`,
@@ -211,11 +200,10 @@ export class MessageQueueManager {
 		if (version === "cancel") return "cancel";
 		if (!version) return undefined;
 
-		const internalPort = await this.showInputBoxWithBack(`Enter ${mq.label} Internal Port`, mq.defaultPort.toString(), currentStep, totalSteps);
+		const internalPort = await this.showInputBoxWithBack(`Enter ${mq.label} Internal Port`, (existingConfig?.internalPort || mq.defaultPort).toString(), currentStep, totalSteps);
 		if (internalPort === "back") return "back";
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
-
 		const internalPortValidation = validatePort(internalPort);
 		if (internalPortValidation) {
 			vscode.window.showErrorMessage(internalPortValidation);
@@ -226,7 +214,6 @@ export class MessageQueueManager {
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
-
 		const externalPortValidation = validatePort(externalPort);
 		if (externalPortValidation) {
 			vscode.window.showErrorMessage(externalPortValidation);
@@ -245,7 +232,9 @@ export class MessageQueueManager {
 		if (useAlpine === "back") return "back";
 		if (useAlpine === "cancel") return "cancel";
 
-		return {
+		// باگ 523: Kafka 4.x بدون Zookeeper
+		// باگ 524: ActiveMQ Artemis تنظیمات خاص
+		const queueConfig: MessageQueueConfig = {
 			type: mq.value,
 			version: version.value,
 			internalPort: parseInt(internalPort),
@@ -254,6 +243,20 @@ export class MessageQueueManager {
 			image: version.image,
 			alpineImage: version.alpineImage,
 		};
+
+		// باگ 523: Kafka نسخه 4.x به بعد standalone هست
+		if (mq.value === "kafka" && version.value.startsWith("4")) {
+			queueConfig.enableZookeeper = false;
+		} else if (mq.value === "kafka" && version.value.startsWith("2")) {
+			queueConfig.enableZookeeper = true;
+		}
+
+		// باگ 524: ActiveMQ Artemis نیاز به تنظیمات خاص داره
+		if (mq.value === "activemq-artemis") {
+			queueConfig.enableManagement = true;
+		}
+
+		return queueConfig;
 	}
 
 	private showQuickPickWithBack(title: string, items: any[], currentStep: number, totalSteps: number): Promise<any> {
@@ -263,16 +266,13 @@ export class MessageQueueManager {
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
-
 		let isResolved = false;
 		const disposables: vscode.Disposable[] = [];
-
 		return new Promise((resolve) => {
 			const cleanup = () => {
 				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
 			};
-
 			disposables.push(
 				quickPick.onDidAccept(() => {
 					if (!isResolved) {
@@ -297,7 +297,6 @@ export class MessageQueueManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -310,16 +309,13 @@ export class MessageQueueManager {
 			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
 			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
 		];
-
 		let isResolved = false;
 		const disposables: vscode.Disposable[] = [];
-
 		return new Promise((resolve) => {
 			const cleanup = () => {
 				disposables.forEach((d) => d.dispose());
 				inputBox.dispose();
 			};
-
 			const acceptValue = () => {
 				if (!isResolved) {
 					isResolved = true;
@@ -328,7 +324,6 @@ export class MessageQueueManager {
 					resolve(value);
 				}
 			};
-
 			disposables.push(
 				inputBox.onDidAccept(acceptValue),
 				inputBox.onDidTriggerButton((button) => {
@@ -350,7 +345,6 @@ export class MessageQueueManager {
 					}
 				}),
 			);
-
 			inputBox.show();
 		});
 	}

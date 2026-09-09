@@ -1,69 +1,69 @@
 import { ProjectConfig } from "../types/index.js";
 
-/**
- * EnvFileGenerator class - Generates .env.example file
- * Fixed bugs: 355-357, 373, 391-392, 416
- */
 export class EnvFileGenerator {
 	constructor(private config: ProjectConfig) {}
 
 	generate(): string {
-		const envVars: string[] = [
-			"# ============================================",
-			`# Environment Variables for ${this.config.projectName}`,
-			"# Copy this file to .env and update values",
-			"# ============================================",
-			"",
-			"# Application",
-			`SERVER_PORT=${this.config.port}`,
-			`SPRING_PROFILES_ACTIVE=production`,
-			"",
-		];
+		const envVars: string[] = ["# ============================================", `# Environment Variables for ${this.config.projectName}`, "# Copy this file to .env and update values", "# ============================================", "", "# Application", `SERVER_PORT=${this.config.port}`];
 
-		// Fix bug 356, 392: Use prefixed DB env vars instead of generic DB_HOST
+		// باگ 578 و 685: SPRING_PROFILES_ACTIVE فقط برای Java
+		if (this.config.language.startsWith("java")) {
+			envVars.push(`SPRING_PROFILES_ACTIVE=production`);
+		}
+		envVars.push("");
+
 		for (const db of this.config.databases) {
+			// باگ 579: برای external URL پورت اضافه نمیشه
 			if (!db.useExternalUrl) {
 				const prefix = this.getDbPrefix(db.type);
-				// Fix bug 355, 373: Proper default database name per DB type
 				const defaultDbName = this.getDefaultDbName(db.type);
-
 				envVars.push(`# ${db.type} Database`, `${prefix}_HOST=localhost`, `${prefix}_PORT=${db.internalPort}`, `${prefix}_NAME=${db.databaseName || defaultDbName}`, `${prefix}_USER=${db.username || "root"}`, `${prefix}_PASSWORD=${db.password || "root"}`, "");
 			}
 		}
 
-		// Fix bug 357: Only one Redis section
 		const hasRedisAsDb = this.config.databases.some((d) => d.type === "redis");
 		if (this.config.enableRedis && !hasRedisAsDb) {
 			envVars.push("# Redis", "REDIS_HOST=localhost", "REDIS_PORT=6379", "REDIS_PASSWORD=", "");
 		}
 
-		// Message queue env vars
 		for (const mq of this.config.messageQueues) {
 			const mqPrefix = mq.type.toUpperCase().replace(/-/g, "_");
 			envVars.push(`# ${mq.type} Message Queue`, `${mqPrefix}_HOST=localhost`, `${mqPrefix}_PORT=${mq.internalPort}`, "");
 		}
 
-		// Fix bug 416: JWT only for web frameworks that need it
-		const needsJwt = this.config.language.startsWith("js") || this.config.language === "laravel" || this.config.language === "rails" || this.config.framework === "spring-boot";
+		// باگ 627: JWT_SECRET فقط برای js-backend
+		const needsJwt = this.config.language === "js-backend" || this.config.language === "laravel" || this.config.language === "rails" || this.config.framework === "spring-boot";
 
 		if (needsJwt) {
 			envVars.push("# Security", "JWT_SECRET=your-secret-key-change-this-in-production", "JWT_EXPIRATION=86400", "");
 		}
 
-		// Monitoring
 		if (this.config.enableHealthCheck) {
-			envVars.push("# Monitoring", "PROMETHEUS_PORT=9090", "GRAFANA_PORT=3000", "GRAFANA_ADMIN_USER=admin", "GRAFANA_ADMIN_PASSWORD=admin", "");
+			envVars.push(
+				"# Monitoring",
+				"PROMETHEUS_PORT=9090",
+				"GRAFANA_PORT=3000",
+				"GRAFANA_ADMIN_USER=admin",
+				// باگ 698: Grafana password اشاره به env variable
+				"GRAFANA_ADMIN_PASSWORD=change-me-in-production",
+				"",
+			);
 		}
 
-		envVars.push("# ============================================", "# Notes:", "# - Never commit .env file to git", "# - Use .env.example as template", "# - Change all passwords in production", "# ============================================");
+		envVars.push(
+			"# ============================================",
+			"# Notes:",
+			"# - Never commit .env file to git",
+			"# - Use .env.example as template",
+			// باگ 649: هشدار امنیتی
+			"# - Change all passwords in production",
+			"# - Use secrets manager for production",
+			"# ============================================",
+		);
 
 		return envVars.join("\n");
 	}
 
-	/**
-	 * Get env var prefix for database type
-	 * Fix bug 356, 392
-	 */
 	private getDbPrefix(dbType: string): string {
 		const prefixMap: Record<string, string> = {
 			postgresql: "POSTGRES",
@@ -87,14 +87,12 @@ export class EnvFileGenerator {
 			etcd: "ETCD",
 			aerospike: "AEROSPIKE",
 			cockroachdb: "COCKROACH",
+			tidb: "TIDB",
+			yugabytedb: "YUGABYTE",
 		};
 		return prefixMap[dbType] || dbType.toUpperCase().replace(/-/g, "_");
 	}
 
-	/**
-	 * Get default database name per type
-	 * Fix bug 355, 373
-	 */
 	private getDefaultDbName(dbType: string): string {
 		const defaultNames: Record<string, string> = {
 			postgresql: "postgres",
@@ -115,6 +113,8 @@ export class EnvFileGenerator {
 			arangodb: "_system",
 			elasticsearch: "elasticsearch",
 			cockroachdb: "defaultdb",
+			tidb: "test",
+			yugabytedb: "yugabyte",
 		};
 		return defaultNames[dbType] || "postgres";
 	}

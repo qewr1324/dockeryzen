@@ -508,5 +508,208 @@ Part-3---------------------------------------------------------------------
 ✅ 499: DockerfileGenerator - generateRailsDockerfile برای db:migrate در CMD هست ولی باید entrypoint باشه
 ✅ 500: DockerComposeGenerator - وقتی همه 46 دیتابیس انتخاب بشن، depends_on با 46 سرویس باعث میشه app هیچوقت healthy نشه
 
+Part-4---------------------------------------------------------------------
+
+✅ 501: DockerWizard - start() - Cancellation error catch نمیشه.
+✅ 502: DockerWizard - loadState() - JSON خراب crash میده بدون fallback.
+✅ 503: DockerWizard - saveState() - نبود workspace silently ignore میشه.
+✅ 504: DockerWizard - withTimeout() - Race condition ممکنه memory leak بده.
+✅ 505: DockerWizard - askLanguage() - تشخیص چند فایل conflict میده.
+✅ 506: DockerWizard - askGeneralOptions() - Redis برای js-frontend هم نمایش داده میشه.
+✅ 507: DockerWizard - askJavaSettings() - JDK 25 با Maven ناسازگاره.
+✅ 508: DockerWizard - askNodeSettings() - اولویتبندی lock files اشتباهه.
+✅ 509: DockerWizard - generateFiles() - خطا فایلهای ناقص باقی میذاره.
+✅ 510: DockerWizard - generateFiles() - پوشه .github با .git تداخل میکنه.
+✅ 511: DatabaseManager - selectDatabases() - انتخاب همه دیتابیسها کند میشه.
+✅ 512: DatabaseManager - showSelectedDatabasesWithEdit() - بعد از remove، UI درست refresh نمیشه.
+✅ 513: DatabaseManager - showSelectedDatabasesWithEdit() - back زدن تنظیمات قبلی رو پاک میکنه.
+✅ 514: DatabaseManager - askDatabaseConfig() - برای URL خارجی پورت هم ست میشه.
+✅ 515: DatabaseManager - testConnection() - فقط TCP تست میشه نه auth.
+✅ 516: DatabaseManager - getVolumePath() - TiDB path اشتباهه.
+✅ 517: DatabaseManager - getVolumePath() - YugabyteDB path تعریف نشده.
+✅ 518: DatabaseManager - validateMssqlPassword() - Regex بعضی کاراکترها رو رد میکنه.
+✅ 519: DatabaseManager - askDatabaseConfig() - Use Defaults همیشه Alpine رو false میکنه.
+✅ 520: DatabaseManager - showSelectedDatabasesWithEdit() - فقط اولین دیتابیس edit میشه.
+✅ 521: MessageQueueManager - selectMessageQueues() - Zookeeper خودکار نمایش داده نمیشه.
+✅ 522: MessageQueueManager - showSelectedQueuesWithEdit() - back تنظیمات رو پاک میکنه.
+✅ 523: MessageQueueManager - askQueueConfig() - Kafka 4.x هنوز Zookeeper میسازه.
+✅ 524: MessageQueueManager - askQueueConfig() - ActiveMQ Artemis generic درمان میشه.
+✅ 525: MessageQueueManager - showSelectedQueuesWithEdit() - alpineImage ممکنه undefined باشه.
+✅ 526: ServiceManager - selectServices() - Prometheus/Grafana دوبار مدیریت میشن.
+✅ 527: ServiceManager - showSelectedServicesWithEdit() - back تنظیمات رو پاک میکنه.
+✅ 528: ServiceManager - askServiceConfig() - Keycloak پورت 8080 تداخل داره.
+✅ 529: ServiceManager - askServiceConfig() - MinIO version کاراکتر خاص داره.
+✅ 530: ServiceManager - showSelectedServicesWithEdit() - command برای بعضی services ست نمیشه.
+✅ 531: DockerfileGenerator - generateJavaJarDockerfile() - JAVA_OPTS دوبار ست میشه.
+✅ 532: DockerfileGenerator - generateJavaWarDockerfile() - jetty به اشتباه tomcat میشه.
+✅ 533: DockerfileGenerator - getJavaBuildStage() - JDK 25 با Maven ناسازگاره.
+✅ 534: DockerfileGenerator - generateJSFrontendDockerfile() - Angular CMD اشتباهه (server.js).
+✅ 535: DockerfileGenerator - generateJSFrontendDockerfile() - Nuxt CMD اشتباهه.
+✅ 536: DockerfileGenerator - generateJSBackendDockerfile() - pm2 نصب lock file رو خراب میکنه.
+✅ 537: DockerfileGenerator - generatePythonDockerfile() - Gunicorn با uvicorn conflict داره.
+✅ 538: DockerfileGenerator - generateGoDockerfile() - CGO=0 ممکنه build fail بده.
+✅ 539: DockerfileGenerator - generateRustDockerfile() - rm -rf src ممکنه مشکل بده.
+✅ 540: DockerfileGenerator - generateDotNetDockerfile() - Comment گمراه کننده است.
+✅ 541: DockerfileGenerator - generateLaravelDockerfile() - supervisor config ممکنه نباشه.
+✅ 542: DockerfileGenerator - generateRailsDockerfile() - ENTRYPOINT args رو درست پاس نمیده.
+✅ 543: DockerfileGenerator - generateCppDockerfile() - خطا با || true پنهان میشه.
+✅ 544: DockerfileGenerator - generateCDockerfile() - خطا با || true پنهان میشه.
+✅ 545: DockerfileGenerator - getHealthCheck() - Java WAR همیشه / چک میکنه.
+✅ 546: DockerfileGenerator - getHealthCheck() - Laravel پورت 9000 رو چک میکنه.
+✅ 547: DockerfileGenerator - getInstallCommand() - wget ممکنه نباشه.
+✅ 548: DockerfileGenerator - generateGoDockerfile() - CGO packages اضافه نصب میشن.
+✅ 549: DockerfileGenerator - generateRustDockerfile() - projectName با dash مشکل میده.
+✅ 550: DockerfileGenerator - generateDotNetDockerfile() - safeProjectName dash حذف میکنه.
+✅ 551: DockerComposeGenerator - generate() - 46 سرویس depends_on app رو hang میکنه.
+✅ 552: DockerComposeGenerator - generateMainService() - depends_on بدون healthcheck fail میشه.
+✅ 553: DockerComposeGenerator - generateMainService() - ARM64 فقط macOS تشخیص میده.
+✅ 554: DockerComposeGenerator - generateDatabaseService() - Oracle credentials hardcode است.
+✅ 555: DockerComposeGenerator - generateDatabaseService() - MSSQL password hardcode است.
+✅ 556: DockerComposeGenerator - getDatabaseHealthCheck() - CockroachDB پورت 8080 اشتباهه.
+✅ 557: DockerComposeGenerator - getDatabaseHealthCheck() - TiDB/YugabyteDB تعریف نشده.
+✅ 558: DockerComposeGenerator - generateBackupService() - فقط 3 دیتابیس backup دارن.
+✅ 559: DockerComposeGenerator - generateMessageQueueService() - Kafka 4.x Zookeeper میسازه.
+✅ 560: DockerComposeGenerator - generateMessageQueueService() - RabbitMQ پورت 15672 همیشه expose میشه.
+✅ 561: DockerComposeGenerator - generateSecretsSection() - فایل secret واقعی ساخته نمیشه.
+✅ 562: DockerComposeGenerator - checkPortConflicts() - فقط external port تغییر میکنه.
+✅ 563: DockerComposeGenerator - checkPortConflicts() - Debug port conflict check نمیشه.
+✅ 564: DockerComposeGenerator - generateMainService() - read_only ممکنه app رو بشکنه.
+✅ 565: DockerComposeGenerator - generatePrometheusService() - prometheus.yml ممکنه نباشه.
+✅ 566: DockerComposeGenerator - generateGrafanaService() - admin password hardcode است.
+✅ 567: DockerComposeGenerator - generateNginxService() - nginx.conf برای غیر Laravel ساخته نمیشه.
+✅ 568: DockerComposeGenerator - generateLaravelQueueWorker() - app ممکنه healthcheck نداشته باشه.
+✅ 569: DockerComposeGenerator - generateSidekiqWorker() - app ممکنه healthcheck نداشته باشه.
+✅ 570: DockerComposeGenerator - generateAdditionalService() - Keycloak بدون PostgreSQL با H2 شروع میشه.
+✅ 571: DockerComposeOverrideGenerator - generate() - مسیر node_modules با PM تغییر میکنه.
+✅ 572: DockerComposeOverrideGenerator - generate() - Debug port برای همه DBها expose میشه.
+✅ 573: DockerComposeOverrideGenerator - getDefaultDebugPort() - ممکنه با port اصلی تداخل کنه.
+✅ 574: DockerignoreGenerator - generate() - الگوی override ممکنه ignore بشه.
+✅ 575: DockerignoreGenerator - generate() - mvnw ignore میشه ولی build لازمش داره.
+✅ 576: DockerignoreGenerator - generate() - go.work ممکنه لازم باشه.
+✅ 577: DockerignoreGenerator - generate() - .env.production با .env.* ignore میشه.
+✅ 578: EnvFileGenerator - generate() - SPRING_PROFILES_ACTIVE همیشه اضافه میشه.
+✅ 579: EnvFileGenerator - generate() - برای external URL هنوز HOST/PORT اضافه میشه.
+✅ 580: EnvFileGenerator - getDbPrefix() - TiDB prefix ممکنه اشتباه باشه.
+✅ 581: EnvFileGenerator - getDefaultDbName() - TiDB/YugabyteDB تعریف نشده.
+✅ 582: GitHubWorkflowGenerator - generateDatabaseServices() - CockroachDB پورت 8080 اشتباهه.
+✅ 583: GitHubWorkflowGenerator - generateDatabaseServices() - TiDB/YugabyteDB تعریف نشده.
+✅ 584: GitHubWorkflowGenerator - generateTestCommand() - Gradle wrapper استفاده نمیشه.
+✅ 585: GitHubWorkflowGenerator - generateSetupSteps() - actions-rs deprecated شده.
+✅ 586: GitHubWorkflowGenerator - generate() - services indent اشتباه دارن.
+✅ 587: GitLabCIGenerator - generate() - unit-test services indent اشتباه دارن.
+✅ 588: GitLabCIGenerator - getBuildImage() - gradle:7-jdk8 ممکنه نباشه.
+✅ 589: GitLabCIGenerator - generateServices() - CockroachDB/TiDB/YugabyteDB تعریف نشده.
+✅ 590: GitLabCIGenerator - generate() - security-scan image ممکنه push نشده باشه.
+✅ 591: NginxConfigGenerator - generate() - service name ممکنه sanitized شده باشه.
+✅ 592: NginxConfigGenerator - generate() - regex \\. به جای \. استفاده شده.
+✅ 593: NginxConfigGenerator - generate() - فقط برای Laravel معنی داره.
+✅ 594: PrometheusConfigGenerator - generate() - Spring Boot path درست تشخیص نمیده.
+✅ 595: PrometheusConfigGenerator - generate() - اکثر دیتابیسها exporter ندارن.
+✅ 596: PrometheusConfigGenerator - generate() - service name ممکنه sanitized شده باشه.
+✅ 597: عمومی - Error Handling - خطاها silently ignore میشن.
+✅ 598: عمومی - Type Safety - استفاده زیاد از any خطاها رو پنهان میکنه.
+✅ 599: عمومی - Code Duplication - متدهای QuickPick/InputBox تکرار شدن.
+✅ 600: عمومی - Validation - validation کامل قبل از generate نیست.
+✅ 601: DockerWizard - askProjectName() - validateProjectName کاراکترهای unicode رو رد میکنه ولی Docker اجازه میده.
+✅ 602: DockerWizard - askPort() - findFreePort فقط port+1 میکنه و ممکنه همون port مشغول باشه.
+✅ 603: DockerWizard - detectLanguage() - برای package.json همیشه js-backend برمیگردونه حتی اگه frontend باشه.
+✅ 604: DockerWizard - askGeneralOptions() - گزینههای انتخابی بعد از back زدن reset نمیشن.
+✅ 605: DatabaseManager - getAllDatabases() - دستهبندی Graph Database دوبار import شده.
+✅ 606: DatabaseManager - askDatabaseConfig() - URL validation فقط format چک میکنه نه connectivity واقعی.
+✅ 607: DatabaseManager - testConnection() - timeout 5 ثانیه برای بعضی دیتابیسها کمه.
+✅ 608: MessageQueueManager - selectMessageQueues() - Kafka versions 4.3.1 و 4.1.1 image غیررسمی دارن.
+✅ 609: ServiceManager - askServiceConfig() - MinIO version شامل : و - هست که YAML مشکل میده.
+✅ 610: DockerfileGenerator - generateJavaWarDockerfile() - Jetty webapps path اشتباهه.
+✅ 611: DockerfileGenerator - generateJSFrontendDockerfile() - server.mjs کپی میشه ولی CMD فقط server.js صدا میزنه.
+✅ 612: DockerfileGenerator - generatePythonDockerfile() - virtualenv path با Alpine ناسازگاره.
+✅ 613: DockerfileGenerator - generateGoDockerfile() - installsuffix cgo با Go 1.20+ deprecated شده.
+✅ 614: DockerfileGenerator - generateRustDockerfile() - touch src/main.rs cache رو invalid میکنه.
+✅ 615: DockerfileGenerator - generateLaravelDockerfile() - composer install --no-dev ممکنه package های لازم production رو نصب نکنه.
+✅ 616: DockerfileGenerator - generateRailsDockerfile() - bundle install --without development test با Bunler 2+ کار نمیکنه.
+✅ 617: DockerfileGenerator - generateCppDockerfile() - خروجی binary همیشه app هست ولی ممکنه نام دیگه باشه.
+✅ 618: DockerComposeGenerator - generateMainService() - platform: linux/amd64 روی ARM64 سرور fail میده.
+✅ 619: DockerComposeGenerator - generateDatabaseService() - Elasticsearch ES_JAVA_OPTS hardcode است.
+✅ 620: DockerComposeGenerator - generateDatabaseService() - Cassandra بدون volume data از دست میره.
+✅ 621: DockerComposeGenerator - generateMessageQueueService() - Kafka 3.x Zookeeper dependency درست handle نمیشه.
+✅ 622: DockerComposeGenerator - generateZookeeperService() - Zookeeper port 2181 همیشه expose میشه.
+✅ 623: DockerComposeGenerator - generateRedisService() - Redis بدون password اجرا میشه.
+✅ 624: DockerComposeGenerator - generateAdditionalService() - MinIO console port 9001 expose نمیشه.
+✅ 625: DockerComposeOverrideGenerator - generate() - volumes برای non-Node پروژهها path اشتباه داره.
+✅ 626: DockerignoreGenerator - generate() - فایلهای .next/ و .nuxt/ برای build لازم هستن ولی ignore میشن.
+✅ 627: EnvFileGenerator - generate() - JWT_SECRET برای همه js-frontend هم اضافه میشه.
+✅ 628: GitHubWorkflowGenerator - generate() - اگر test وجود نداشته باشه، job fail میشه.
+✅ 629: GitHubWorkflowGenerator - generateDatabaseServices() - MongoDB health check escaping مشکل داره.
+✅ 630: GitLabCIGenerator - generate() - deploy job همیشه kubectl استفاده میکنه حتی اگه K8s نباشه.
+✅ 631: NginxConfigGenerator - generate() - fastcgi_pass service name ممکنه sanitized شده باشه.
+✅ 632: PrometheusConfigGenerator - generate() - scrape interval ثابت 15s هست.
+✅ 633: DockerWizard - start() - اگه کاربر وسط wizard پنجره رو ببنده، state ذخیره نمیشه.
+✅ 634: DatabaseManager - showSelectedDatabasesWithEdit() - دیتابیسهای removed شده در UI دوباره نمایش داده میشن.
+✅ 635: ServiceManager - showSelectedServicesWithEdit() - services تکراری ممکنه duplicate بشن.
+✅ 636: DockerfileGenerator - getJavaBaseImage() - JDK 25 با eclipse-temurin ممکنه tag نداشته باشه.
+✅ 637: DockerfileGenerator - generateDotNetDockerfile() - --self-contained true باعث بزرگ شدن image میشه.
+✅ 638: DockerComposeGenerator - generateMainService() - init: true روی ویندوز ممکنه کار نکنه.
+✅ 639: DockerComposeGenerator - generateDatabaseService() - Oracle volume path اشتباهه.
+✅ 640: DockerComposeGenerator - generateBackupService() - backup command password رو لو میده.
+✅ 641: GitHubWorkflowGenerator - generate() - Trivy scan روی image test انجام میشه نه latest.
+✅ 642: GitLabCIGenerator - generate() - cache فقط target/ هست و node_modules نداره.
+✅ 643: DockerWizard - askLanguageSpecificSettings() - برای زبان ناشناخته به اشتباه next برمیگردونه.
+✅ 644: DatabaseManager - askDatabaseConfig() - اگه کاربر Cancel بزنه، undefined برمیگرده و flow میشکنه.
+✅ 645: MessageQueueManager - showSelectedQueuesWithEdit() - queues با image undefined ساخته میشن.
+✅ 646: DockerfileGenerator - generateJSBackendDockerfile() - npm run build || true خطا رو پنهان میکنه.
+✅ 647: DockerComposeGenerator - generateSecretsSection() - secrets تعریف میشن ولی استفاده نمیشن.
+✅ 648: DockerComposeGenerator - generateMainService() - DNS hardcode 8.8.8.8 ممکنه در intranet کار نکنه.
+✅ 649: EnvFileGenerator - generate() - پسوردها plain text ذخیره میشن.
+✅ 650: PrometheusConfigGenerator - generate() - فقط PostgreSQL/Redis/Elasticsearch رو scrape میکنه.
+✅ 651: DockerWizard - generateFiles() - اگه یک فایل fail بشه، بقیه ساخته نمیشن.
+✅ 652: DatabaseManager - getVolumePath() - RavenDB path اشتباهه.
+✅ 653: DockerfileGenerator - generateGoDockerfile() - -installsuffix cgo با Go 1.20+ خطا میده.
+✅ 654: DockerComposeGenerator - generateDatabaseService() - Neo4j auth format اشتباهه.
+✅ 655: DockerComposeGenerator - generateDatabaseService() - Couchbase نیاز به setup اضافی داره.
+✅ 656: DockerfileGenerator - generateLaravelDockerfile() - php artisan migrate در Dockerfile اجرا نمیشه.
+✅ 657: GitHubWorkflowGenerator - generate() - docker compose up ممکنه fail کنه چون image ساخته نشده.
+✅ 658: GitLabCIGenerator - generate() - docker compose در image docker:27 نصب نیست.
+✅ 659: ServiceManager - askServiceConfig() - Keycloak 26 نیاز به --optimized flag داره.
+✅ 660: DockerComposeGenerator - generateAdditionalService() - Nginx service بدون config fail میده.
+✅ 661: DockerWizard - loadState() - state از پروژه قبلی ممکنه اشتباه load بشه.
+✅ 662: DatabaseManager - askDatabaseConfig() - external URL password رو ذخیره نمیکنه.
+✅ 663: DockerfileGenerator - generatePythonDockerfile() - pip install --prefix=/install با بعضی package ها کار نمیکنه.
+✅ 664: DockerComposeGenerator - generateMainService() - read_only: true با tmpfs ممکنه کافی نباشه.
+✅ 665: DockerComposeGenerator - generatePrometheusService() - prometheus.yml mount read-only نیست.
+✅ 666: EnvFileGenerator - getDbPrefix() - بعضی دیتابیسها prefix ندارن و fallback بد میشه.
+✅ 667: GitHubWorkflowGenerator - generateSetupSteps() - PHP version hardcode شده.
+✅ 668: GitLabCIGenerator - getBuildImage() - Rust image همیشه latest هست.
+✅ 669: NginxConfigGenerator - generate() - server_name localhost برای production مناسب نیست.
+✅ 670: DockerComposeGenerator - generateDatabaseService() - InfluxDB 1.8 با 2.7 env vars ناسازگاره.
+✅ 671: DockerfileGenerator - generateRustDockerfile() - RUSTFLAGS cache رو invalid میکنه.
+✅ 672: ServiceManager - selectServices() - Nginx و Grafana ممکنه دوبار اضافه بشن.
+✅ 673: DockerComposeGenerator - checkPortConflicts() - internal port conflict check نمیشه.
+✅ 674: DatabaseManager - showSelectedDatabasesWithEdit() - بعد از edit دیتابیس، UI state از دست میره.
+✅ 675: DockerfileGenerator - generateDotNetDockerfile() - *.sln کپی میشه ولی ممکنه نباشه.
+✅ 676: DockerComposeGenerator - generateMessageQueueService() - Kafka advertised listeners اشتباهه.
+✅ 677: GitHubWorkflowGenerator - generate() - Hadolint روی Dockerfile ناقص fail میده.
+✅ 678: GitLabCIGenerator - generate() - deploy manual هست ولی auto باید باشه.
+✅ 679: DockerWizard - askProjectName() - پروژه با نام تکراری ممکنه overwrite کنه.
+✅ 680: DockerComposeGenerator - generateMainService() - container_name ممکنه conflict کنه.
+✅ 681: DockerfileGenerator - generateJavaJarDockerfile() - jar path برای Gradle اشتباهه.
+✅ 682: DockerComposeGenerator - generateDatabaseService() - MySQL 9.2 env vars تغییر کردن.
+✅ 683: DockerfileGenerator - generateLaravelDockerfile() - docker-php-ext-install ممکنه fail بده.
+✅ 684: DockerComposeGenerator - generateAdditionalService() - MinIO بدون volume data از دست میره.
+✅ 685: EnvFileGenerator - generate() - SPRING_PROFILES_ACTIVE برای non-Java اضافه میشه.
+✅ 686: PrometheusConfigGenerator - generate() - metrics path برای non-Spring Boot اشتباهه.
+✅ 687: DockerWizard - start() - totalSteps ثابت 8 هست ولی ممکنه steps بیشتر بشن.
+✅ 688: DatabaseManager - askDatabaseConfig() - port validation برای external URL هم انجام میشه.
+✅ 689: DockerfileGenerator - generateGoDockerfile() - go mod download بدون go.sum fail میده.
+✅ 690: DockerComposeGenerator - generateDatabaseService() - Oracle image نیاز به acceptance داره.
+✅ 691: GitHubWorkflowGenerator - generate() - secrets ممکنه undefined باشن.
+✅ 692: GitLabCIGenerator - generate() - $CI_REGISTRY_IMAGE ممکنه خالی باشه.
+✅ 693: ServiceManager - showSelectedServicesWithEdit() - services با پورت تکراری conflict میدن.
+✅ 694: DockerfileGenerator - generateRailsDockerfile() - rake assets:precompile ممکنه fail بده.
+✅ 695: DockerComposeGenerator - generateMainService() - healthcheck برای app با curl ممکنه curl نصب نباشه.
+✅ 696: DockerfileGenerator - generateJSFrontendDockerfile() - npm install sharp همیشه اجرا میشه.
+✅ 697: DockerComposeGenerator - generateBackupService() - backup volume name conflict میکنه.
+✅ 698: EnvFileGenerator - generate() - Grafana password plain text هست.
+✅ 699: DockerWizard - generateFiles() - اگه workspace read-only باشه fail میده.
+✅ 700: عمومی - Performance - import همه config ها در startup کند هست.
+
 
 همرو درست کن و فایل کامل رو بده من.

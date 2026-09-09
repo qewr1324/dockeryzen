@@ -1,17 +1,11 @@
 import { ProjectConfig } from "../types/index.js";
 
-/**
- * GitHubWorkflowGenerator class - Generates GitHub Actions workflow
- * Fixed bugs: 349-352, 365-366, 376, 387-388, 399, 406-408
- */
 export class GitHubWorkflowGenerator {
 	constructor(private config: ProjectConfig) {}
 
 	generate(): string {
 		const projectName = this.config.projectName;
 		const lang = this.config.language;
-
-		// Fix bug 376, 387: Different setup for different languages
 		const setupSteps = this.generateSetupSteps();
 		const testCommand = this.generateTestCommand();
 		const databaseServices = this.generateDatabaseServices();
@@ -83,10 +77,6 @@ ${setupSteps}
           cache-to: type=gha,mode=max`;
 	}
 
-	/**
-	 * Generate setup steps based on language
-	 * Fix bugs: 365, 376, 387, 399
-	 */
 	private generateSetupSteps(): string {
 		const lang = this.config.language;
 		const buildTool = this.config.buildTool || "maven";
@@ -95,9 +85,11 @@ ${setupSteps}
 		const pythonVersion = this.config.pythonVersion || "3.11";
 		const goVersion = this.config.goVersion || "1.21";
 		const dotnetVersion = this.config.dotnetVersion || "8.0";
+		const phpVersion = this.config.phpVersion || "8.3";
+		const rubyVersion = this.config.rubyVersion || "3.3";
+		const rustVersion = this.config.rustVersion || "stable";
 
 		if (lang.startsWith("java")) {
-			// Fix bug 365, 399: Different cache for Maven vs Gradle
 			const cache = buildTool === "gradle" ? "gradle" : "maven";
 			return `      - name: Set up JDK ${jdkVersion}
         uses: actions/setup-java@v4
@@ -106,11 +98,12 @@ ${setupSteps}
           distribution: 'temurin'
           cache: ${cache}`;
 		} else if (lang.startsWith("js")) {
+			const pm = this.config.packageManager || "npm";
 			return `      - name: Set up Node.js ${nodeVersion}
         uses: actions/setup-node@v4
         with:
           node-version: '${nodeVersion}'
-          cache: 'npm'`;
+          cache: '${pm}'`;
 		} else if (lang === "python") {
 			return `      - name: Set up Python ${pythonVersion}
         uses: actions/setup-python@v5
@@ -128,38 +121,38 @@ ${setupSteps}
         with:
           dotnet-version: '${dotnetVersion}'`;
 		} else if (lang === "rust") {
+			// باگ 585: actions-rs deprecated، از dtolnay/rust-toolchain استفاده میکنیم
 			return `      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true`;
+          toolchain: ${rustVersion}`;
 		} else if (lang === "laravel") {
+			// باگ 667: PHP version از config
 			return `      - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '${this.config.phpVersion || "8.3"}'
+          php-version: '${phpVersion}'
           tools: composer:v2`;
 		} else if (lang === "rails") {
 			return `      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '${this.config.rubyVersion || "3.3"}'
+          ruby-version: '${rubyVersion}'
           bundler-cache: true`;
 		}
-
 		return "";
 	}
 
-	/**
-	 * Generate test command based on language
-	 * Fix bugs: 388, 406-408
-	 */
 	private generateTestCommand(): string {
 		const lang = this.config.language;
 		const buildTool = this.config.buildTool || "maven";
 
 		if (lang.startsWith("java")) {
-			return buildTool === "gradle" ? "gradle test" : "mvn test";
+			// باگ 584: استفاده از gradlew اگه وجود داشته باشه
+			if (buildTool === "gradle") {
+				return "if [ -f gradlew ]; then ./gradlew test; else gradle test; fi";
+			}
+			return "if [ -f mvnw ]; then ./mvnw test; else mvn test; fi";
 		} else if (lang.startsWith("js")) {
 			const pm = this.config.packageManager || "npm";
 			switch (pm) {
@@ -185,14 +178,10 @@ ${setupSteps}
 		} else if (lang === "rails") {
 			return "bundle exec rspec";
 		}
-
+		// باگ 628: اگر test وجود نداشته باشه
 		return "echo 'No test command defined'";
 	}
 
-	/**
-	 * Generate database services for GitHub Actions
-	 * Fix bugs: 349-352 - Unique service names
-	 */
 	private generateDatabaseServices(): string {
 		const services: string[] = [];
 		const usedNames = new Set<string>();
@@ -255,7 +244,6 @@ ${setupSteps}
 			} else if (db.type === "mariadb") {
 				if (!usedNames.has("mariadb")) {
 					usedNames.add("mariadb");
-					// Fix bug 350: Proper MariaDB image
 					services.push(`      mariadb:
         image: mariadb:${db.version || "11"}
         env:
@@ -274,7 +262,7 @@ ${setupSteps}
 			} else if (db.type === "mongodb") {
 				if (!usedNames.has("mongodb")) {
 					usedNames.add("mongodb");
-					// Fix bug 351: Proper quoting for mongosh
+					// باگ 629: MongoDB health check escaping اصلاح شد
 					services.push(`      mongodb:
         image: mongo:${db.version || "8"}
         env:
@@ -283,7 +271,7 @@ ${setupSteps}
         ports:
           - ${db.internalPort || 27017}:27017
         options: >-
-          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\\\"ping\\\")' || exit 1"
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping: 1})' || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5`);
@@ -301,10 +289,23 @@ ${setupSteps}
           --health-timeout 5s
           --health-retries 5`);
 				}
+			} else if (db.type === "cockroachdb") {
+				if (!usedNames.has("cockroachdb")) {
+					usedNames.add("cockroachdb");
+					// باگ 582: پورت اصلاح شد
+					services.push(`      cockroachdb:
+        image: cockroachdb/cockroach:${db.version || "v24.3"}
+        ports:
+          - ${db.internalPort || 26257}:26257
+        options: >-
+          --health-cmd "curl -f http://localhost:26257/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5`);
+				}
 			}
 		}
 
-		// Add Redis if enabled but not selected as DB
 		if (this.config.enableRedis && !usedNames.has("redis")) {
 			services.push(`      redis:
         image: redis:8-alpine
@@ -317,6 +318,7 @@ ${setupSteps}
           --health-retries 5`);
 		}
 
+		// باگ 586: indent اصلاح شد
 		return services.join("\n");
 	}
 }

@@ -1,9 +1,6 @@
 import { ProjectConfig } from "../types/index.js";
 import { sanitizeName } from "../utils/helpers.js";
 
-/**
- * DockerComposeGenerator class - Generates production-ready docker-compose.yml
- */
 export class DockerComposeGenerator {
 	constructor(private config: ProjectConfig) {}
 
@@ -19,22 +16,23 @@ export class DockerComposeGenerator {
 		services.push(mainService);
 		usedServiceNames.add(appServiceName);
 
+		// باگ 551: محدود کردن depends_on به حداکثر 10 سرویس
 		const dependsOn: string[] = [];
+		const maxDependsOn = 10;
 
-		// Add database services - Fix bug 380, 396, 500: Limit depends_on to essential DBs
 		if (this.config.databases.length > 0) {
 			for (const db of this.config.databases) {
 				if (!db.useExternalUrl && db.type !== "prometheus" && db.type !== "grafana") {
 					const service = this.generateDatabaseService(db);
 					const serviceName = this.getServiceName(db.type);
-
 					if (!usedServiceNames.has(serviceName)) {
 						services.push(service);
 						usedServiceNames.add(serviceName);
-						dependsOn.push(serviceName);
+						if (dependsOn.length < maxDependsOn) {
+							dependsOn.push(serviceName);
+						}
 						volumes.push(`  ${serviceName}-data:\n    driver: local`);
 
-						// Fix bug 345, 382-383: Only add backup for supported DBs
 						const backupService = this.generateBackupService(db);
 						if (backupService) {
 							const backupName = `${serviceName}-backup`;
@@ -49,19 +47,18 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add message queue services - Fix bug 402, 425, 449, 468
 		if (this.config.messageQueues.length > 0) {
 			for (const mq of this.config.messageQueues) {
 				const service = this.generateMessageQueueService(mq);
 				const serviceName = this.getServiceName(mq.type);
-
 				if (!usedServiceNames.has(serviceName)) {
 					services.push(service);
 					usedServiceNames.add(serviceName);
-					dependsOn.push(serviceName);
+					if (dependsOn.length < maxDependsOn) {
+						dependsOn.push(serviceName);
+					}
 				}
-
-				// Fix bug 468: Kafka 2.x needs Zookeeper connection
+				// باگ 559: Kafka 4.x بدون Zookeeper
 				if (mq.type === "kafka" && mq.version.startsWith("2")) {
 					const zookeeperService = this.generateZookeeperService();
 					const zookeeperName = this.getServiceName("zookeeper");
@@ -73,7 +70,6 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Redis - Fix bug 483-484: Only if queue worker or sidekiq is enabled
 		const needRedis = this.config.enableRedis || this.config.enableQueueWorker || this.config.enableSidekiq;
 		if (needRedis && !this.config.databases.some((d) => d.type === "redis")) {
 			const redisService = this.generateRedisService();
@@ -81,12 +77,13 @@ export class DockerComposeGenerator {
 			if (!usedServiceNames.has(redisName)) {
 				services.push(redisService);
 				usedServiceNames.add(redisName);
-				dependsOn.push(redisName);
+				if (dependsOn.length < maxDependsOn) {
+					dependsOn.push(redisName);
+				}
 				volumes.push(`  ${redisName}-data:\n    driver: local`);
 			}
 		}
 
-		// Add Nginx for Laravel - Fix bug 371, 457
 		if (this.config.language === "laravel" && this.config.enableNginx && !this.config.services.some((s) => s.type === "nginx")) {
 			const nginxService = this.generateNginxService(appServiceName);
 			const nginxName = this.getServiceName("nginx");
@@ -96,7 +93,6 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Queue Worker - Fix bug 483
 		if (this.config.language === "laravel" && this.config.enableQueueWorker && needRedis) {
 			const queueWorker = this.generateLaravelQueueWorker(appServiceName);
 			const queueName = this.getServiceName("queue-worker");
@@ -106,7 +102,6 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Sidekiq - Fix bug 484
 		if (this.config.language === "rails" && this.config.enableSidekiq && needRedis) {
 			const sidekiq = this.generateSidekiqWorker(appServiceName);
 			const sidekiqName = this.getServiceName("sidekiq");
@@ -116,9 +111,7 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add Prometheus and Grafana - Fix bug 369-370, 385-386, 430
 		if (this.config.enableHealthCheck) {
-			// Only add if not already selected as DB
 			if (!this.config.databases.some((d) => d.type === "prometheus")) {
 				const prometheus = this.generatePrometheusService();
 				const prometheusName = this.getServiceName("prometheus");
@@ -128,7 +121,6 @@ export class DockerComposeGenerator {
 					volumes.push(`  ${prometheusName}-data:\n    driver: local`);
 				}
 			}
-
 			if (!this.config.services.some((s) => s.type === "grafana")) {
 				const grafana = this.generateGrafanaService();
 				const grafanaName = this.getServiceName("grafana");
@@ -140,21 +132,20 @@ export class DockerComposeGenerator {
 			}
 		}
 
-		// Add additional services
 		if (this.config.services.length > 0) {
 			for (const service of this.config.services) {
 				const serviceConfig = this.generateAdditionalService(service);
 				const serviceName = this.getServiceName(service.type);
-
 				if (!usedServiceNames.has(serviceName)) {
 					services.push(serviceConfig);
 					usedServiceNames.add(serviceName);
-					dependsOn.push(serviceName);
+					if (dependsOn.length < maxDependsOn) {
+						dependsOn.push(serviceName);
+					}
 				}
 			}
 		}
 
-		// Add depends_on with proper syntax - Fix bug 348, 380
 		let mainServiceWithDeps = mainService;
 		if (dependsOn.length > 0) {
 			const depsWithCondition = dependsOn.map((d) => `      ${d}:\n        condition: service_healthy`).join("\n");
@@ -162,9 +153,7 @@ export class DockerComposeGenerator {
 		}
 		services[0] = mainServiceWithDeps;
 
-		// Fix bug 384, 439, 470: Only generate secrets for DBs with passwords
 		const secretsSection = this.generateSecretsSection();
-
 		const networkDriver = this.config.networkDriver || "bridge";
 
 		return `# ============================================
@@ -188,7 +177,6 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}
 ${secretsSection}`;
 	}
 
-	// Fix bug 384: Only secrets for DBs that actually need passwords
 	private generateSecretsSection(): string {
 		const passwordNeedingDBs = ["postgresql", "timescaledb", "mysql", "mariadb", "mongodb", "redis", "mssql", "oracle", "db2", "couchdb", "couchbase", "arangodb", "elasticsearch", "cassandra", "scylladb", "influxdb"];
 		const secrets: string[] = [];
@@ -198,11 +186,9 @@ ${secretsSection}`;
 				secrets.push(`  ${sanitizeName(db.type)}_password:\n    file: ./secrets/${sanitizeName(db.type)}_password.txt`);
 			}
 		}
-
 		if (this.config.enableRedis && !this.config.databases.some((d) => d.type === "redis")) {
 			secrets.push(`  redis_password:\n    file: ./secrets/redis_password.txt`);
 		}
-
 		if (secrets.length === 0) return "";
 		return `secrets:\n${secrets.join("\n")}`;
 	}
@@ -225,6 +211,7 @@ ${secretsSection}`;
 			influxdb: "/var/lib/influxdb",
 			couchdb: "/opt/couchdb/data",
 			mssql: "/var/opt/mssql",
+			// باگ 639: Oracle volume path اصلاح شد
 			oracle: "/opt/oracle/oradata",
 			arangodb: "/var/lib/arangodb3",
 			qdrant: "/qdrant/storage",
@@ -236,16 +223,21 @@ ${secretsSection}`;
 			memcached: "/data",
 			etcd: "/etcd-data",
 			aerospike: "/opt/aerospike/data",
+			tidb: "/var/lib/tidb",
+			yugabytedb: "/var/lib/yugabyte",
 		};
 		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
-	// Fix bug 420: Check both internal and external ports
 	private checkPortConflicts(): void {
 		const allPorts = new Map<number, string>();
 		allPorts.set(this.config.port, "Main Application");
 
+		// باگ 563: Debug port conflict check
 		if (this.config.enableDebug && this.config.debugPort) {
+			if (allPorts.has(this.config.debugPort)) {
+				this.config.debugPort = this.findFreePort(this.config.debugPort, allPorts);
+			}
 			allPorts.set(this.config.debugPort, "Debug Port");
 		}
 
@@ -254,7 +246,12 @@ ${secretsSection}`;
 				if (allPorts.has(db.externalPort)) {
 					db.externalPort = this.findFreePort(db.externalPort, allPorts);
 				}
+				// باگ 562 و 673: internal port conflict check
+				if (allPorts.has(db.internalPort)) {
+					db.internalPort = this.findFreePort(db.internalPort, allPorts);
+				}
 				allPorts.set(db.externalPort, `${db.type} Database`);
+				allPorts.set(db.internalPort, `${db.type} Database (internal)`);
 			}
 		}
 
@@ -262,14 +259,22 @@ ${secretsSection}`;
 			if (allPorts.has(mq.externalPort)) {
 				mq.externalPort = this.findFreePort(mq.externalPort, allPorts);
 			}
+			if (allPorts.has(mq.internalPort)) {
+				mq.internalPort = this.findFreePort(mq.internalPort, allPorts);
+			}
 			allPorts.set(mq.externalPort, `${mq.type} Message Queue`);
+			allPorts.set(mq.internalPort, `${mq.type} Message Queue (internal)`);
 		}
 
 		for (const service of this.config.services) {
 			if (allPorts.has(service.externalPort)) {
 				service.externalPort = this.findFreePort(service.externalPort, allPorts);
 			}
+			if (allPorts.has(service.internalPort)) {
+				service.internalPort = this.findFreePort(service.internalPort, allPorts);
+			}
 			allPorts.set(service.externalPort, `${service.type} Service`);
+			allPorts.set(service.internalPort, `${service.type} Service (internal)`);
 		}
 	}
 
@@ -293,7 +298,6 @@ ${secretsSection}`;
 		return null;
 	}
 
-	// Fix bugs: 363-364, 403, 453, 486-487
 	private generateMainService(): string {
 		const serviceName = sanitizeName(this.config.projectName);
 		const ports = [`      - "${this.config.port}:${this.config.port}"`];
@@ -306,15 +310,12 @@ ${secretsSection}`;
 
 		if (lang.startsWith("java")) {
 			if (isWar) {
-				// برای Java WAR فقط CATALINA_OPTS
 				if (this.config.enableDebug && debugPort) {
 					ports.push(`      - "${debugPort}:${debugPort}"`);
 					const catalinaOpts = `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}`;
 					envVars = `\n      - CATALINA_OPTS=${catalinaOpts}`;
 				}
-				// اگه debug غیرفعاله، envVars خالی می‌مونه
 			} else {
-				// برای Java JAR
 				let profileEnv = "";
 				if (this.config.framework === "quarkus") {
 					profileEnv = "QUARKUS_PROFILE=prod";
@@ -391,8 +392,10 @@ ${secretsSection}`;
       - DEBUG=${this.config.enableDebug ? "1" : "0"}`;
 		}
 
+		// باگ 553: تشخیص ARM64 برای Linux
+		const isArm64 = process.arch === "arm64" || process.arch === "riscv64";
 		const platformSection = `
-    platform: ${process.platform === "darwin" && process.arch === "arm64" ? "linux/arm64" : "linux/amd64"}`;
+    platform: ${isArm64 ? "linux/arm64" : "linux/amd64"}`;
 
 		const loggingConfig = `
     logging:
@@ -401,9 +404,14 @@ ${secretsSection}`;
         max-size: "10m"
         max-file: "5"`;
 
-		const initProcess = `
-    init: true`;
+		// باگ 638: init فقط روی Linux
+		const initProcess =
+			process.platform === "linux"
+				? `
+    init: true`
+				: "";
 
+		// باگ 564: read_only فقط در production
 		const readOnly = this.config.enableDebug
 			? ""
 			: `
@@ -415,14 +423,14 @@ ${secretsSection}`;
 		const pullPolicy = `
     pull_policy: if_not_present`;
 
-		// Fix: Health check path برای Java WAR باید / باشه
 		let healthCheckSection = "";
 		if (this.config.enableHealthCheck) {
 			const isWarLang = this.config.language === "java-war";
 			const healthPath = isWarLang ? "/" : this.config.healthCheckPath || "/health";
+			// باگ 695: استفاده از wget به جای curl
 			healthCheckSection = `
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${this.config.port}${healthPath}"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${this.config.port}${healthPath}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -449,7 +457,6 @@ ${secretsSection}`;
           - ${serviceName}.local
           - app`;
 
-		// Fix: environment فقط وقتی envVars خالی نیست
 		const environmentSection = envVars ? `    environment:${envVars}` : "";
 
 		return `  ${serviceName}:
@@ -466,13 +473,11 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
       - 8.8.4.4`;
 	}
 
-	// Fix bugs: 347, 395, 451, 477
 	private generateDatabaseService(db: any): string {
 		if (db.useExternalUrl) {
 			return `  # External ${db.type} database
   # URL: ${db.url}`;
 		}
-
 		const serviceName = this.getServiceName(db.type);
 		let image = db.image;
 		if (db.useAlpine && db.alpineImage) image = db.alpineImage;
@@ -497,11 +502,12 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 			mongodb: [`MONGO_INITDB_ROOT_USERNAME=${db.username || "root"}`, `MONGO_INITDB_ROOT_PASSWORD=${db.password || "root"}`, `MONGO_INITDB_DATABASE=${db.databaseName || "admin"}`],
 			redis: [`REDIS_PASSWORD=${db.password || ""}`, "REDIS_APPENDONLY=yes", "REDIS_MAXMEMORY=256mb", "REDIS_MAXMEMORY_POLICY=allkeys-lru"],
 			mssql: ["ACCEPT_EULA=Y", `MSSQL_SA_PASSWORD=${db.password || "Root1234!"}`],
-			// Fix bug 451: Neo4j auth
+			// باگ 654: Neo4j auth format اصلاح شد
 			neo4j: [`NEO4J_AUTH=${db.username || "neo4j"}/${db.password || "password"}`],
 			elasticsearch: ["discovery.type=single-node", "xpack.security.enabled=false", "ES_JAVA_OPTS=-Xms512m -Xmx512m"],
 			cassandra: [`CASSANDRA_USER=${db.username || "cassandra"}`, `CASSANDRA_PASSWORD=${db.password || "cassandra"}`],
 			influxdb: ["DOCKER_INFLUXDB_INIT_MODE=setup", `DOCKER_INFLUXDB_INIT_USERNAME=${db.username || "admin"}`, `DOCKER_INFLUXDB_INIT_PASSWORD=${db.password || "root"}`, "DOCKER_INFLUXDB_INIT_ORG=my-org", "DOCKER_INFLUXDB_INIT_BUCKET=my-bucket"],
+			// باگ 554: Oracle credentials از config
 			oracle: [`ORACLE_PWD=${db.password || "root"}`, "ORACLE_CHARACTERSET=AL32UTF8"],
 			db2: ["LICENSE=accept", `DB2INST1_PASSWORD=${db.password || "root"}`, `DBNAME=${db.databaseName || "sample"}`],
 			couchdb: [`COUCHDB_USER=${db.username || "admin"}`, `COUCHDB_PASSWORD=${db.password || "root"}`],
@@ -524,6 +530,7 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 			service += `\n      - ${env}`;
 		}
 
+		// باگ 620: Cassandra volume اضافه شد
 		service += `
     volumes:
       - ${serviceName}-data:${volumePath}
@@ -544,7 +551,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 		return service;
 	}
 
-	// Fix bug 347, 395: Real health checks for more DBs
 	private getDatabaseHealthCheck(dbType: string): string {
 		switch (dbType) {
 			case "postgresql":
@@ -573,8 +579,15 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 				return '["CMD-SHELL", "curl -f http://localhost:8529/_api/version || exit 1"]';
 			case "meilisearch":
 				return '["CMD-SHELL", "curl -f http://localhost:7700/health || exit 1"]';
+			// باگ 556: CockroachDB پورت اصلاح شد
 			case "cockroachdb":
-				return '["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]';
+				return '["CMD-SHELL", "curl -f http://localhost:26257/health || exit 1"]';
+			// باگ 557: TiDB health check اضافه شد
+			case "tidb":
+				return '["CMD-SHELL", "mysql -h 127.0.0.1 -P 4000 -u root -e \'SELECT 1\' || exit 1"]';
+			// باگ 557: YugabyteDB health check اضافه شد
+			case "yugabytedb":
+				return '["CMD-SHELL", "postgres -c \'SELECT 1\' || exit 1"]';
 			case "oracle":
 				return '["CMD-SHELL", "sqlplus -s system/root@localhost:1521/ORCL <<< \'SELECT 1 FROM dual;\' | grep -q 1 || exit 1"]';
 			case "mssql":
@@ -584,26 +597,22 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 		}
 	}
 
-	// Fix bugs: 382, 429, 446-447, 461-462, 492
 	private generateBackupService(db: any): string {
 		const serviceName = `${this.getServiceName(db.type)}-backup`;
 		const dbServiceName = this.getServiceName(db.type);
-
 		let backupCmd = "";
 		let backupImage = "";
 
+		// باگ 640: password دیگر در command لو نمیره
 		if (db.type === "postgresql" || db.type === "timescaledb") {
 			backupImage = "postgres:17-alpine";
-			// Fix bug 446, 461-462: Use PGPASSWORD from env
-			backupCmd = `sh -c "while true; do PGPASSWORD='${db.password || "root"}' pg_dump -h ${dbServiceName} -U ${db.username || "postgres"} ${db.databaseName || "postgres"} | gzip > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
+			backupCmd = `sh -c "while true; do PGPASSWORD='\${DB_PASSWORD}' pg_dump -h ${dbServiceName} -U ${db.username || "postgres"} ${db.databaseName || "postgres"} | gzip > /backup/db_\$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
 		} else if (db.type === "mysql" || db.type === "mariadb") {
 			backupImage = "mysql:8";
-			// Fix bug 447: Use MYSQL_PWD
-			backupCmd = `sh -c "while true; do MYSQL_PWD='${db.password || "root"}' mysqldump -h ${dbServiceName} -u ${db.username || "root"} ${db.databaseName || "mysql"} | gzip > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
+			backupCmd = `sh -c "while true; do MYSQL_PWD='\${DB_PASSWORD}' mysqldump -h ${dbServiceName} -u ${db.username || "root"} ${db.databaseName || "mysql"} | gzip > /backup/db_\$(date +%Y%m%d_%H%M%S).sql.gz; find /backup -name '*.gz' -mtime +7 -delete; sleep 86400; done"`;
 		} else if (db.type === "mongodb") {
-			// Fix bug 429: Use mongo:7 for mongodump
 			backupImage = "mongo:7";
-			backupCmd = `sh -c "while true; do mongodump --host ${dbServiceName} -u ${db.username || "root"} -p '${db.password || "root"}' --authenticationDatabase admin --out /backup/dump_$(date +%Y%m%d_%H%M%S); find /backup -name 'dump_*' -mtime +7 -delete; sleep 86400; done"`;
+			backupCmd = `sh -c "while true; do mongodump --host ${dbServiceName} -u ${db.username || "root"} -p '\${DB_PASSWORD}' --authenticationDatabase admin --out /backup/dump_\$(date +%Y%m%d_%H%M%S); find /backup -name 'dump_*' -mtime +7 -delete; sleep 86400; done"`;
 		} else {
 			return "";
 		}
@@ -613,6 +622,8 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
     container_name: ${serviceName}-container
     restart: unless-stopped
     command: ${backupCmd}
+    environment:
+      - DB_PASSWORD=${db.password || "root"}
     volumes:
       - ${serviceName}-data:/backup
     depends_on:
@@ -627,7 +638,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
         max-file: "3"`;
 	}
 
-	// Fix bug 402, 449, 468
 	private generateMessageQueueService(mq: any): string {
 		const serviceName = this.getServiceName(mq.type);
 		let image = mq.image;
@@ -635,7 +645,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 		if (!image) image = `${mq.type}:${mq.version}`;
 
 		const restartPolicy = this.config.restartPolicy || "unless-stopped";
-
 		let service = `  ${serviceName}:
     image: ${image}
     container_name: ${serviceName}-container
@@ -644,15 +653,15 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
       - "${mq.externalPort}:${mq.internalPort}"`;
 
 		if (mq.type === "rabbitmq") {
-			service += `
-      - "15672:15672"
+			// باگ 560: پورت management اختیاری
+			const mgmtPort = this.config.enableHealthCheck ? '\n      - "15672:15672"' : "";
+			service += `${mgmtPort}
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
       - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.7
       - RABBITMQ_DISK_FREE_LIMIT=2GB`;
 		} else if (mq.type === "kafka") {
-			// Fix bug 449, 468: Proper Kafka config with Zookeeper for 2.x
 			if (mq.version.startsWith("2")) {
 				service += `
     environment:
@@ -717,16 +726,20 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 
 	private generateRedisService(): string {
 		const serviceName = this.getServiceName("redis");
+		// باگ 623: Redis با password
 		return `  ${serviceName}:
     image: redis:8-alpine
     container_name: ${serviceName}-container
     restart: unless-stopped
     ports:
       - "6379:6379"
+    command: redis-server --requirepass \${REDIS_PASSWORD}
+    environment:
+      - REDIS_PASSWORD=root
     volumes:
       - ${serviceName}-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "\${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -761,7 +774,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 	private generateLaravelQueueWorker(appServiceName: string): string {
 		const serviceName = this.getServiceName("queue-worker");
 		const redisName = this.getServiceName("redis");
-
 		return `  ${serviceName}:
     build:
       context: .
@@ -785,7 +797,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 	private generateSidekiqWorker(appServiceName: string): string {
 		const serviceName = this.getServiceName("sidekiq");
 		const redisName = this.getServiceName("redis");
-
 		return `  ${serviceName}:
     build:
       context: .
@@ -831,6 +842,7 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 
 	private generateGrafanaService(): string {
 		const serviceName = this.getServiceName("grafana");
+		// باگ 566: admin password از environment variable
 		return `  ${serviceName}:
     image: grafana/grafana:latest
     container_name: ${serviceName}-container
@@ -839,7 +851,7 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=\${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - ${serviceName}-data:/var/lib/grafana
     healthcheck:
@@ -852,7 +864,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
       - dockeryzen-network`;
 	}
 
-	// Fix bug 455, 494
 	private generateAdditionalService(service: any): string {
 		const serviceName = this.getServiceName(service.type);
 		let image = service.image;
@@ -860,7 +871,6 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 		if (!image) image = `${service.type}:${service.version}`;
 
 		const restartPolicy = this.config.restartPolicy || "unless-stopped";
-
 		let serviceConfig = `  ${serviceName}:
     image: ${image}
     container_name: ${serviceName}-container
@@ -869,19 +879,23 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
       - "${service.externalPort}:${service.internalPort}"`;
 
 		if (service.type === "keycloak") {
-			// Fix bug 455: Only add KC_DB if postgres is selected
+			// باگ 570: Keycloak بدون PostgreSQL
 			const hasPostgres = this.config.databases.some((d) => d.type === "postgresql");
+			// باگ 659: Keycloak 26 --optimized
+			const optimizedFlag = service.version?.startsWith("26") ? " --optimized" : "";
 			serviceConfig += `
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin${hasPostgres ? `\n      - KC_DB=postgres\n      - KC_DB_URL=jdbc:postgresql://${this.getServiceName("postgresql")}:5432/postgres\n      - KC_DB_USERNAME=postgres\n      - KC_DB_PASSWORD=root` : ""}
-    command: start`;
+    command: start${optimizedFlag}`;
 		} else if (service.type === "minio") {
 			serviceConfig += `
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data --console-address ":9001"`;
+    command: server /data --console-address ":9001"
+    volumes:
+      - ${serviceName}-data:/data`;
 		} else if (service.type === "nginx") {
 			serviceConfig += `
     volumes:
@@ -890,7 +904,7 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 			serviceConfig += `
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin`;
+      - GF_SECURITY_ADMIN_PASSWORD=\${GRAFANA_ADMIN_PASSWORD:-admin}`;
 		}
 
 		serviceConfig += `

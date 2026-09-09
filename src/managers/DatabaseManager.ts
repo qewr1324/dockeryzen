@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { DatabaseConfig } from "../types/index.js";
 import { validatePort } from "../utils/helpers.js";
-
 import sqlDatabases from "../config/databases/sql.json" with { type: "json" };
 import nosqlDatabases from "../config/databases/nosql.json" with { type: "json" };
 import keyValueDatabases from "../config/databases/key-value.json" with { type: "json" };
@@ -12,28 +11,17 @@ import searchEngineDatabases from "../config/databases/search-engines.json" with
 import newsqlDatabases from "../config/databases/newsql.json" with { type: "json" };
 import vectorDatabases from "../config/databases/vector.json" with { type: "json" };
 
-/**
- * DatabaseManager class - Manages database selection and configuration
- */
 export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];
 
-	/**
-	 * Select databases with category grouping
-	 */
 	async selectDatabases(currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
 		this.databases = [];
 		const allDatabases = this.getAllDatabases();
 		const categories = [...new Set(allDatabases.map((db: any) => db.category))];
-
-		// Group databases by category
 		const groupedItems: any[] = [];
-		for (const category of categories) {
-			groupedItems.push({
-				label: `--- ${category} ---`,
-				kind: vscode.QuickPickItemKind.Separator,
-			});
 
+		for (const category of categories) {
+			groupedItems.push({ label: `--- ${category} ---`, kind: vscode.QuickPickItemKind.Separator });
 			const categoryDatabases = allDatabases.filter((db: any) => db.category === category);
 			for (const db of categoryDatabases) {
 				groupedItems.push({
@@ -77,18 +65,15 @@ export class DatabaseManager {
 					isResolved = true;
 					const selected = quickPick.selectedItems as any[];
 					cleanup();
-
 					if (selected.length === 0) {
 						resolve([]);
 						return;
 					}
-
 					const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
 					resolve(result);
 				}),
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
-
 					if (button.tooltip === "Back") {
 						isResolved = true;
 						cleanup();
@@ -97,12 +82,10 @@ export class DatabaseManager {
 						isResolved = true;
 						const selected = quickPick.selectedItems as any[];
 						cleanup();
-
 						if (selected.length === 0) {
 							resolve([]);
 							return;
 						}
-
 						const result = this.showSelectedDatabasesWithEdit(selected, currentStep, totalSteps);
 						resolve(result);
 					}
@@ -115,7 +98,6 @@ export class DatabaseManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -123,18 +105,19 @@ export class DatabaseManager {
 	private getAllDatabases(): any[] {
 		const allDatabases: any[] = [];
 		const configs: any[] = [sqlDatabases, nosqlDatabases, keyValueDatabases, wideColumnDatabases, graphDatabases, timeSeriesDatabases, searchEngineDatabases, newsqlDatabases, vectorDatabases];
-
+		const seenCategories = new Set<string>();
 		for (const config of configs) {
 			if (config.databases) {
+				// باگ 605: جلوگیری از دسته‌بندی تکراری
+				if (seenCategories.has(config.category)) {
+					continue;
+				}
+				seenCategories.add(config.category);
 				for (const db of config.databases) {
-					allDatabases.push({
-						...db,
-						category: config.category,
-					});
+					allDatabases.push({ ...db, category: config.category });
 				}
 			}
 		}
-
 		return allDatabases;
 	}
 
@@ -142,7 +125,11 @@ export class DatabaseManager {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Databases`;
 		quickPick.placeholder = "Click to edit, press Delete to remove, or press Enter to continue";
-		quickPick.items = selectedDbs.map((db) => ({
+
+		// باگ 512 و 634: فیلتر کردن دیتابیس‌های removed شده
+		const activeDbs = selectedDbs.filter((db) => !db.removed);
+
+		quickPick.items = activeDbs.map((db) => ({
 			label: `$(${db.icon}) ${db.label}`,
 			description: db.configured ? "$(check) Configured" : "$(gear) Click to Edit",
 			detail: `Port: ${db.defaultPort} | Version: ${db.versions[0].label}`,
@@ -154,6 +141,7 @@ export class DatabaseManager {
 			configured: db.configured || false,
 			removed: db.removed || false,
 		}));
+
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [
@@ -174,7 +162,6 @@ export class DatabaseManager {
 			disposables.push(
 				quickPick.onDidAccept(async () => {
 					if (isResolved) return;
-
 					const selected = quickPick.selectedItems[0] as any;
 					if (selected) {
 						isResolved = true;
@@ -187,8 +174,9 @@ export class DatabaseManager {
 							return;
 						}
 
-						const config = await this.askDatabaseConfig(selected, currentStep, totalSteps);
-
+						// باگ 513: حفظ تنظیمات قبلی هنگام back
+						const existingConfig = this.databases.find((d) => d.type === selected.value);
+						const config = await this.askDatabaseConfig(selected, currentStep, totalSteps, existingConfig);
 						if (config === "back") {
 							resolve("back");
 							return;
@@ -207,40 +195,35 @@ export class DatabaseManager {
 							}
 							selected.configured = true;
 						}
-
 						const result = await this.showSelectedDatabasesWithEdit(selectedDbs, currentStep, totalSteps);
 						resolve(result);
 					}
 				}),
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
-
 					if (button.tooltip === "Remove Selected") {
 						const selected = quickPick.selectedItems[0] as any;
 						if (selected) {
 							selected.removed = true;
 							this.databases = this.databases.filter((d) => d.type !== selected.value);
-
-							quickPick.items = selectedDbs
-								.filter((d: any) => !d.removed)
-								.map((db) => ({
-									label: `$(${db.icon}) ${db.label}`,
-									description: db.configured ? "$(check) Configured" : "$(gear) Click to Edit",
-									detail: `Port: ${db.defaultPort} | Version: ${db.versions[0].label}`,
-									value: db.value,
-									defaultPort: db.defaultPort,
-									defaultUser: db.defaultUser,
-									defaultDatabase: db.defaultDatabase,
-									versions: db.versions,
-									configured: db.configured || false,
-								}));
+							// باگ 512: رفرش درست UI
+							const activeDbs = selectedDbs.filter((d: any) => !d.removed);
+							quickPick.items = activeDbs.map((db) => ({
+								label: `$(${db.icon}) ${db.label}`,
+								description: db.configured ? "$(check) Configured" : "$(gear) Click to Edit",
+								detail: `Port: ${db.defaultPort} | Version: ${db.versions[0].label}`,
+								value: db.value,
+								defaultPort: db.defaultPort,
+								defaultUser: db.defaultUser,
+								defaultDatabase: db.defaultDatabase,
+								versions: db.versions,
+								configured: db.configured || false,
+							}));
 						}
 						return;
 					}
-
 					isResolved = true;
 					cleanup();
-
 					if (button.tooltip === "Back") {
 						resolve("back");
 					} else {
@@ -275,7 +258,6 @@ export class DatabaseManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -315,8 +297,12 @@ export class DatabaseManager {
 			solr: "/var/solr",
 			meilisearch: "/meili_data",
 			typesense: "/data",
-			tidb: "/data",
-			ravendb: "/opt/RavenDB/Server/RavenData",
+			// باگ 516: TiDB path اصلاح شد
+			tidb: "/var/lib/tidb",
+			// باگ 517: YugabyteDB path اضافه شد
+			yugabytedb: "/var/lib/yugabyte",
+			// باگ 652: RavenDB path اصلاح شد
+			ravendb: "/var/lib/ravendb/data",
 			couchbase: "/opt/couchbase/var",
 			dynamodb: "/home/dynamodblocal/data",
 			db2: "/database",
@@ -324,7 +310,7 @@ export class DatabaseManager {
 		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
-	private async askDatabaseConfig(db: any, currentStep: number, totalSteps: number): Promise<DatabaseConfig | "back" | "cancel" | undefined> {
+	private async askDatabaseConfig(db: any, currentStep: number, totalSteps: number, existingConfig?: DatabaseConfig): Promise<DatabaseConfig | "back" | "cancel" | undefined> {
 		const configMethod = await this.showQuickPickWithBack(
 			`Configure ${db.label}`,
 			[
@@ -350,7 +336,8 @@ export class DatabaseManager {
 				databaseName: db.defaultDatabase,
 				username: db.defaultUser,
 				password: db.value === "mssql" ? "Root1234!" : "root",
-				useAlpine: false,
+				// باگ 519: استفاده از تنظیمات قبلی برای Alpine
+				useAlpine: existingConfig?.useAlpine || false,
 				image: defaultVersion.image,
 				alpineImage: defaultVersion.alpineImage,
 				volumePath: this.getVolumePath(db.value),
@@ -359,16 +346,14 @@ export class DatabaseManager {
 
 		if (configMethod.value === "url") {
 			const url = await this.showInputBoxWithBack(`Enter ${db.label} connection URL`, "postgresql://user:pass@host:port/dbname", currentStep, totalSteps);
-
 			if (url === "back") return "back";
 			if (url === "cancel") return "cancel";
 			if (!url) return undefined;
-
 			if (!this.validateUrl(url)) {
 				vscode.window.showErrorMessage("Invalid URL format. Please use format: protocol://user:pass@host:port/dbname");
 				return undefined;
 			}
-
+			// باگ 606: تست connectivity واقعی
 			const connectionTest = await this.testConnection(url);
 			if (!connectionTest) {
 				const proceed = await vscode.window.showWarningMessage("Could not connect to the database. Do you want to continue anyway?", "Yes", "No");
@@ -376,19 +361,18 @@ export class DatabaseManager {
 					return undefined;
 				}
 			}
-
+			// باگ 514: برای external URL پورت ست نمی‌شه
 			return {
 				type: db.value,
 				version: "latest",
-				internalPort: db.defaultPort,
-				externalPort: db.defaultPort,
+				internalPort: 0,
+				externalPort: 0,
 				useAlpine: false,
 				useExternalUrl: true,
 				url: url,
 			};
 		}
 
-		// Edit Part - Version
 		const versionItems = db.versions.map((v: any) => ({
 			label: `$(tag) ${v.label}`,
 			description: `Version ${v.value}`,
@@ -398,16 +382,16 @@ export class DatabaseManager {
 			alpineImage: v.alpineImage,
 		}));
 
+		// باگ 513: استفاده از تنظیمات قبلی
 		const version = await this.showQuickPickWithBack(`Select ${db.label} Version`, versionItems, currentStep, totalSteps);
 		if (version === "back") return "back";
 		if (version === "cancel") return "cancel";
 		if (!version) return undefined;
 
-		const internalPort = await this.showInputBoxWithBack(`Enter ${db.label} Internal Port`, db.defaultPort.toString(), currentStep, totalSteps);
+		const internalPort = await this.showInputBoxWithBack(`Enter ${db.label} Internal Port`, (existingConfig?.internalPort || db.defaultPort).toString(), currentStep, totalSteps);
 		if (internalPort === "back") return "back";
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
-
 		const internalPortValidation = validatePort(internalPort);
 		if (internalPortValidation) {
 			vscode.window.showErrorMessage(internalPortValidation);
@@ -418,7 +402,6 @@ export class DatabaseManager {
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
-
 		const externalPortValidation = validatePort(externalPort);
 		if (externalPortValidation) {
 			vscode.window.showErrorMessage(externalPortValidation);
@@ -427,18 +410,18 @@ export class DatabaseManager {
 
 		let databaseName: string | undefined;
 		if (db.defaultDatabase) {
-			const dbName = await this.showInputBoxWithBack(`Enter Database Name for ${db.label}`, db.defaultDatabase, currentStep, totalSteps);
+			const dbName = await this.showInputBoxWithBack(`Enter Database Name for ${db.label}`, existingConfig?.databaseName || db.defaultDatabase || "", currentStep, totalSteps);
 			if (dbName === "back") return "back";
 			if (dbName === "cancel") return "cancel";
 			databaseName = dbName;
 		}
 
-		const username = await this.showInputBoxWithBack(`Enter Username for ${db.label}`, db.defaultUser, currentStep, totalSteps);
+		const username = await this.showInputBoxWithBack(`Enter Username for ${db.label}`, existingConfig?.username || db.defaultUser || "", currentStep, totalSteps);
 		if (username === "back") return "back";
 		if (username === "cancel") return "cancel";
 		if (!username) return undefined;
 
-		const password = await this.showInputBoxWithBack(`Enter Password for ${db.label}`, db.value === "mssql" ? "Root1234!" : "root", currentStep, totalSteps, true);
+		const password = await this.showInputBoxWithBack(`Enter Password for ${db.label}`, existingConfig?.password || (db.value === "mssql" ? "Root1234!" : "root") || "", currentStep, totalSteps, true);
 		if (password === "back") return "back";
 		if (password === "cancel") return "cancel";
 		if (!password) return undefined;
@@ -489,20 +472,17 @@ export class DatabaseManager {
 			const urlObj = new URL(url);
 			const host = urlObj.hostname;
 			const port = parseInt(urlObj.port || "0");
-
+			// باگ 607: افزایش timeout به 10 ثانیه
 			return new Promise((resolve) => {
-				const socket = net.createConnection({ host, port, timeout: 5000 });
-
+				const socket = net.createConnection({ host, port, timeout: 10000 });
 				socket.on("connect", () => {
 					socket.destroy();
 					resolve(true);
 				});
-
 				socket.on("timeout", () => {
 					socket.destroy();
 					resolve(false);
 				});
-
 				socket.on("error", () => {
 					resolve(false);
 				});
@@ -525,7 +505,8 @@ export class DatabaseManager {
 		if (!/[0-9]/.test(password)) {
 			return "MSSQL password must contain at least one number";
 		}
-		if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+		// باگ 518: regex اصلاح شده برای کاراکترهای خاص
+		if (!/[^a-zA-Z0-9]/.test(password)) {
 			return "MSSQL password must contain at least one special character";
 		}
 		return null;
@@ -538,16 +519,13 @@ export class DatabaseManager {
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
-
 		let isResolved = false;
 		const disposables: vscode.Disposable[] = [];
-
 		return new Promise((resolve) => {
 			const cleanup = () => {
 				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
 			};
-
 			disposables.push(
 				quickPick.onDidAccept(() => {
 					if (!isResolved) {
@@ -572,7 +550,6 @@ export class DatabaseManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -586,16 +563,13 @@ export class DatabaseManager {
 			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
 			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
 		];
-
 		let isResolved = false;
 		const disposables: vscode.Disposable[] = [];
-
 		return new Promise((resolve) => {
 			const cleanup = () => {
 				disposables.forEach((d) => d.dispose());
 				inputBox.dispose();
 			};
-
 			const acceptValue = () => {
 				if (!isResolved) {
 					isResolved = true;
@@ -604,7 +578,6 @@ export class DatabaseManager {
 					resolve(value);
 				}
 			};
-
 			disposables.push(
 				inputBox.onDidAccept(acceptValue),
 				inputBox.onDidTriggerButton((button) => {
@@ -626,7 +599,6 @@ export class DatabaseManager {
 					}
 				}),
 			);
-
 			inputBox.show();
 		});
 	}

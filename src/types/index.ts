@@ -1,6 +1,3 @@
-/**
- * Main configuration interface for Dockeryzen
- */
 export interface ProjectConfig {
 	projectName: string;
 	language: string;
@@ -41,9 +38,6 @@ export interface ProjectConfig {
 	services: ServiceConfig[];
 }
 
-/**
- * Database configuration interface
- */
 export interface DatabaseConfig {
 	type: string;
 	version: string;
@@ -61,9 +55,6 @@ export interface DatabaseConfig {
 	extensions?: string[];
 }
 
-/**
- * Message queue configuration interface
- */
 export interface MessageQueueConfig {
 	type: string;
 	version: string;
@@ -77,9 +68,6 @@ export interface MessageQueueConfig {
 	enableManagement?: boolean;
 }
 
-/**
- * Additional service configuration interface
- */
 export interface ServiceConfig {
 	type: string;
 	version: string;

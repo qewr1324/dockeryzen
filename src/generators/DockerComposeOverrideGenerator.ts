@@ -1,10 +1,6 @@
 import { ProjectConfig } from "../types/index.js";
 import { sanitizeName } from "../utils/helpers.js";
 
-/**
- * DockerComposeOverrideGenerator class - Generates docker-compose.override.yml for development
- * Fixed bugs: 353-354, 375, 390, 412
- */
 export class DockerComposeOverrideGenerator {
 	constructor(private config: ProjectConfig) {}
 
@@ -12,12 +8,16 @@ export class DockerComposeOverrideGenerator {
 		const serviceName = sanitizeName(this.config.projectName);
 		const debugPort = this.config.debugPort || this.getDefaultDebugPort();
 		const lang = this.config.language;
-
 		const services: string[] = [];
 
-		// Fix bug 354, 390, 412: Only add node_modules for Node.js projects
 		const isNodeProject = lang.startsWith("js");
-		const volumes = isNodeProject ? "      - .:/app\n      - /app/node_modules" : "      - .:/app";
+
+		let nodeModulesPath = "/app/node_modules";
+		if (isNodeProject) {
+			nodeModulesPath = "/app/node_modules";
+		}
+
+		const volumes = isNodeProject ? `      - .:/app\n      - ${nodeModulesPath}` : `      - .:/app`;
 
 		let appService = `  ${serviceName}:
     volumes:
@@ -25,17 +25,18 @@ ${volumes}
     environment:
       - DEBUG=true`;
 
-		// Fix bug 411: Only add debug port if debug is enabled
-		if (this.config.enableDebug && debugPort) {
-			appService += `
-    ports:
-      - "${debugPort}:${debugPort}"`;
+		let effectiveDebugPort = debugPort;
+		if (effectiveDebugPort && effectiveDebugPort === this.config.port) {
+			effectiveDebugPort = this.config.port + 1000;
 		}
 
+		if (this.config.enableDebug && effectiveDebugPort) {
+			appService += `
+    ports:
+      - "${effectiveDebugPort}:${effectiveDebugPort}"`;
+		}
 		services.push(appService);
 
-		// Fix bug 353, 375: Only add DB ports if they're not already in main compose
-		// In development, we might want to access DBs from host
 		for (const db of this.config.databases) {
 			if (!db.useExternalUrl) {
 				const dbServiceName = sanitizeName(`${this.config.projectName}-${db.type}`);
@@ -46,7 +47,6 @@ ${volumes}
 			}
 		}
 
-		// Add Redis port for local access
 		if (this.config.enableRedis) {
 			const redisName = sanitizeName(`${this.config.projectName}-redis`);
 			services.push(`

@@ -1,12 +1,8 @@
 import * as vscode from "vscode";
 import { ServiceConfig } from "../types/index.js";
 import { validatePort } from "../utils/helpers.js";
-
 import servicesConfig from "../config/services.json" with { type: "json" };
 
-/**
- * ServiceManager class - Manages additional service selection and configuration
- */
 export class ServiceManager {
 	private services: ServiceConfig[] = [];
 
@@ -49,18 +45,15 @@ export class ServiceManager {
 					isResolved = true;
 					const selected = quickPick.selectedItems as any[];
 					cleanup();
-
 					if (selected.length === 0) {
 						resolve([]);
 						return;
 					}
-
 					const result = this.showSelectedServicesWithEdit(selected, currentStep, totalSteps);
 					resolve(result);
 				}),
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
-
 					if (button.tooltip === "Back") {
 						isResolved = true;
 						cleanup();
@@ -69,12 +62,10 @@ export class ServiceManager {
 						isResolved = true;
 						const selected = quickPick.selectedItems as any[];
 						cleanup();
-
 						if (selected.length === 0) {
 							resolve([]);
 							return;
 						}
-
 						const result = this.showSelectedServicesWithEdit(selected, currentStep, totalSteps);
 						resolve(result);
 					}
@@ -87,7 +78,6 @@ export class ServiceManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -96,6 +86,7 @@ export class ServiceManager {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Services`;
 		quickPick.placeholder = "Click on a service to edit it, or press Enter to continue with defaults";
+
 		quickPick.items = selectedServices.map((service) => ({
 			label: `$(${service.icon}) ${service.label}`,
 			description: service.configured ? "$(check) Configured" : "$(gear) Click to Edit",
@@ -105,6 +96,7 @@ export class ServiceManager {
 			versions: service.versions,
 			configured: service.configured || false,
 		}));
+
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [
@@ -124,14 +116,14 @@ export class ServiceManager {
 			disposables.push(
 				quickPick.onDidAccept(async () => {
 					if (isResolved) return;
-
 					const selected = quickPick.selectedItems[0] as any;
 					if (selected) {
 						isResolved = true;
 						cleanup();
 
-						const config = await this.askServiceConfig(selected, currentStep, totalSteps);
-
+						// باگ 527: حفظ تنظیمات قبلی هنگام back
+						const existingConfig = this.services.find((s) => s.type === selected.value);
+						const config = await this.askServiceConfig(selected, currentStep, totalSteps, existingConfig);
 						if (config === "back") {
 							resolve("back");
 							return;
@@ -150,17 +142,14 @@ export class ServiceManager {
 							}
 							selected.configured = true;
 						}
-
 						const result = await this.showSelectedServicesWithEdit(selectedServices, currentStep, totalSteps);
 						resolve(result);
 					}
 				}),
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
-
 					isResolved = true;
 					cleanup();
-
 					if (button.tooltip === "Back") {
 						resolve("back");
 					} else {
@@ -168,6 +157,8 @@ export class ServiceManager {
 							if (!service.configured) {
 								const exists = this.services.some((s) => s.type === service.value);
 								if (!exists) {
+									// باگ 530: command برای بعضی services
+									const command = this.getDefaultCommand(service.value);
 									this.services.push({
 										type: service.value,
 										version: service.versions[0].value,
@@ -176,6 +167,7 @@ export class ServiceManager {
 										useAlpine: false,
 										image: service.versions[0].image,
 										alpineImage: service.versions[0].alpineImage,
+										command: command,
 									});
 								}
 							}
@@ -191,12 +183,23 @@ export class ServiceManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
 
-	private async askServiceConfig(service: any, currentStep: number, totalSteps: number): Promise<ServiceConfig | "back" | "cancel" | undefined> {
+	// باگ 530: command پیش‌فرض برای services
+	private getDefaultCommand(serviceType: string): string | undefined {
+		const commands: Record<string, string | undefined> = {
+			keycloak: "start",
+			minio: 'server /data --console-address ":9001"',
+			nginx: undefined,
+			grafana: undefined,
+			prometheus: undefined,
+		};
+		return commands[serviceType];
+	}
+
+	private async askServiceConfig(service: any, currentStep: number, totalSteps: number, existingConfig?: ServiceConfig): Promise<ServiceConfig | "back" | "cancel" | undefined> {
 		const versionItems = service.versions.map((v: any) => ({
 			label: `$(tag) ${v.label}`,
 			description: `Version ${v.value}`,
@@ -211,11 +214,16 @@ export class ServiceManager {
 		if (version === "cancel") return "cancel";
 		if (!version) return undefined;
 
-		const internalPort = await this.showInputBoxWithBack(`Enter ${service.label} Internal Port`, service.defaultPort.toString(), currentStep, totalSteps);
+		// باگ 528: Keycloak پورت 8080 تداخل داره
+		let defaultPort = service.defaultPort;
+		if (service.value === "keycloak") {
+			defaultPort = 8081; // تغییر پورت پیش‌فرض Keycloak
+		}
+
+		const internalPort = await this.showInputBoxWithBack(`Enter ${service.label} Internal Port`, (existingConfig?.internalPort || defaultPort).toString(), currentStep, totalSteps);
 		if (internalPort === "back") return "back";
 		if (internalPort === "cancel") return "cancel";
 		if (!internalPort) return undefined;
-
 		const internalPortValidation = validatePort(internalPort);
 		if (internalPortValidation) {
 			vscode.window.showErrorMessage(internalPortValidation);
@@ -226,7 +234,6 @@ export class ServiceManager {
 		if (externalPort === "back") return "back";
 		if (externalPort === "cancel") return "cancel";
 		if (!externalPort) return undefined;
-
 		const externalPortValidation = validatePort(externalPort);
 		if (externalPortValidation) {
 			vscode.window.showErrorMessage(externalPortValidation);
@@ -245,14 +252,21 @@ export class ServiceManager {
 		if (useAlpine === "back") return "back";
 		if (useAlpine === "cancel") return "cancel";
 
+		// باگ 529: MinIO version با کاراکتر خاص
+		let versionValue = version.value;
+		if (service.value === "minio" && versionValue.includes(":")) {
+			versionValue = versionValue.replace(/:/g, "-");
+		}
+
 		return {
 			type: service.value,
-			version: version.value,
+			version: versionValue,
 			internalPort: parseInt(internalPort),
 			externalPort: parseInt(externalPort),
 			useAlpine: useAlpine?.value === "yes",
 			image: version.image,
 			alpineImage: version.alpineImage,
+			command: this.getDefaultCommand(service.value),
 		};
 	}
 
@@ -263,16 +277,13 @@ export class ServiceManager {
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" }];
-
 		let isResolved = false;
 		const disposables: vscode.Disposable[] = [];
-
 		return new Promise((resolve) => {
 			const cleanup = () => {
 				disposables.forEach((d) => d.dispose());
 				quickPick.dispose();
 			};
-
 			disposables.push(
 				quickPick.onDidAccept(() => {
 					if (!isResolved) {
@@ -297,7 +308,6 @@ export class ServiceManager {
 					}
 				}),
 			);
-
 			quickPick.show();
 		});
 	}
@@ -310,16 +320,13 @@ export class ServiceManager {
 			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
 			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
 		];
-
 		let isResolved = false;
 		const disposables: vscode.Disposable[] = [];
-
 		return new Promise((resolve) => {
 			const cleanup = () => {
 				disposables.forEach((d) => d.dispose());
 				inputBox.dispose();
 			};
-
 			const acceptValue = () => {
 				if (!isResolved) {
 					isResolved = true;
@@ -328,7 +335,6 @@ export class ServiceManager {
 					resolve(value);
 				}
 			};
-
 			disposables.push(
 				inputBox.onDidAccept(acceptValue),
 				inputBox.onDidTriggerButton((button) => {
@@ -350,7 +356,6 @@ export class ServiceManager {
 					}
 				}),
 			);
-
 			inputBox.show();
 		});
 	}

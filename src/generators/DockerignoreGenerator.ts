@@ -1,9 +1,5 @@
 import { ProjectConfig } from "../types/index.js";
 
-/**
- * DockerignoreGenerator class - Generates comprehensive .dockerignore
- * Fixed bugs: 358, 374, 417-418
- */
 export class DockerignoreGenerator {
 	constructor(private config: ProjectConfig) {}
 
@@ -46,6 +42,9 @@ export class DockerignoreGenerator {
 			".env.production.local",
 			".env.*",
 			"!.env.example",
+			"!.env.production",
+			"!.env.development",
+			"!.env.staging",
 			"",
 			"# Secrets",
 			"secrets/",
@@ -93,21 +92,53 @@ export class DockerignoreGenerator {
 		const lang = language || this.config.language;
 
 		if (lang.startsWith("js")) {
-			ignorePatterns.push("# Node.js", "node_modules/", ".npm/", ".node-gyp/", "dist/", "build/", ".next/", ".nuxt/", "out/", "");
+			ignorePatterns.push(
+				"# Node.js",
+				"node_modules/",
+				".npm/",
+				".node-gyp/",
+				"dist/",
+				"build/",
+				// باگ 626: .next و .nuxt برای build لازم هستن
+				// حذف کردیم چون برای build لازم هستن
+				"out/",
+				"",
+			);
 		} else if (lang.startsWith("java")) {
-			ignorePatterns.push("# Java", "target/", "*.class", "*.jar", "*.war", "*.ear", ".mvn/", "mvnw", "mvnw.cmd", ".gradle/", "build/", "");
+			ignorePatterns.push(
+				"# Java",
+				"target/",
+				"*.class",
+				"*.jar",
+				"*.war",
+				"*.ear",
+				".mvn/",
+				// باگ 575: mvnw برای build لازمه
+				// حذف کردیم
+				".gradle/",
+				"build/",
+				"",
+			);
 		} else if (lang === "python") {
 			ignorePatterns.push("# Python", "__pycache__/", "*.py[cod]", "*$py.class", "*.so", ".Python", "env/", "venv/", "ENV/", ".pytest_cache/", ".mypy_cache/", "dist/", "build/", "*.egg-info/", "");
 		} else if (lang === "go") {
-			ignorePatterns.push("# Go", "*.exe", "*.exe~", "*.dll", "*.so", "*.dylib", "*.test", "*.out", "go.work", "bin/", "dist/", "");
-		} else if (lang === "rust") {
 			ignorePatterns.push(
-				"# Rust",
-				"target/",
-				"**/*.rs.bk",
-				// Fix bug 417: Don't ignore Cargo.lock for applications
+				"# Go",
+				"*.exe",
+				"*.exe~",
+				"*.dll",
+				"*.so",
+				"*.dylib",
+				"*.test",
+				"*.out",
+				// باگ 576: go.work برای workspace لازمه
+				// حذف کردیم
+				"bin/",
+				"dist/",
 				"",
 			);
+		} else if (lang === "rust") {
+			ignorePatterns.push("# Rust", "target/", "**/*.rs.bk", "");
 		} else if (lang === "dotnet") {
 			ignorePatterns.push("# .NET", "**/[Oo]bj/", "**/[Bb]in/", "*.user", "*.suo", "dist/", "build/", "");
 		} else if (lang === "laravel") {
@@ -115,22 +146,10 @@ export class DockerignoreGenerator {
 		} else if (lang === "rails") {
 			ignorePatterns.push("# Ruby/Rails", "*.gem", ".bundle/", "vendor/bundle/", "log/*", "tmp/*", "node_modules/", "");
 		} else if (lang === "cpp" || lang === "c") {
-			ignorePatterns.push(
-				"# C/C++",
-				"*.o",
-				"*.obj",
-				"*.exe",
-				"*.out",
-				"build/",
-				"dist/",
-				"cmake-build-*/",
-				// Fix bug 418: Don't ignore Makefile
-				"",
-			);
+			ignorePatterns.push("# C/C++", "*.o", "*.obj", "*.exe", "*.out", "build/", "dist/", "cmake-build-*/", "");
 		}
 
-		// Fix bug 358, 374: Don't ignore docker-compose.override.yml
-		ignorePatterns.push("# Docker (keep main files including override)", "docker-compose.*.yml", "!docker-compose.override.yml", "docker-compose.*.yaml", "!docker-compose.override.yaml", ".docker/", "");
+		ignorePatterns.push("# Docker (keep main files including override)", "docker-compose.*.yml", "!docker-compose.yml", "!docker-compose.override.yml", "docker-compose.*.yaml", "!docker-compose.yaml", "!docker-compose.override.yaml", ".docker/", "");
 
 		return ignorePatterns.join("\n");
 	}
