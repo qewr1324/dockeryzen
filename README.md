@@ -1,4 +1,4 @@
-# 🧢 Dockeryzen
+# 🐋 Dockeryzen
 
 > **Automatic Dockerfile and Docker Compose build for multiple languages and frameworks.**
 
