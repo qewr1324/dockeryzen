@@ -8,7 +8,7 @@ import { ServiceManager } from "../managers/ServiceManager.js";
 import { DockerfileGenerator } from "../generators/DockerfileGenerator.js";
 import { DockerComposeGenerator } from "../generators/DockerComposeGenerator.js";
 import { DockerignoreGenerator } from "../generators/DockerignoreGenerator.js";
-import { validatePort, validateProjectName, fileExists, safeWriteFile } from "../utils/helpers.js";
+import { validatePort, validateProjectName, fileExists, safeWriteFile, isPortAvailable, findFreePort } from "../utils/helpers.js";
 
 import javaConfig from "../config/languages/java.json" with { type: "json" };
 import dotnetConfig from "../config/languages/dotnet.json" with { type: "json" };
@@ -21,6 +21,10 @@ import goConfig from "../config/languages/go.json" with { type: "json" };
 import cppConfig from "../config/languages/cpp.json" with { type: "json" };
 import cConfig from "../config/languages/c.json" with { type: "json" };
 
+/**
+ * DockerWizard class - Main wizard for generating Docker configuration
+ * Handles the entire flow from project name to file generation
+ */
 export class DockerWizard {
 	private config: ProjectConfig;
 	private currentStep: number = 0;
@@ -28,6 +32,8 @@ export class DockerWizard {
 	private languageConfigs: Map<string, any> = new Map();
 	private wizardState: Map<string, any> = new Map();
 	private context: vscode.ExtensionContext;
+	private progressIndicator: vscode.Progress<{ message?: string; increment?: number }> | null = null;
+	private timeoutId: NodeJS.Timeout | null = null;
 
 	constructor(context?: vscode.ExtensionContext) {
 		this.context = context || ({} as vscode.ExtensionContext);
@@ -39,12 +45,24 @@ export class DockerWizard {
 			enableDebug: this.getConfigValue<boolean>("enableDebugByDefault", false),
 			enableHealthCheck: this.getConfigValue<boolean>("enableHealthCheckByDefault", false),
 			debugPort: this.getConfigValue<number>("debugPort", 5005),
+			restartPolicy: "unless-stopped",
+			networkDriver: "bridge",
+			enableRedis: false,
+			enableSidekiq: false,
+			enableQueueWorker: false,
+			useVirtualEnv: true,
+			cgoEnabled: true,
 			databases: [],
 			messageQueues: [],
 			services: [],
 		};
+		// Load saved state if exists
+		this.loadState();
 	}
 
+	/**
+	 * Get a configuration value from VSCode settings
+	 */
 	private getConfigValue<T>(key: string, defaultValue: T): T {
 		try {
 			const config = vscode.workspace.getConfiguration("dockeryzen");
@@ -54,6 +72,43 @@ export class DockerWizard {
 		}
 	}
 
+	/**
+	 * Save wizard state to workspace
+	 */
+	private async saveState(): Promise<void> {
+		try {
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+			if (workspaceFolder) {
+				const statePath = path.join(workspaceFolder.uri.fsPath, ".dockeryzen-state.json");
+				await fs.writeFile(statePath, JSON.stringify(this.config, null, 2));
+			}
+		} catch (error) {
+			console.error("Failed to save state:", error);
+		}
+	}
+
+	/**
+	 * Load wizard state from workspace
+	 */
+	private async loadState(): Promise<void> {
+		try {
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+			if (workspaceFolder) {
+				const statePath = path.join(workspaceFolder.uri.fsPath, ".dockeryzen-state.json");
+				if (await fileExists(statePath)) {
+					const savedState = await fs.readFile(statePath, "utf8");
+					const parsedState = JSON.parse(savedState);
+					Object.assign(this.config, parsedState);
+				}
+			}
+		} catch (error) {
+			console.error("Failed to load state:", error);
+		}
+	}
+
+	/**
+	 * Start the wizard
+	 */
 	async start(): Promise<void> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		if (!workspaceFolder) {
@@ -66,46 +121,109 @@ export class DockerWizard {
 
 		vscode.window.showInformationMessage("🚀 Welcome to Dockeryzen! Let's create your Docker configuration.");
 
-		const steps = [
-			{ name: "Project Name", fn: () => this.askProjectName() },
-			{ name: "Language", fn: () => this.askLanguage() },
-			{ name: "Port", fn: () => this.askPort() },
-			{ name: "General Options", fn: () => this.askGeneralOptions() },
-			{ name: "Language Settings", fn: () => this.askLanguageSpecificSettings() },
-			{ name: "Databases", fn: () => this.askDatabases() },
-			{ name: "Message Queues", fn: () => this.askMessageQueues() },
-			{ name: "Services", fn: () => this.askServices() },
-		];
+		// Show progress indicator
+		await vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title: "Dockeryzen",
+				cancellable: true,
+			},
+			async (progress, token) => {
+				this.progressIndicator = progress;
 
-		this.currentStep = 0;
-
-		while (this.currentStep < steps.length) {
-			const step = steps[this.currentStep];
-
-			try {
-				const result = await step.fn();
-
-				if (result === "back") {
-					this.currentStep = Math.max(0, this.currentStep - 1);
-					continue;
-				}
-
-				if (result === "cancel") {
+				token.onCancellationRequested(() => {
 					vscode.window.showInformationMessage("❌ Operation cancelled by user");
-					return;
+					throw new Error("Operation cancelled by user");
+				});
+
+				const steps = [
+					{ name: "Project Name", fn: () => this.askProjectName() },
+					{ name: "Language", fn: () => this.askLanguage() },
+					{ name: "Port", fn: () => this.askPort() },
+					{ name: "General Options", fn: () => this.askGeneralOptions() },
+					{ name: "Language Settings", fn: () => this.askLanguageSpecificSettings() },
+					{ name: "Databases", fn: () => this.askDatabases() },
+					{ name: "Message Queues", fn: () => this.askMessageQueues() },
+					{ name: "Services", fn: () => this.askServices() },
+				];
+
+				this.currentStep = 0;
+
+				while (this.currentStep < steps.length) {
+					const step = steps[this.currentStep];
+					const stepKey = `step_${this.currentStep}`;
+
+					// Update progress
+					if (this.progressIndicator) {
+						const percentage = Math.round((this.currentStep / this.totalSteps) * 100);
+						this.progressIndicator.report({
+							message: `Step ${this.currentStep + 1}/${this.totalSteps}: ${step.name}`,
+							increment: percentage,
+						});
+					}
+
+					// Restore state if available
+					if (this.wizardState.has(stepKey)) {
+						const savedState = this.wizardState.get(stepKey);
+						Object.assign(this.config, savedState);
+					}
+
+					try {
+						// Set timeout for user input
+						const result = await this.withTimeout(() => step.fn(), 300000); // 5 minutes timeout
+
+						if (result === "back") {
+							this.currentStep = Math.max(0, this.currentStep - 1);
+							continue;
+						}
+
+						if (result === "cancel") {
+							vscode.window.showInformationMessage("❌ Operation cancelled by user");
+							return;
+						}
+
+						// Save state for this step
+						this.wizardState.set(stepKey, { ...this.config });
+						await this.saveState();
+						this.currentStep++;
+					} catch (error) {
+						if (error instanceof Error && error.message === "Timeout") {
+							vscode.window.showWarningMessage("Operation timed out. Please try again.");
+							return;
+						}
+						const message = error instanceof Error ? error.message : "Unknown error";
+						vscode.window.showErrorMessage(`Error in step "${step.name}": ${message}`);
+						return;
+					}
 				}
 
-				this.currentStep++;
-			} catch (error) {
-				const message = error instanceof Error ? error.message : "Unknown error";
-				vscode.window.showErrorMessage(`Error in step "${step.name}": ${message}`);
-				return;
-			}
-		}
-
-		await this.generateFiles();
+				await this.generateFiles();
+			},
+		);
 	}
 
+	/**
+	 * Execute a function with timeout
+	 */
+	private withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+		return Promise.race([
+			fn(),
+			new Promise<T>((_, reject) => {
+				this.timeoutId = setTimeout(() => {
+					reject(new Error("Timeout"));
+				}, timeoutMs);
+			}),
+		]).finally(() => {
+			if (this.timeoutId) {
+				clearTimeout(this.timeoutId);
+				this.timeoutId = null;
+			}
+		});
+	}
+
+	/**
+	 * Ask for project name
+	 */
 	private async askProjectName(): Promise<"next" | "back" | "cancel"> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		const defaultName = workspaceFolder ? path.basename(workspaceFolder.uri.fsPath) : "my-project";
@@ -114,7 +232,7 @@ export class DockerWizard {
 		inputBox.title = `Step ${this.currentStep + 1}/${this.totalSteps}: Project Name`;
 		inputBox.prompt = "Enter project name (e.g., my-awesome-app)";
 		inputBox.placeholder = "my-awesome-app";
-		inputBox.value = defaultName;
+		inputBox.value = this.config.projectName || defaultName;
 		inputBox.buttons = [
 			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
 			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
@@ -170,7 +288,13 @@ export class DockerWizard {
 		});
 	}
 
+	/**
+	 * Ask for language selection with auto-detection
+	 */
 	private async askLanguage(): Promise<"next" | "back" | "cancel"> {
+		// Auto-detect language from workspace
+		const detectedLanguage = await this.detectLanguage();
+
 		const languageConfigs: any[] = [javaConfig, dotnetConfig, pythonConfig, nodejsConfig, rubyConfig, phpConfig, rustConfig, goConfig, cppConfig, cConfig];
 
 		const languages: any[] = [];
@@ -188,6 +312,7 @@ export class DockerWizard {
 							detail: type.detail,
 							value: type.type,
 							config: config,
+							picked: type.type === detectedLanguage,
 						});
 					}
 				}
@@ -201,6 +326,7 @@ export class DockerWizard {
 						detail: config.detail,
 						value: config.type,
 						config: config,
+						picked: config.type === detectedLanguage,
 					});
 				}
 			}
@@ -208,7 +334,7 @@ export class DockerWizard {
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: Select Language`;
-		quickPick.placeholder = "Select your project language/framework (type to search)";
+		quickPick.placeholder = detectedLanguage ? `Detected: ${detectedLanguage}. Type to search or press Enter to confirm` : "Select your project language/framework (type to search)";
 		quickPick.items = languages;
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
@@ -256,14 +382,67 @@ export class DockerWizard {
 		});
 	}
 
+	/**
+	 * Detect language from workspace files
+	 */
+	private async detectLanguage(): Promise<string | null> {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+		if (!workspaceFolder) return null;
+
+		const rootPath = workspaceFolder.uri.fsPath;
+
+		// Check for language-specific files
+		const checks: Array<[string, string]> = [
+			["java-jar", "pom.xml"],
+			["java-jar", "build.gradle"],
+			["java-jar", "build.gradle.kts"],
+			["java-war", "web.xml"],
+			["js-frontend", "next.config.js"],
+			["js-frontend", "angular.json"],
+			["js-frontend", "nuxt.config.js"],
+			["js-backend", "package.json"],
+			["python", "requirements.txt"],
+			["python", "pyproject.toml"],
+			["python", "setup.py"],
+			["go", "go.mod"],
+			["rust", "Cargo.toml"],
+			["dotnet", "*.csproj"],
+			["laravel", "artisan"],
+			["rails", "Gemfile"],
+			["cpp", "CMakeLists.txt"],
+			["c", "Makefile"],
+		];
+
+		for (const [lang, file] of checks) {
+			if (file.includes("*")) {
+				const pattern = file.replace("*", "");
+				const files = await fs.readdir(rootPath);
+				if (files.some((f) => f.endsWith(pattern))) {
+					return lang;
+				}
+			} else if (await fileExists(path.join(rootPath, file))) {
+				return lang;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Ask for port with dynamic suggestion
+	 */
 	private async askPort(): Promise<"next" | "back" | "cancel"> {
 		const defaultPort = this.getConfigValue<number>("defaultPort", 8080);
 
+		// Check if default port is available
+		const portAvailable = await isPortAvailable(defaultPort);
+		const suggestedPort = portAvailable ? defaultPort : findFreePort(defaultPort, new Set([defaultPort]));
+
 		const inputBox = vscode.window.createInputBox();
 		inputBox.title = `Step ${this.currentStep + 1}/${this.totalSteps}: Application Port`;
-		inputBox.prompt = "Enter application port (1-65535)";
+		inputBox.prompt = portAvailable ? `Enter application port (1-65535). Port ${defaultPort} is available` : `Port ${defaultPort} is in use. Suggested port: ${suggestedPort}`;
 		inputBox.placeholder = "8080";
-		inputBox.value = defaultPort.toString();
+		inputBox.value = (this.config.port || suggestedPort).toString();
 		inputBox.buttons = [
 			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
 			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
@@ -319,14 +498,19 @@ export class DockerWizard {
 		});
 	}
 
+	/**
+	 * Ask for general options with additional settings
+	 */
+	/**
+	 * Ask for general options with additional settings
+	 */
 	private async askGeneralOptions(): Promise<"next" | "back" | "cancel"> {
 		const options = [
 			{
 				label: "$(package) Use Alpine",
 				description: "Smaller image size (where available)",
-				detail: "Uses Alpine-based images for reduced container size",
+				detail: "Uses Alpine-based images. Warning: May not be compatible with all native modules",
 				picked: this.config.useAlpine,
-				tooltip: "Warning: Alpine may not be compatible with all native modules",
 			},
 			{
 				label: "$(bug) Enable Debug",
@@ -339,6 +523,24 @@ export class DockerWizard {
 				description: "Health check endpoint",
 				detail: "Adds HEALTHCHECK to monitor application status",
 				picked: this.config.enableHealthCheck,
+			},
+			{
+				label: "$(database) Enable Redis",
+				description: "Add Redis for caching/background jobs",
+				detail: "Useful for Rails Sidekiq, Laravel queues, etc.",
+				picked: this.config.enableRedis,
+			},
+			{
+				label: "$(sync) Enable Queue Worker",
+				description: "Add queue worker for background jobs",
+				detail: "For Laravel queue, Rails Sidekiq, etc.",
+				picked: this.config.enableQueueWorker,
+			},
+			{
+				label: "$(terminal) Use Virtual Environment",
+				description: "Use Python virtual environment",
+				detail: "Recommended for Python projects",
+				picked: this.config.useVirtualEnv,
 			},
 		];
 
@@ -362,6 +564,9 @@ export class DockerWizard {
 			this.config.useAlpine = selected.some((o) => o.label.includes("Alpine"));
 			this.config.enableDebug = selected.some((o) => o.label.includes("Debug"));
 			this.config.enableHealthCheck = selected.some((o) => o.label.includes("Health"));
+			this.config.enableRedis = selected.some((o) => o.label.includes("Redis"));
+			this.config.enableQueueWorker = selected.some((o) => o.label.includes("Queue Worker"));
+			this.config.useVirtualEnv = selected.some((o) => o.label.includes("Virtual Environment"));
 
 			const selectedLabels = selected.map((o) => o.label.split(" ")[1]).join(", ");
 			if (selectedLabels) {
@@ -414,9 +619,20 @@ export class DockerWizard {
 		});
 	}
 
+	/**
+	 * Ask for language-specific settings with skip option
+	 */
 	private async askLanguageSpecificSettings(): Promise<"next" | "back" | "cancel"> {
 		const langConfig = this.languageConfigs.get(this.config.language);
 		if (!langConfig) return "next";
+
+		// Add skip option
+		const skipOption = {
+			label: "$(chevron-right) Skip - Use Defaults",
+			description: "Skip language-specific settings",
+			detail: "Use default settings for this language",
+			value: "skip",
+		};
 
 		switch (this.config.language) {
 			case "java-jar":
@@ -445,6 +661,9 @@ export class DockerWizard {
 		}
 	}
 
+	/**
+	 * Ask for Java-specific settings
+	 */
 	private async askJavaSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const typeConfig = langConfig.types?.find((t: any) => t.type === this.config.language);
 		const buildTools = typeConfig?.buildTools || [];
@@ -463,6 +682,7 @@ export class DockerWizard {
 			if (buildTool?.value) this.config.buildTool = buildTool.value as "maven" | "gradle";
 		}
 
+		// JDK Version with custom option
 		const jdkVersions = langConfig.jdkVersions.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description,
@@ -470,11 +690,30 @@ export class DockerWizard {
 			value: v.value,
 		}));
 
+		// Add custom JDK option
+		jdkVersions.push({
+			label: "$(edit) Custom JDK Version",
+			description: "Enter a custom JDK version",
+			detail: "For advanced users",
+			value: "custom",
+		});
+
 		const jdkVersion = await this.showQuickPickWithBack("Select JDK Version", jdkVersions);
 		if (jdkVersion === "back") return "back";
 		if (jdkVersion === "cancel") return "cancel";
-		if (jdkVersion?.value) this.config.jdkVersion = jdkVersion.value;
 
+		if (jdkVersion?.value === "custom") {
+			const customVersion = await this.showInputBoxWithBack("Enter Custom JDK Version", this.config.jdkVersion || "21", "Enter JDK version (e.g., 21, 22, 23)");
+			if (customVersion === "back") return "back";
+			if (customVersion === "cancel") return "cancel";
+			if (customVersion && /^\d+$/.test(customVersion)) {
+				this.config.jdkVersion = customVersion;
+			}
+		} else if (jdkVersion?.value) {
+			this.config.jdkVersion = jdkVersion.value;
+		}
+
+		// JDK Vendor
 		const jdkVendors = langConfig.jdkVendors.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description,
@@ -487,6 +726,7 @@ export class DockerWizard {
 		if (jdkVendor === "cancel") return "cancel";
 		if (jdkVendor?.value) this.config.jdkVendor = jdkVendor.value;
 
+		// Framework or Server
 		if (this.config.language === "java-jar" && typeConfig?.frameworks) {
 			const frameworks = typeConfig.frameworks.map((f: any) => ({
 				label: `$(${f.icon}) ${f.label}`,
@@ -520,7 +760,11 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for Node.js settings
+	 */
 	private async askNodeSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
+		// Detect package manager
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		if (workspaceFolder) {
 			const rootPath = workspaceFolder.uri.fsPath;
@@ -530,11 +774,14 @@ export class DockerWizard {
 				this.config.packageManager = "yarn";
 			} else if (await fileExists(path.join(rootPath, "bun.lockb"))) {
 				this.config.packageManager = "bun";
+			} else if (await fileExists(path.join(rootPath, "deno.json"))) {
+				this.config.packageManager = "deno";
 			} else {
 				this.config.packageManager = "npm";
 			}
 		}
 
+		// Node version with LTS distinction
 		const nodeVersions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description === "LTS" ? "$(check) LTS" : v.description,
@@ -547,6 +794,7 @@ export class DockerWizard {
 		if (nodeVersion === "cancel") return "cancel";
 		if (nodeVersion?.value) this.config.nodeVersion = nodeVersion.value;
 
+		// Framework
 		const typeConfig = langConfig.types?.find((t: any) => t.type === this.config.language);
 		if (typeConfig?.frameworks) {
 			const frameworks = typeConfig.frameworks.map((f: any) => ({
@@ -565,7 +813,11 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for Python settings
+	 */
 	private async askPythonSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
+		// Framework
 		const frameworks = langConfig.frameworks.map((f: any) => ({
 			label: `$(${f.icon}) ${f.label}`,
 			description: f.description,
@@ -578,6 +830,7 @@ export class DockerWizard {
 		if (framework === "cancel") return "cancel";
 		if (framework?.value) this.config.framework = framework.value;
 
+		// Python version
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon}) ${v.label}`,
 			description: v.description,
@@ -593,6 +846,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for .NET settings
+	 */
 	private async askDotNetSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon || "tag"}) ${v.label}`,
@@ -609,6 +865,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for Go settings
+	 */
 	private async askGoSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon || "tag"}) ${v.label}`,
@@ -622,9 +881,21 @@ export class DockerWizard {
 		if (version === "cancel") return "cancel";
 		if (version?.value) this.config.goVersion = version.value;
 
+		// CGO option
+		const cgoOption = await this.showQuickPickWithBack("Enable CGO?", [
+			{ label: "$(check) Yes", description: "Enable CGO for SQLite and other C dependencies", value: "yes" },
+			{ label: "$(x) No", description: "Disable CGO for static binaries", value: "no" },
+		]);
+		if (cgoOption === "back") return "back";
+		if (cgoOption === "cancel") return "cancel";
+		if (cgoOption?.value) this.config.cgoEnabled = cgoOption.value === "yes";
+
 		return "next";
 	}
 
+	/**
+	 * Ask for Rust settings
+	 */
 	private async askRustSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon || "tag"}) ${v.label}`,
@@ -641,6 +912,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for PHP settings
+	 */
 	private async askPHPSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon || "tag"}) ${v.label}`,
@@ -657,6 +931,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for Ruby settings
+	 */
 	private async askRubySettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon || "tag"}) ${v.label}`,
@@ -670,9 +947,23 @@ export class DockerWizard {
 		if (version === "cancel") return "cancel";
 		if (version?.value) this.config.rubyVersion = version.value;
 
+		// Ask about Sidekiq
+		if (this.config.enableQueueWorker) {
+			const sidekiqOption = await this.showQuickPickWithBack("Enable Sidekiq?", [
+				{ label: "$(check) Yes", description: "Add Sidekiq for background jobs", value: "yes" },
+				{ label: "$(x) No", description: "Skip Sidekiq", value: "no" },
+			]);
+			if (sidekiqOption === "back") return "back";
+			if (sidekiqOption === "cancel") return "cancel";
+			if (sidekiqOption?.value) this.config.enableSidekiq = sidekiqOption.value === "yes";
+		}
+
 		return "next";
 	}
 
+	/**
+	 * Ask for GCC settings
+	 */
 	private async askGCCSettings(langConfig: any): Promise<"next" | "back" | "cancel"> {
 		const versions = langConfig.versions.map((v: any) => ({
 			label: `$(${v.icon || "tag"}) ${v.label}`,
@@ -689,6 +980,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for databases with category grouping
+	 */
 	private async askDatabases(): Promise<"next" | "back" | "cancel"> {
 		const databaseManager = new DatabaseManager();
 		const result = await databaseManager.selectDatabases(this.currentStep, this.totalSteps);
@@ -698,6 +992,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for message queues
+	 */
 	private async askMessageQueues(): Promise<"next" | "back" | "cancel"> {
 		const messageQueueManager = new MessageQueueManager();
 		const result = await messageQueueManager.selectMessageQueues(this.currentStep, this.totalSteps);
@@ -707,6 +1004,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Ask for additional services
+	 */
 	private async askServices(): Promise<"next" | "back" | "cancel"> {
 		const serviceManager = new ServiceManager();
 		const result = await serviceManager.selectServices(this.currentStep, this.totalSteps);
@@ -716,6 +1016,9 @@ export class DockerWizard {
 		return "next";
 	}
 
+	/**
+	 * Show quick pick with back button
+	 */
 	private showQuickPickWithBack(title: string, items: any[]): Promise<any> {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: ${title}`;
@@ -762,6 +1065,66 @@ export class DockerWizard {
 		});
 	}
 
+	/**
+	 * Show input box with back button
+	 */
+	private showInputBoxWithBack(title: string, value: string, prompt?: string): Promise<string | "back" | "cancel"> {
+		const inputBox = vscode.window.createInputBox();
+		inputBox.title = `Step ${this.currentStep + 1}/${this.totalSteps}: ${title}`;
+		inputBox.value = value;
+		if (prompt) inputBox.prompt = prompt;
+		inputBox.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
+
+		return new Promise((resolve) => {
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
+				inputBox.dispose();
+			};
+
+			const acceptValue = () => {
+				if (!isResolved) {
+					isResolved = true;
+					const value = inputBox.value;
+					cleanup();
+					resolve(value);
+				}
+			};
+
+			disposables.push(
+				inputBox.onDidAccept(acceptValue),
+				inputBox.onDidTriggerButton((button) => {
+					if (!isResolved) {
+						if (button.tooltip === "Back") {
+							isResolved = true;
+							cleanup();
+							resolve("back");
+						} else if (button.tooltip === "OK") {
+							acceptValue();
+						}
+					}
+				}),
+				inputBox.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
+
+			inputBox.show();
+		});
+	}
+
+	/**
+	 * Generate Docker files
+	 */
 	private async generateFiles(): Promise<void> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		if (!workspaceFolder) {
@@ -797,6 +1160,12 @@ export class DockerWizard {
 				const filePath = path.join(workspacePath, file.name);
 				await safeWriteFile(filePath, file.content);
 				writtenFiles.push(file.name);
+			}
+
+			// Clean up state file
+			const statePath = path.join(workspacePath, ".dockeryzen-state.json");
+			if (await fileExists(statePath)) {
+				await fs.remove(statePath);
 			}
 
 			const showNotification = this.getConfigValue<boolean>("showSuccessNotification", true);

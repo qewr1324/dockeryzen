@@ -12,27 +12,48 @@ import searchEngineDatabases from "../config/databases/search-engines.json" with
 import newsqlDatabases from "../config/databases/newsql.json" with { type: "json" };
 import vectorDatabases from "../config/databases/vector.json" with { type: "json" };
 
+/**
+ * DatabaseManager class - Manages database selection and configuration
+ */
 export class DatabaseManager {
 	private databases: DatabaseConfig[] = [];
 
+	/**
+	 * Select databases with category grouping
+	 */
 	async selectDatabases(currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
 		this.databases = [];
 		const allDatabases = this.getAllDatabases();
+		const categories = [...new Set(allDatabases.map((db: any) => db.category))];
+
+		// Group databases by category
+		const groupedItems: any[] = [];
+		for (const category of categories) {
+			groupedItems.push({
+				label: `--- ${category} ---`,
+				kind: vscode.QuickPickItemKind.Separator,
+			});
+
+			const categoryDatabases = allDatabases.filter((db: any) => db.category === category);
+			for (const db of categoryDatabases) {
+				groupedItems.push({
+					label: `$(${db.icon}) ${db.label}`,
+					description: db.category,
+					detail: `Port: ${db.defaultPort} | Version: ${db.versions[0].label}`,
+					value: db.value,
+					defaultPort: db.defaultPort,
+					defaultUser: db.defaultUser,
+					defaultDatabase: db.defaultDatabase,
+					versions: db.versions,
+					picked: false,
+				});
+			}
+		}
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Select Databases`;
 		quickPick.placeholder = "Select databases (multi-select) - Press Enter when done";
-		quickPick.items = allDatabases.map((db) => ({
-			label: `$(${db.icon}) ${db.label}`,
-			description: db.category,
-			detail: `Port: ${db.defaultPort} | Version: ${db.versions[0].label}`,
-			value: db.value,
-			defaultPort: db.defaultPort,
-			defaultUser: db.defaultUser,
-			defaultDatabase: db.defaultDatabase,
-			versions: db.versions,
-			picked: false,
-		}));
+		quickPick.items = groupedItems;
 		quickPick.canSelectMany = true;
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
@@ -99,6 +120,9 @@ export class DatabaseManager {
 		});
 	}
 
+	/**
+	 * Get all databases from config files
+	 */
 	private getAllDatabases(): any[] {
 		const allDatabases: any[] = [];
 		const configs: any[] = [sqlDatabases, nosqlDatabases, keyValueDatabases, wideColumnDatabases, graphDatabases, timeSeriesDatabases, searchEngineDatabases, newsqlDatabases, vectorDatabases];
@@ -117,10 +141,13 @@ export class DatabaseManager {
 		return allDatabases;
 	}
 
+	/**
+	 * Show selected databases for editing
+	 */
 	private async showSelectedDatabasesWithEdit(selectedDbs: any[], currentStep: number, totalSteps: number): Promise<DatabaseConfig[] | "back" | "cancel"> {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: Configure Databases`;
-		quickPick.placeholder = "Click on a database to edit it, or press Enter to continue with defaults";
+		quickPick.placeholder = "Click to edit, press Delete to remove, or press Enter to continue";
 		quickPick.items = selectedDbs.map((db) => ({
 			label: `$(${db.icon}) ${db.label}`,
 			description: db.configured ? "$(check) Configured" : "$(gear) Click to Edit",
@@ -131,12 +158,14 @@ export class DatabaseManager {
 			defaultDatabase: db.defaultDatabase,
 			versions: db.versions,
 			configured: db.configured || false,
+			removed: db.removed || false,
 		}));
 		quickPick.matchOnDescription = true;
 		quickPick.matchOnDetail = true;
 		quickPick.buttons = [
 			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
 			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+			{ iconPath: new vscode.ThemeIcon("trash"), tooltip: "Remove Selected" },
 		];
 
 		let isResolved = false;
@@ -156,6 +185,14 @@ export class DatabaseManager {
 					if (selected) {
 						isResolved = true;
 						cleanup();
+
+						if (selected.removed) {
+							// Skip removed items
+							const remaining = selectedDbs.filter((d: any) => d.value !== selected.value);
+							const result = await this.showSelectedDatabasesWithEdit(remaining, currentStep, totalSteps);
+							resolve(result);
+							return;
+						}
 
 						const config = await this.askDatabaseConfig(selected, currentStep, totalSteps);
 
@@ -185,6 +222,35 @@ export class DatabaseManager {
 				quickPick.onDidTriggerButton((button) => {
 					if (isResolved) return;
 
+					if (button.tooltip === "Remove Selected") {
+						const selected = quickPick.selectedItems[0] as any;
+						if (selected) {
+							// Mark as removed
+							selected.removed = true;
+							selected.label = `$(x) ${selected.label}`;
+							selected.description = "Will be removed";
+
+							// Remove from databases list
+							this.databases = this.databases.filter((d) => d.type !== selected.value);
+
+							// Refresh items
+							quickPick.items = selectedDbs
+								.filter((d: any) => !d.removed)
+								.map((db) => ({
+									label: `$(${db.icon}) ${db.label}`,
+									description: db.configured ? "$(check) Configured" : "$(gear) Click to Edit",
+									detail: `Port: ${db.defaultPort} | Version: ${db.versions[0].label}`,
+									value: db.value,
+									defaultPort: db.defaultPort,
+									defaultUser: db.defaultUser,
+									defaultDatabase: db.defaultDatabase,
+									versions: db.versions,
+									configured: db.configured || false,
+								}));
+						}
+						return;
+					}
+
 					isResolved = true;
 					cleanup();
 
@@ -192,7 +258,7 @@ export class DatabaseManager {
 						resolve("back");
 					} else {
 						for (const db of selectedDbs) {
-							if (!db.configured) {
+							if (!db.configured && !db.removed) {
 								const exists = this.databases.some((d) => d.type === db.value);
 								if (!exists) {
 									this.databases.push({
@@ -227,6 +293,9 @@ export class DatabaseManager {
 		});
 	}
 
+	/**
+	 * Get volume path for database type
+	 */
 	private getVolumePath(dbType: string): string {
 		const volumePaths: Record<string, string> = {
 			postgresql: "/var/lib/postgresql/data",
@@ -249,29 +318,17 @@ export class DatabaseManager {
 			milvus: "/var/lib/milvus",
 			chroma: "/chroma/data",
 			cockroachdb: "/cockroach/cockroach-data",
-			yugabytedb: "/home/yugabyte/data",
 			scylladb: "/var/lib/scylla",
 			memcached: "/data",
 			etcd: "/etcd-data",
 			aerospike: "/opt/aerospike/data",
-			hbase: "/data",
-			bigtable: "/data",
-			janusgraph: "/var/lib/janusgraph",
-			dgraph: "/dgraph",
-			prometheus: "/prometheus",
-			opentsdb: "/data",
-			solr: "/var/solr",
-			meilisearch: "/meili_data",
-			typesense: "/data",
-			tidb: "/data",
-			ravendb: "/opt/RavenDB/Server/RavenData",
-			couchbase: "/opt/couchbase/var",
-			dynamodb: "/home/dynamodblocal/data",
-			db2: "/database",
 		};
 		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
+	/**
+	 * Ask for database configuration
+	 */
 	private async askDatabaseConfig(db: any, currentStep: number, totalSteps: number): Promise<DatabaseConfig | "back" | "cancel" | undefined> {
 		const configMethod = await this.showQuickPickWithBack(
 			`Configure ${db.label}`,
@@ -315,6 +372,15 @@ export class DatabaseManager {
 			if (!this.validateUrl(url)) {
 				vscode.window.showErrorMessage("Invalid URL format. Please use format: protocol://user:pass@host:port/dbname");
 				return undefined;
+			}
+
+			// Test connection with timeout
+			const connectionTest = await this.testConnection(url, db.value);
+			if (!connectionTest) {
+				const proceed = await vscode.window.showWarningMessage("Could not connect to the database. Do you want to continue anyway?", "Yes", "No");
+				if (proceed !== "Yes") {
+					return undefined;
+				}
 			}
 
 			return {
@@ -424,11 +490,49 @@ export class DatabaseManager {
 		};
 	}
 
+	/**
+	 * Validate URL format
+	 */
 	private validateUrl(url: string): boolean {
 		const urlPattern = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s]+$/;
 		return urlPattern.test(url);
 	}
 
+	/**
+	 * Test database connection with timeout
+	 */
+	private async testConnection(url: string, dbType: string): Promise<boolean> {
+		try {
+			const net = await import("net");
+			const urlObj = new URL(url);
+			const host = urlObj.hostname;
+			const port = parseInt(urlObj.port || "0");
+
+			return new Promise((resolve) => {
+				const socket = net.createConnection({ host, port, timeout: 5000 });
+
+				socket.on("connect", () => {
+					socket.destroy();
+					resolve(true);
+				});
+
+				socket.on("timeout", () => {
+					socket.destroy();
+					resolve(false);
+				});
+
+				socket.on("error", () => {
+					resolve(false);
+				});
+			});
+		} catch {
+			return false;
+		}
+	}
+
+	/**
+	 * Validate MSSQL password
+	 */
 	private validateMssqlPassword(password: string): string | null {
 		if (password.length < 8) {
 			return "MSSQL password must be at least 8 characters long";
@@ -448,6 +552,9 @@ export class DatabaseManager {
 		return null;
 	}
 
+	/**
+	 * Show quick pick with back button
+	 */
 	private showQuickPickWithBack(title: string, items: any[], currentStep: number, totalSteps: number): Promise<any> {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${currentStep + 1}/${totalSteps}: ${title}`;
@@ -494,6 +601,9 @@ export class DatabaseManager {
 		});
 	}
 
+	/**
+	 * Show input box with back button
+	 */
 	private showInputBoxWithBack(title: string, value: string, currentStep: number, totalSteps: number, isPassword = false): Promise<string | "back" | "cancel"> {
 		const inputBox = vscode.window.createInputBox();
 		inputBox.title = `Step ${currentStep + 1}/${totalSteps}: ${title}`;

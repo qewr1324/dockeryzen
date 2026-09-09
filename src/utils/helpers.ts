@@ -2,14 +2,23 @@ import * as vscode from "vscode";
 import * as fs from "fs-extra";
 import * as path from "path";
 
+/**
+ * Get the first workspace folder
+ */
 export function getWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
 	return vscode.workspace.workspaceFolders?.[0];
 }
 
+/**
+ * Get the path of the first workspace folder
+ */
 export function getWorkspacePath(): string | undefined {
 	return getWorkspaceFolder()?.uri.fsPath;
 }
 
+/**
+ * Sanitize a name for use in Docker
+ */
 export function sanitizeName(name: string): string {
 	return name
 		.toLowerCase()
@@ -17,6 +26,9 @@ export function sanitizeName(name: string): string {
 		.replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Validate a port number
+ */
 export function validatePort(port: string | number): string | null {
 	const portNum = typeof port === "string" ? parseInt(port) : port;
 	if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
@@ -29,6 +41,9 @@ export function validatePort(port: string | number): string | null {
 	return null;
 }
 
+/**
+ * Validate a project name
+ */
 export function validateProjectName(name: string): string | null {
 	if (!name || name.length === 0) {
 		return "Project name cannot be empty";
@@ -42,6 +57,9 @@ export function validateProjectName(name: string): string | null {
 	return null;
 }
 
+/**
+ * Check if a file exists
+ */
 export async function fileExists(filePath: string): Promise<boolean> {
 	try {
 		await fs.access(filePath);
@@ -51,6 +69,9 @@ export async function fileExists(filePath: string): Promise<boolean> {
 	}
 }
 
+/**
+ * Get Docker image name for a service type
+ */
 export function getImageName(type: string, version?: string): string {
 	const imageMap: Record<string, string> = {
 		postgresql: "postgres",
@@ -71,6 +92,9 @@ export function getImageName(type: string, version?: string): string {
 	return version ? `${baseImage}:${version}` : baseImage;
 }
 
+/**
+ * Safely write a file with backup and user confirmation
+ */
 export async function safeWriteFile(filePath: string, content: string): Promise<void> {
 	try {
 		if (await fileExists(filePath)) {
@@ -102,4 +126,33 @@ export async function safeWriteFile(filePath: string, content: string): Promise<
 		}
 		throw error;
 	}
+}
+
+/**
+ * Find a free port starting from a given port
+ */
+export function findFreePort(startPort: number, usedPorts: Set<number>): number {
+	let port = startPort;
+	while (usedPorts.has(port)) {
+		port++;
+	}
+	return port;
+}
+
+/**
+ * Check if a port is available on the system
+ */
+export async function isPortAvailable(port: number): Promise<boolean> {
+	const net = await import("net");
+	return new Promise((resolve) => {
+		const server = net.createServer();
+		server.once("error", () => {
+			resolve(false);
+		});
+		server.once("listening", () => {
+			server.close();
+			resolve(true);
+		});
+		server.listen(port);
+	});
 }

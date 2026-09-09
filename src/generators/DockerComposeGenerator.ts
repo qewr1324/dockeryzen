@@ -1,8 +1,14 @@
 import { ProjectConfig } from "../types/index.js";
 
+/**
+ * DockerComposeGenerator class - Generates docker-compose.yml
+ */
 export class DockerComposeGenerator {
 	constructor(private config: ProjectConfig) {}
 
+	/**
+	 * Generate docker-compose.yml
+	 */
 	generate(): string {
 		const services: string[] = [];
 		const volumes: string[] = [];
@@ -49,6 +55,28 @@ export class DockerComposeGenerator {
 					usedServiceNames.add(serviceName);
 					dependsOn.push(serviceName);
 				}
+
+				// Add Zookeeper for Kafka
+				if (mq.type === "kafka" && mq.version.startsWith("3")) {
+					const zookeeperService = this.generateZookeeperService();
+					const zookeeperName = this.getServiceName("zookeeper");
+					if (!usedServiceNames.has(zookeeperName)) {
+						services.push(zookeeperService);
+						usedServiceNames.add(zookeeperName);
+					}
+				}
+			}
+		}
+
+		// Add Redis if enabled
+		if (this.config.enableRedis) {
+			const redisService = this.generateRedisService();
+			const redisName = this.getServiceName("redis");
+			if (!usedServiceNames.has(redisName)) {
+				services.push(redisService);
+				usedServiceNames.add(redisName);
+				dependsOn.push(redisName);
+				volumes.push(`  ${redisName}-data:\n    driver: local`);
 			}
 		}
 
@@ -75,18 +103,23 @@ export class DockerComposeGenerator {
 		// Replace main service with version that has depends_on
 		services[0] = mainServiceWithDeps;
 
+		const networkDriver = this.config.networkDriver || "bridge";
+
 		return `services:
 ${services.join("\n")}
 
 networks:
   dockeryzen-network:
-    driver: bridge
+    driver: ${networkDriver}
     name: dockeryzen-${this.sanitizeName(this.config.projectName)}-network
 
 volumes:
 ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 	}
 
+	/**
+	 * Sanitize name for Docker
+	 */
 	private sanitizeName(name: string): string {
 		return name
 			.toLowerCase()
@@ -94,10 +127,16 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 			.replace(/^-+|-+$/g, "");
 	}
 
+	/**
+	 * Get service name
+	 */
 	private getServiceName(type: string): string {
 		return `${this.sanitizeName(this.config.projectName)}-${this.sanitizeName(type)}`;
 	}
 
+	/**
+	 * Get volume path for database type
+	 */
 	private getVolumePath(dbType: string): string {
 		const volumePaths: Record<string, string> = {
 			postgresql: "/var/lib/postgresql/data",
@@ -128,6 +167,9 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		return volumePaths[dbType] || `/var/lib/${dbType}`;
 	}
 
+	/**
+	 * Check and resolve port conflicts
+	 */
 	private checkPortConflicts(): void {
 		const allPorts = new Map<number, string>();
 
@@ -161,6 +203,9 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		}
 	}
 
+	/**
+	 * Find free port
+	 */
 	private findFreePort(startPort: number, usedPorts: Map<number, string>): number {
 		let port = startPort + 1;
 		while (usedPorts.has(port)) {
@@ -169,6 +214,9 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		return port;
 	}
 
+	/**
+	 * Get debug port for language
+	 */
 	private getDebugPort(): number | null {
 		if (this.config.debugPort) {
 			return this.config.debugPort;
@@ -187,9 +235,13 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
 		return null;
 	}
 
+	/**
+	 * Generate main service
+	 */
 	private generateMainService(): string {
 		const serviceName = this.sanitizeName(this.config.projectName);
 		const ports = [`      - "${this.config.port}:${this.config.port}"`];
+		const restartPolicy = this.config.restartPolicy || "unless-stopped";
 
 		let envVars = "";
 		const lang = this.config.language;
@@ -289,15 +341,24 @@ ${volumes.length > 0 ? volumes.join("\n") : "  data:\n    driver: local"}`;
       start_period: 30s`;
 		}
 
+		// Add development volume if debug is enabled
+		let devVolume = "";
+		if (this.config.enableDebug) {
+			devVolume = `
+    volumes:
+      - .:/app
+      - /app/node_modules`;
+		}
+
 		return `  ${serviceName}:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ${serviceName}-container
-    restart: unless-stopped
+    restart: ${restartPolicy}
     ports:
 ${ports.join("\n")}
-    environment:${envVars}${healthCheckSection}
+    environment:${envVars}${devVolume}${healthCheckSection}
     networks:
       - dockeryzen-network
     dns:
@@ -305,6 +366,9 @@ ${ports.join("\n")}
       - 8.8.4.4`;
 	}
 
+	/**
+	 * Generate database service
+	 */
 	private generateDatabaseService(db: any): string {
 		if (db.useExternalUrl) {
 			return `  # External ${db.type} database
@@ -323,11 +387,12 @@ ${ports.join("\n")}
 		}
 
 		const volumePath = db.volumePath || this.getVolumePath(db.type);
+		const restartPolicy = this.config.restartPolicy || "unless-stopped";
 
 		let service = `  ${serviceName}:
     image: ${image}
     container_name: ${serviceName}-container
-    restart: unless-stopped
+    restart: ${restartPolicy}
     ports:
       - "${db.externalPort}:${db.internalPort}"
     environment:`;
@@ -384,6 +449,9 @@ ${ports.join("\n")}
 		return service;
 	}
 
+	/**
+	 * Generate message queue service
+	 */
 	private generateMessageQueueService(mq: any): string {
 		const serviceName = this.getServiceName(mq.type);
 
@@ -395,10 +463,12 @@ ${ports.join("\n")}
 			image = `${mq.type}:${mq.version}`;
 		}
 
+		const restartPolicy = this.config.restartPolicy || "unless-stopped";
+
 		let service = `  ${serviceName}:
     image: ${image}
     container_name: ${serviceName}-container
-    restart: unless-stopped
+    restart: ${restartPolicy}
     ports:
       - "${mq.externalPort}:${mq.internalPort}"
     environment:`;
@@ -436,6 +506,62 @@ ${ports.join("\n")}
 		return service;
 	}
 
+	/**
+	 * Generate Zookeeper service for Kafka
+	 */
+	private generateZookeeperService(): string {
+		const serviceName = this.getServiceName("zookeeper");
+		const restartPolicy = this.config.restartPolicy || "unless-stopped";
+
+		return `  ${serviceName}:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: ${serviceName}-container
+    restart: ${restartPolicy}
+    ports:
+      - "2181:2181"
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - dockeryzen-network`;
+	}
+
+	/**
+	 * Generate Redis service
+	 */
+	private generateRedisService(): string {
+		const serviceName = this.getServiceName("redis");
+		const restartPolicy = this.config.restartPolicy || "unless-stopped";
+
+		return `  ${serviceName}:
+    image: redis:8-alpine
+    container_name: ${serviceName}-container
+    restart: ${restartPolicy}
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_APPENDONLY=yes
+    volumes:
+      - ${serviceName}-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - dockeryzen-network`;
+	}
+
+	/**
+	 * Generate additional service
+	 */
 	private generateAdditionalService(service: any): string {
 		const serviceName = this.getServiceName(service.type);
 
@@ -447,10 +573,12 @@ ${ports.join("\n")}
 			image = `${service.type}:${service.version}`;
 		}
 
+		const restartPolicy = this.config.restartPolicy || "unless-stopped";
+
 		let serviceConfig = `  ${serviceName}:
     image: ${image}
     container_name: ${serviceName}-container
-    restart: unless-stopped
+    restart: ${restartPolicy}
     ports:
       - "${service.externalPort}:${service.internalPort}"`;
 

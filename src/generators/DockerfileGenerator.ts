@@ -1,11 +1,17 @@
 import { ProjectConfig } from "../types/index.js";
 
+/**
+ * DockerfileGenerator class - Generates Dockerfile for various languages and frameworks
+ */
 export class DockerfileGenerator {
 	constructor(
 		private config: ProjectConfig,
 		private langConfig?: any,
 	) {}
 
+	/**
+	 * Generate Dockerfile based on language
+	 */
 	generate(): string {
 		switch (this.config.language) {
 			case "java-jar":
@@ -37,6 +43,9 @@ export class DockerfileGenerator {
 		}
 	}
 
+	/**
+	 * Get debug port for language
+	 */
 	private getDebugPort(): string {
 		if (this.config.debugPort) {
 			return this.config.debugPort.toString();
@@ -55,6 +64,9 @@ export class DockerfileGenerator {
 		return "";
 	}
 
+	/**
+	 * Get debug expose line
+	 */
 	private getDebugExpose(): string {
 		if (!this.config.enableDebug) return "";
 		const debugPort = this.getDebugPort();
@@ -64,6 +76,9 @@ export class DockerfileGenerator {
 EXPOSE ${debugPort}`;
 	}
 
+	/**
+	 * Get health check command
+	 */
 	private getHealthCheck(): string {
 		if (!this.config.enableHealthCheck) return "";
 
@@ -98,6 +113,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
   CMD curl -f http://localhost:${port}${healthPath} || exit 1`;
 	}
 
+	/**
+	 * Get install command for health check tools
+	 */
 	private getInstallCommand(): string {
 		if (this.config.useAlpine) {
 			return "RUN apk add --no-cache curl wget ca-certificates";
@@ -105,13 +123,17 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \\
 		return "RUN apt-get update && apt-get install -y --no-install-recommends curl wget ca-certificates && rm -rf /var/lib/apt/lists/*";
 	}
 
+	/**
+	 * Generate Java JAR Dockerfile
+	 */
 	private generateJavaJarDockerfile(): string {
 		const baseImage = this.getJavaBaseImage();
 		const buildStage = this.getJavaBuildStage();
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 
-		const jarPath = this.config.buildTool === "gradle" ? "/app/build/libs/*.jar" : "/app/target/*.jar";
+		// Use wildcard but with better naming
+		const jarPath = this.config.buildTool === "gradle" ? "/app/build/libs/*-SNAPSHOT.jar /app/build/libs/*.jar" : "/app/target/*-SNAPSHOT.jar /app/target/*.jar";
 
 		return `# Build stage
 ${buildStage}
@@ -124,7 +146,7 @@ WORKDIR /app
 # Install health check tools if needed
 ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
-# Copy JAR from build stage
+# Copy JAR from build stage (prefer non-SNAPSHOT if available)
 COPY --from=build ${jarPath} app.jar
 
 # Create non-root user
@@ -139,6 +161,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]`;
 	}
 
+	/**
+	 * Generate Java WAR Dockerfile
+	 */
 	private generateJavaWarDockerfile(): string {
 		const server = this.config.server || "tomcat";
 		const serverImage = this.getServerImage(server);
@@ -173,6 +198,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 CMD ${startCommand}`;
 	}
 
+	/**
+	 * Get Java base image
+	 */
 	private getJavaBaseImage(): string {
 		const vendor = this.config.jdkVendor || "eclipse-temurin";
 		const version = this.config.jdkVersion || "17";
@@ -206,6 +234,9 @@ CMD ${startCommand}`;
 		return imageMap[vendor] || imageMap["eclipse-temurin"];
 	}
 
+	/**
+	 * Get Java build stage with Maven/Gradle wrapper support
+	 */
 	private getJavaBuildStage(): string {
 		let version = this.config.jdkVersion || "17";
 
@@ -223,6 +254,7 @@ CMD ${startCommand}`;
 			return `FROM ${image} AS build
 WORKDIR /app
 
+# Copy Gradle files (support both Groovy and Kotlin DSL)
 COPY build.gradle* settings.gradle* gradlew* ./
 COPY gradle ./gradle
 COPY src ./src
@@ -233,22 +265,28 @@ RUN if [ -f gradlew ]; then ./gradlew build -x test --no-daemon; else gradle bui
 			const mavenImages = useAlpine ? this.langConfig?.mavenAlpineImages : this.langConfig?.mavenImages;
 			const image = mavenImages?.[version] || `maven:3.9-jdk-${version}${useAlpine ? "-alpine" : ""}`;
 
-			// Support Maven wrapper
+			// Support Maven wrapper and multi-module
 			return `FROM ${image} AS build
 WORKDIR /app
 
+# Copy Maven files (support wrapper and multi-module)
 COPY pom.xml ./
 COPY .mvn .mvn
 COPY mvnw* ./
+COPY */pom.xml ./
 
 RUN if [ -f mvnw ]; then ./mvnw dependency:go-offline; else mvn dependency:go-offline; fi
 
-COPY src ./src
+COPY . .
+
 RUN if [ -f mvnw ]; then ./mvnw package -DskipTests; else mvn package -DskipTests; fi && \\
     rm -rf /root/.m2/repository`;
 		}
 	}
 
+	/**
+	 * Get server image for WAR deployment
+	 */
 	private getServerImage(server: string): string {
 		const version = this.config.jdkVersion || "17";
 		const useAlpine = this.config.useAlpine;
@@ -290,6 +328,9 @@ RUN if [ -f mvnw ]; then ./mvnw package -DskipTests; else mvn package -DskipTest
 		}
 	}
 
+	/**
+	 * Get Node.js image
+	 */
 	private getNodeImage(version: string): string {
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);
@@ -306,6 +347,9 @@ RUN if [ -f mvnw ]; then ./mvnw package -DskipTests; else mvn package -DskipTest
 		return `node:${version}${this.config.useAlpine ? "-alpine" : ""}`;
 	}
 
+	/**
+	 * Get package install command based on package manager
+	 */
 	private getPackageInstallCommand(): string {
 		const pm = this.config.packageManager || "npm";
 		switch (pm) {
@@ -315,11 +359,16 @@ RUN if [ -f mvnw ]; then ./mvnw package -DskipTests; else mvn package -DskipTest
 				return "pnpm install --frozen-lockfile";
 			case "bun":
 				return "bun install";
+			case "deno":
+				return "deno cache --reload";
 			default:
 				return "npm ci || npm install";
 		}
 	}
 
+	/**
+	 * Get run command based on package manager
+	 */
 	private getRunCommand(): string {
 		const pm = this.config.packageManager || "npm";
 		switch (pm) {
@@ -329,11 +378,16 @@ RUN if [ -f mvnw ]; then ./mvnw package -DskipTests; else mvn package -DskipTest
 				return "pnpm start";
 			case "bun":
 				return "bun start";
+			case "deno":
+				return "deno run --allow-net main.ts";
 			default:
 				return "npm start";
 		}
 	}
 
+	/**
+	 * Generate JavaScript Frontend Dockerfile
+	 */
 	private generateJSFrontendDockerfile(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
 		const image = this.getNodeImage(nodeVersion);
@@ -369,6 +423,7 @@ ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
 ENV NODE_ENV=production
 
+# Copy Angular build output (support both old and new paths)
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package*.json ./
@@ -376,6 +431,7 @@ COPY --from=build /app/package*.json ./
 # Copy Angular SSR files if they exist
 COPY --from=build /app/server.js* ./
 COPY --from=build /app/angular.json* ./
+COPY --from=build /app/server/ ./server/
 
 ${this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app"}
 
@@ -424,9 +480,9 @@ USER appuser
 
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 
-CMD ["${this.getRunCommand().split(" ")[0]}", "${this.getRunCommand().split(" ").slice(1).join(" ")}"]`;
+CMD ["npm", "start"]`;
 		} else {
-			// Next.js (default)
+			// Next.js (default) with static export support
 			return `# Build stage
 FROM ${image} AS build
 
@@ -441,7 +497,12 @@ RUN ${installCmd}
 
 COPY . .
 
-RUN npm run build
+# Build with static export support
+RUN if grep -q '"output": "export"' next.config.js 2>/dev/null; then \\
+        npm run build && npx next export -o out; \\
+    else \\
+        npm run build; \\
+    fi
 
 # Runtime stage
 FROM ${image}
@@ -454,7 +515,9 @@ ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 ENV NODE_ENV=production
 ENV PORT=${this.config.port}
 
+# Copy Next.js build output (support both .next and static export)
 COPY --from=build /app/.next ./.next
+COPY --from=build /app/out ./out
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/public ./public
@@ -470,6 +533,9 @@ CMD ["npm", "start"]`;
 		}
 	}
 
+	/**
+	 * Generate JavaScript Backend Dockerfile
+	 */
 	private generateJSBackendDockerfile(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
 		const image = this.getNodeImage(nodeVersion);
@@ -509,6 +575,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 CMD ["node", "dist/index.js"]`;
 	}
 
+	/**
+	 * Get Python image
+	 */
 	private getPythonImage(version: string): string {
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);
@@ -528,12 +597,16 @@ CMD ["node", "dist/index.js"]`;
 		return `python:${version}${this.config.useAlpine ? "-alpine" : "-slim"}`;
 	}
 
+	/**
+	 * Generate Python Dockerfile with virtual environment support
+	 */
 	private generatePythonDockerfile(): string {
 		const pythonVersion = this.config.pythonVersion || "3.11";
 		const image = this.getPythonImage(pythonVersion);
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
 		const framework = this.config.framework;
+		const useVirtualEnv = this.config.useVirtualEnv;
 
 		const installCmd = this.config.useAlpine ? "RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev zlib-dev jpeg-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev default-libmysqlclient-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*";
 
@@ -546,6 +619,13 @@ CMD ["node", "dist/index.js"]`;
 			startCmd = `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${this.config.port}"]`;
 		}
 
+		const virtualEnvSetup = useVirtualEnv
+			? `
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"`
+			: "";
+
 		return `FROM ${image}
 
 WORKDIR /app
@@ -555,6 +635,7 @@ ${installCmd}
 
 # Install health check tools if needed
 ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
+${virtualEnvSetup}
 
 # Copy requirements files
 COPY requirements.txt* ./
@@ -580,10 +661,14 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 ${startCmd}`;
 	}
 
+	/**
+	 * Generate Go Dockerfile with CGO support
+	 */
 	private generateGoDockerfile(): string {
 		const goVersion = this.config.goVersion || "1.21";
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
+		const cgoEnabled = this.config.cgoEnabled !== false;
 
 		let buildImage = `golang:${goVersion}`;
 		if (this.langConfig?.versions) {
@@ -594,6 +679,7 @@ ${startCmd}`;
 		}
 
 		const runtimeBase = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
+		const cgoFlag = cgoEnabled ? "1" : "0";
 
 		return `# Build stage
 FROM ${buildImage} AS build
@@ -609,8 +695,8 @@ RUN go mod download
 
 COPY . .
 
-# Build with CGO support
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main .
+# Build with CGO support (configurable)
+RUN CGO_ENABLED=${cgoFlag} GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Runtime stage
 FROM ${runtimeBase}
@@ -639,6 +725,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 CMD ["./main"]`;
 	}
 
+	/**
+	 * Generate Rust Dockerfile
+	 */
 	private generateRustDockerfile(): string {
 		const rustVersion = this.config.rustVersion || "latest";
 
@@ -697,6 +786,9 @@ EXPOSE ${this.config.port}${this.getHealthCheck()}
 CMD ["./${this.config.projectName}"]`;
 	}
 
+	/**
+	 * Generate .NET Dockerfile
+	 */
 	private generateDotNetDockerfile(): string {
 		const dotnetVersion = this.config.dotnetVersion || "8.0";
 		const debugExpose = this.getDebugExpose();
@@ -720,10 +812,11 @@ FROM ${sdkImage} AS build
 
 WORKDIR /app
 
-# Copy project files
+# Copy project files (support solution and NuGet config)
 COPY *.csproj ./
 COPY *.sln ./
 COPY NuGet.config* ./
+COPY nuget.config* ./
 
 RUN dotnet restore
 
@@ -750,6 +843,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 ENTRYPOINT ["dotnet", "${safeProjectName}.dll"]`;
 	}
 
+	/**
+	 * Generate Laravel Dockerfile
+	 */
 	private generateLaravelDockerfile(): string {
 		const phpVersion = this.config.phpVersion || "8.3";
 		const debugExpose = this.getDebugExpose();
@@ -772,7 +868,8 @@ ENTRYPOINT ["dotnet", "${safeProjectName}.dll"]`;
     libxml2-dev \\
     zip \\
     unzip \\
-    supervisor`
+    supervisor \\
+    nginx`
 			: `RUN apt-get update && apt-get install -y --no-install-recommends \\
     git \\
     curl \\
@@ -784,6 +881,12 @@ ENTRYPOINT ["dotnet", "${safeProjectName}.dll"]`;
     supervisor \\
     nginx \\
     && rm -rf /var/lib/apt/lists/*`;
+
+		const queueWorkerConfig = this.config.enableQueueWorker
+			? `
+# Copy supervisor config for queue worker
+COPY docker/supervisor/queue-worker.conf /etc/supervisor/conf.d/queue-worker.conf`
+			: "";
 
 		return `FROM ${phpImage}
 
@@ -808,12 +911,16 @@ RUN mkdir -p /var/www/html/storage/framework/views \\
 RUN chown -R www-data:www-data /var/www/html \\
     && chmod -R 755 /var/www/html/storage \\
     && chmod -R 755 /var/www/html/bootstrap/cache
+${queueWorkerConfig}
 
 EXPOSE 9000${debugExpose}${healthCheck}
 
 CMD ["php-fpm"]`;
 	}
 
+	/**
+	 * Generate Rails Dockerfile
+	 */
 	private generateRailsDockerfile(): string {
 		const rubyVersion = this.config.rubyVersion || "3.3";
 		const debugExpose = this.getDebugExpose();
@@ -833,12 +940,18 @@ CMD ["php-fpm"]`;
 			}
 		}
 
+		const sidekiqConfig = this.config.enableSidekiq
+			? `
+# Sidekiq for background jobs
+RUN gem install sidekiq`
+			: "";
+
 		return `FROM ${rubyImage}
 
 WORKDIR /app
 
 # Install dependencies including Node.js for assets
-${this.config.useAlpine ? "RUN apk add --no-cache build-base postgresql-dev nodejs yarn tzdata git" : "RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev nodejs yarn tzdata git && rm -rf /var/lib/apt/lists/*"}
+${this.config.useAlpine ? "RUN apk add --no-cache build-base postgresql-dev nodejs yarn tzdata git redis" : "RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev nodejs yarn tzdata git redis-server && rm -rf /var/lib/apt/lists/*"}
 
 # Install health check tools if needed
 ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
@@ -846,6 +959,7 @@ ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 COPY Gemfile Gemfile.lock* ./
 
 RUN gem install bundler && bundle install --without development test
+${sidekiqConfig}
 
 COPY . .
 
@@ -863,6 +977,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 CMD ["sh", "-c", "bundle exec rails db:migrate && bundle exec rails server -b 0.0.0.0 -p ${this.config.port}"]`;
 	}
 
+	/**
+	 * Generate C++ Dockerfile
+	 */
 	private generateCppDockerfile(): string {
 		const gccVersion = this.config.gccVersion || "13";
 		const debugExpose = this.getDebugExpose();
@@ -887,11 +1004,14 @@ FROM ${gccImage} AS build
 
 WORKDIR /app
 
+# Install CMake and Make if needed
+${this.config.useAlpine ? "RUN apk add --no-cache cmake make" : "RUN apt-get update && apt-get install -y --no-install-recommends cmake make && rm -rf /var/lib/apt/lists/*"}
+
 COPY . .
 
 # Support CMake, Makefile, or direct compile
 RUN if [ -f CMakeLists.txt ]; then \\
-        cmake -B build && cmake --build build -j$(nproc); \\
+        cmake -B build && cmake --build build -j$(nproc) && cp build/*/app app 2>/dev/null || cp build/app app 2>/dev/null || true; \\
     elif [ -f Makefile ]; then \\
         make -j$(nproc); \\
     else \\
@@ -920,6 +1040,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 CMD ["./app"]`;
 	}
 
+	/**
+	 * Generate C Dockerfile
+	 */
 	private generateCDockerfile(): string {
 		const gccVersion = this.config.gccVersion || "13";
 		const debugExpose = this.getDebugExpose();
@@ -944,10 +1067,13 @@ FROM ${gccImage} AS build
 
 WORKDIR /app
 
+# Install CMake and Make if needed
+${this.config.useAlpine ? "RUN apk add --no-cache cmake make" : "RUN apt-get update && apt-get install -y --no-install-recommends cmake make && rm -rf /var/lib/apt/lists/*"}
+
 COPY . .
 
 RUN if [ -f CMakeLists.txt ]; then \\
-        cmake -B build && cmake --build build -j$(nproc); \\
+        cmake -B build && cmake --build build -j$(nproc) && cp build/*/app app 2>/dev/null || cp build/app app 2>/dev/null || true; \\
     elif [ -f Makefile ]; then \\
         make -j$(nproc); \\
     else \\
@@ -975,6 +1101,9 @@ EXPOSE ${this.config.port}${debugExpose}${healthCheck}
 CMD ["./app"]`;
 	}
 
+	/**
+	 * Generate generic Dockerfile
+	 */
 	private generateGenericDockerfile(): string {
 		const healthCheck = this.getHealthCheck();
 
@@ -985,7 +1114,16 @@ WORKDIR /app
 # Install health check tools if needed
 ${this.config.enableHealthCheck ? this.getInstallCommand() : ""}
 
+# Install common build tools
+${this.config.useAlpine ? "RUN apk add --no-cache build-base git curl wget" : "RUN apt-get update && apt-get install -y --no-install-recommends build-essential git curl wget && rm -rf /var/lib/apt/lists/*"}
+
 COPY . .
+
+# Build if possible
+RUN if [ -f Makefile ]; then make; \\
+    elif [ -f CMakeLists.txt ]; then cmake -B build && cmake --build build; \\
+    elif [ -f package.json ]; then npm install && npm run build; \\
+    elif [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
 EXPOSE ${this.config.port}${healthCheck}
 
