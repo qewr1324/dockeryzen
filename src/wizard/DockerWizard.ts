@@ -61,6 +61,14 @@ export class DockerWizard {
 			messageQueues: [],
 			services: [],
 		};
+
+		// NEW: تنظیمات پیش‌فرض CI/CD
+		this.wizardState.set("ci_cd_config", {
+			generateGitHubActions: true,
+			generateGitLabCI: true,
+			generatePrometheus: false,
+		});
+
 		this.loadState();
 	}
 
@@ -149,6 +157,7 @@ export class DockerWizard {
 					{ name: "Databases", fn: () => this.askDatabases() },
 					{ name: "Message Queues", fn: () => this.askMessageQueues() },
 					{ name: "Services", fn: () => this.askServices() },
+					{ name: "CI/CD & Monitoring", fn: () => this.askCICDAndMonitoring() },
 				];
 
 				// باگ 687: totalSteps داینامیک
@@ -951,6 +960,100 @@ export class DockerWizard {
 		return "next";
 	}
 
+	private async askCICDAndMonitoring(): Promise<"next" | "back" | "cancel"> {
+		const options: any[] = [
+			{
+				label: "$(github) GitHub Actions",
+				description: "CI/CD Pipeline",
+				detail: "Generate .github/workflows/docker-build.yml",
+				picked: true,
+			},
+			{
+				label: "$(gitlab) GitLab CI/CD",
+				description: "CI/CD Pipeline",
+				detail: "Generate .gitlab-ci.yml",
+				picked: true,
+			},
+			{
+				label: "$(pulse) Prometheus",
+				description: "Monitoring",
+				detail: "Generate prometheus.yml",
+				picked: this.config.enableHealthCheck,
+			},
+		];
+
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: CI/CD & Monitoring`;
+		quickPick.placeholder = "Select which files to generate (multi-select) - Press Enter when done";
+		quickPick.items = options;
+		quickPick.canSelectMany = true;
+		quickPick.matchOnDescription = true;
+		quickPick.matchOnDetail = true;
+		quickPick.buttons = [
+			{ iconPath: new vscode.ThemeIcon("arrow-left"), tooltip: "Back" },
+			{ iconPath: new vscode.ThemeIcon("check"), tooltip: "OK" },
+		];
+
+		let isResolved = false;
+		const disposables: vscode.Disposable[] = [];
+
+		return new Promise((resolve) => {
+			const cleanup = () => {
+				disposables.forEach((d) => d.dispose());
+				quickPick.dispose();
+			};
+
+			disposables.push(
+				quickPick.onDidAccept(() => {
+					if (!isResolved) {
+						isResolved = true;
+						const selected = quickPick.selectedItems;
+						this.setCICDAndMonitoringSelections(selected);
+						cleanup();
+						resolve("next");
+					}
+				}),
+				quickPick.onDidTriggerButton((button) => {
+					if (!isResolved) {
+						isResolved = true;
+						if (button.tooltip === "Back") {
+							cleanup();
+							resolve("back");
+						} else {
+							const selected = quickPick.selectedItems;
+							this.setCICDAndMonitoringSelections(selected);
+							cleanup();
+							resolve("next");
+						}
+					}
+				}),
+				quickPick.onDidHide(() => {
+					if (!isResolved) {
+						isResolved = true;
+						cleanup();
+						resolve("cancel");
+					}
+				}),
+			);
+
+			quickPick.selectedItems = options.filter((o) => o.picked);
+			quickPick.show();
+		});
+	}
+
+	private setCICDAndMonitoringSelections(selected: readonly vscode.QuickPickItem[]): void {
+		const selectedLabels = selected.map((o) => o.label);
+
+		// ذخیره انتخاب‌ها در wizardState برای استفاده در
+		const ciCdConfig = {
+			generateGitHubActions: selectedLabels.some((l) => l.includes("GitHub Actions")),
+			generateGitLabCI: selectedLabels.some((l) => l.includes("GitLab CI/CD")),
+			generatePrometheus: selectedLabels.some((l) => l.includes("Prometheus")),
+		};
+
+		this.wizardState.set("ci_cd_config", ciCdConfig);
+	}
+
 	private showQuickPickWithBack(title: string, items: any[]): Promise<any> {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = `Step ${this.currentStep + 1}/${this.totalSteps}: ${title}`;
@@ -1091,14 +1194,35 @@ export class DockerWizard {
 		if (this.config.language === "laravel" && this.config.enableNginx) {
 			filesToWrite.push({ name: "nginx.conf", content: nginxConfigGenerator.generate() });
 		}
-		if (this.config.enableHealthCheck) {
+
+		// NEW: خواندن تنظیمات CI/CD از wizardState
+		const ciCdConfig = this.wizardState.get("ci_cd_config") || {
+			generateGitHubActions: true,
+			generateGitLabCI: true,
+			generatePrometheus: this.config.enableHealthCheck,
+		};
+
+		// Prometheus فقط اگر کاربر انتخاب کرده
+		if (ciCdConfig.generatePrometheus) {
 			filesToWrite.push({ name: "prometheus.yml", content: prometheusConfigGenerator.generate() });
 		}
+
 		if (this.config.enableDebug) {
 			filesToWrite.push({ name: "docker-compose.override.yml", content: dockerComposeOverrideGenerator.generate() });
 		}
-		filesToWrite.push({ name: path.join(".github", "workflows", "docker-build.yml"), content: githubWorkflowGenerator.generate() });
-		filesToWrite.push({ name: ".gitlab-ci.yml", content: gitlabCIGenerator.generate() });
+
+		// GitHub Actions فقط اگر کاربر انتخاب کرده
+		if (ciCdConfig.generateGitHubActions) {
+			filesToWrite.push({
+				name: path.join(".github", "workflows", "docker-build.yml"),
+				content: githubWorkflowGenerator.generate(),
+			});
+		}
+
+		// GitLab CI فقط اگر کاربر انتخاب کرده
+		if (ciCdConfig.generateGitLabCI) {
+			filesToWrite.push({ name: ".gitlab-ci.yml", content: gitlabCIGenerator.generate() });
+		}
 
 		const writtenFiles: string[] = [];
 		try {
