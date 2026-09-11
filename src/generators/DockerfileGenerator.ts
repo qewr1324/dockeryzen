@@ -47,6 +47,7 @@ export class DockerfileGenerator {
 		if (lang === "go") return "2345";
 		if (lang === "laravel") return "9003";
 		if (lang === "rails") return "1234";
+		if (lang === "rust") return "1234";
 		if (lang === "cpp" || lang === "c") return "1234";
 		return "";
 	}
@@ -54,14 +55,15 @@ export class DockerfileGenerator {
 	private getDebugExpose(): string {
 		if (!this.config.enableDebug) return "";
 		const lang = this.config.language;
-		if (lang === "rust") {
-			return "";
-		}
+		// ✅ Fix: Rust هم debug port داره
 		if (lang === "go") {
 			return `\n# Debug port (delve)\nEXPOSE 2345`;
 		}
 		if (lang === "cpp" || lang === "c") {
 			return `\n# Debug port (gdbserver)\nEXPOSE 1234`;
+		}
+		if (lang === "rust") {
+			return `\n# Debug port (lldb/gdb)\nEXPOSE 1234`;
 		}
 		const debugPort = this.getDebugPort();
 		if (!debugPort) return "";
@@ -205,6 +207,7 @@ export class DockerfileGenerator {
 		const isGradle = this.config.buildTool === "gradle";
 		const jarFindPath = isGradle ? "/app/build/libs" : "/app/target";
 
+		// ✅ Fix: exclude original-*.jar و *.jar.original
 		return `# syntax=docker/dockerfile:1.4
 
 # Build stage
@@ -216,9 +219,18 @@ FROM ${baseImage}
 WORKDIR /app
 ${healthCheckInstall}
 COPY --from=build ${jarFindPath} /tmp/jars/
-RUN JAR_FILE=$(find /tmp/jars -name "*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" -not -name "*-plain.jar" | head -n 1) && \\
+RUN JAR_FILE=$(find /tmp/jars -name "*.jar" \\
+        -not -name "*-sources.jar" \\
+        -not -name "*-javadoc.jar" \\
+        -not -name "*-plain.jar" \\
+        -not -name "original-*.jar" \\
+        -not -name "*.jar.original" | head -n 1) && \\
     if [ -z "$JAR_FILE" ]; then \\
-        JAR_FILE=$(find /tmp/jars -name "*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" | head -n 1); \\
+        JAR_FILE=$(find /tmp/jars -name "*.jar" \\
+            -not -name "*-sources.jar" \\
+            -not -name "*-javadoc.jar" \\
+            -not -name "original-*.jar" \\
+            -not -name "*.jar.original" | head -n 1); \\
     fi && \\
     if [ -z "$JAR_FILE" ]; then echo "No JAR file found!" && exit 1; fi && \\
     cp "$JAR_FILE" app.jar && \\
@@ -454,6 +466,7 @@ RUN --mount=type=cache,target=/root/.m2 \\
 
 		if (framework === "angular") {
 			const projectName = this.config.projectName.replace(/[^a-zA-Z0-9-]/g, "-") || "app";
+			// ✅ Fix: fallback داینامیک برای dist
 			return `# syntax=docker/dockerfile:1.4
 
 # Build stage
@@ -469,12 +482,20 @@ FROM nginx:alpine
 
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/dist /tmp/dist
-RUN if [ -d /tmp/dist/${projectName}/browser ]; then \\
+RUN set -e; \\
+    # اگر دایرکتوری browser داره
+    if [ -d /tmp/dist/${projectName}/browser ]; then \\
         cp -r /tmp/dist/${projectName}/browser/* /usr/share/nginx/html/; \\
     elif [ -d /tmp/dist/${projectName} ]; then \\
         cp -r /tmp/dist/${projectName}/* /usr/share/nginx/html/; \\
-    elif [ -d /tmp/dist/browser ]; then \\
-        cp -r /tmp/dist/browser/* /usr/share/nginx/html/; \\
+    # fallback: اولین زیرپوشه با browser
+    elif [ -n "$(find /tmp/dist -maxdepth 2 -type d -name browser | head -n 1)" ]; then \\
+        BROWSER_DIR=$(find /tmp/dist -maxdepth 2 -type d -name browser | head -n 1); \\
+        cp -r "$BROWSER_DIR"/* /usr/share/nginx/html/; \\
+    # fallback: اولین زیرپوشه
+    elif [ -n "$(find /tmp/dist -maxdepth 1 -mindepth 1 -type d | head -n 1)" ]; then \\
+        FIRST_DIR=$(find /tmp/dist -maxdepth 1 -mindepth 1 -type d | head -n 1); \\
+        cp -r "$FIRST_DIR"/* /usr/share/nginx/html/; \\
     else \\
         cp -r /tmp/dist/* /usr/share/nginx/html/; \\
     fi && \\
@@ -537,6 +558,7 @@ EXPOSE ${port}${debugExpose}${healthCheck}
 
 CMD ["sh", "-c", "if [ -f .output/server/index.mjs ]; then exec node .output/server/index.mjs; elif [ -f .output/server/index.js ]; then exec node .output/server/index.js; else exec npm run start; fi"]`;
 		} else {
+			// ✅ Fix: Next.js - بررسی standalone
 			return `# syntax=docker/dockerfile:1.4
 
 # Build stage
@@ -554,7 +576,16 @@ ${healthCheckInstall}
 ENV NODE_ENV=production \\
     PORT=${port} \\
     HOSTNAME=0.0.0.0
-COPY --from=build /app/.next/standalone ./
+
+# ✅ Fix: بررسی وجود standalone و fallback
+RUN echo "Checking for standalone output..." >&2
+COPY --from=build /app/.next/standalone ./.next-standalone-tmp || true
+RUN if [ -d /app/.next-standalone-tmp ]; then \\
+        cp -r /app/.next-standalone-tmp/* /app/ && rm -rf /app/.next-standalone-tmp; \\
+    else \\
+        echo "Warning: .next/standalone not found. Ensure next.config.js has output: 'standalone'" >&2; \\
+    fi
+
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
@@ -565,7 +596,9 @@ ${isAlpineUser}
 USER appuser
 ${ociLabels}
 EXPOSE ${port}${debugExpose}${healthCheck}
-CMD ["node", "server.js"]`;
+
+# ✅ Fix: fallback به next start اگه standalone نبود
+CMD ["sh", "-c", "if [ -f server.js ]; then exec node server.js; else exec npx next start -p ${port}; fi"]`;
 		}
 	}
 
@@ -677,9 +710,16 @@ ${entryPointCmd}`;
 
 		let startCmd = 'CMD ["python", "app.py"]';
 		if (framework === "django") {
-			const wsgiModule = projectModule || "config";
+			// ✅ Fix: Django - تشخیص داینامیک wsgi module
 			if (useGunicorn) {
-				startCmd = `CMD ["sh", "-c", "if [ -f wsgi.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 wsgi:application; elif [ -f ${wsgiModule}/wsgi.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 ${wsgiModule}.wsgi:application; else echo 'No wsgi.py found!' && exit 1; fi"]`;
+				startCmd = `CMD ["sh", "-c", "if [ -f wsgi.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 wsgi:application; fi; \\
+    WSGI_PATH=$(find . -maxdepth 2 -name wsgi.py -not -path './wsgi.py' | head -n 1); \\
+    if [ -n \\"$WSGI_PATH\\" ]; then \\
+        MODULE=$(echo \\"$WSGI_PATH\\" | sed 's|^\\\\./||; s|/|.|g; s|\\\\.py$||'); \\
+        exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 \\"$MODULE:application\\"; \\
+    fi; \\
+    if [ -f ${projectModule}/wsgi.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 ${projectModule}.wsgi:application; fi; \\
+    echo 'No wsgi.py found!' && exit 1"]`;
 			} else {
 				startCmd = `CMD ["sh", "-c", "echo 'No wsgi.py found!' && exit 1"]`;
 			}
@@ -768,12 +808,10 @@ ${startCmd}`;
 
 		const ldflags = "-s -w -X main.version=1.0.0";
 
+		// ✅ Fix: go mod tidy نباید همیشه اجرا بشه
 		const modDownload = `RUN --mount=type=cache,target=/go/pkg/mod \\
-    if [ -f go.sum ]; then \\
-        go mod download; \\
-    else \\
-        go mod download 2>/dev/null || go mod tidy; \\
-    fi`;
+    if [ ! -f go.sum ]; then go mod tidy; fi && \\
+    go mod download`;
 
 		return `# syntax=docker/dockerfile:1.4
 
@@ -835,6 +873,7 @@ CMD ["./main"]`;
 			runtimePackages = "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libgcc-s1 && rm -rf /var/lib/apt/lists/*";
 		}
 
+		// ✅ Fix: اسم باینری از Cargo.toml خونده بشه
 		return `# syntax=docker/dockerfile:1.4
 
 # Build stage
@@ -854,9 +893,19 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \\
     --mount=type=cache,target=/app/target \\
     cargo build --release --locked 2>/dev/null || cargo build --release; \\
-    BIN=$(find /app/target/release -maxdepth 1 -type f -executable -not -name "*.d" -not -name "*.rlib" -not -name "*.so" | head -n 1) && \\
-    if [ -z "$BIN" ]; then echo "No binary found!" && exit 1; fi && \\
-    cp "$BIN" /app/app-binary && \\
+    # ✅ Fix: نام باینری از Cargo.toml
+    BIN_NAME=$(grep -m1 '^name' Cargo.toml | sed 's/.*= *"\\(.*\\)"/\\1/'); \\
+    if [ -z "$BIN_NAME" ]; then BIN_NAME="${safeBinaryName}"; fi; \\
+    if [ -f "/app/target/release/$BIN_NAME" ]; then \\
+        cp "/app/target/release/$BIN_NAME" /app/app-binary; \\
+    else \\
+        # fallback: اولین executable واقعی (به جز build artifacts)
+        BIN=$(find /app/target/release -maxdepth 1 -type f -executable \\
+            -not -name "*.d" -not -name "*.rlib" -not -name "*.so" \\
+            -not -name "build-script-build" -not -name "*.dSYM" 2>/dev/null | head -n 1); \\
+        if [ -z "$BIN" ]; then echo "No binary found!" && exit 1; fi; \\
+        cp "$BIN" /app/app-binary; \\
+    fi; \\
     chmod +x /app/app-binary
 
 # Runtime stage
@@ -1015,6 +1064,7 @@ stderr_logfile_maxbytes=0\\n' > /etc/supervisor/conf.d/supervisord.conf
 
 		const finalCmd = hasQueueWorker ? `CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]` : `USER www-data\nCMD ["php-fpm"]`;
 
+		// ✅ Fix: .env ساخته بشه و key:generate اجرا بشه
 		return `# syntax=docker/dockerfile:1.4
 
 FROM ${phpImage}
@@ -1037,7 +1087,10 @@ COPY . .
 RUN if [ -f composer.json ]; then \\
         composer dump-autoload --optimize --no-dev --classmap-authoritative --no-interaction; \\
     fi && \\
+    # ✅ Fix: ساخت .env و APP_KEY
+    if [ -f .env.example ] && [ ! -f .env ]; then cp .env.example .env; fi && \\
     if [ -f artisan ]; then \\
+        php artisan key:generate --force 2>/dev/null || true; \\
         php artisan package:discover --ansi 2>/dev/null || true; \\
     fi
 
@@ -1089,6 +1142,7 @@ ${finalCmd}`;
 		const bundleInstall = `RUN --mount=type=cache,target=/usr/local/bundle/cache \\
     bundle install --jobs 4 --retry 3`;
 
+		// ✅ Fix: در runtime stage، bundle install مجدد حذف شد (فقط config)
 		return `# syntax=docker/dockerfile:1.4
 
 # Build stage
@@ -1111,10 +1165,10 @@ WORKDIR /app
 ${healthCheckInstall}
 ${runtimeDeps}
 COPY --from=build /app /app
-RUN gem install bundler --no-document && \\
-    bundle config set --local path 'vendor/bundle' && \\
+# ✅ Fix: فقط config، نه install مجدد
+RUN bundle config set --local path 'vendor/bundle' && \\
     bundle config set --local without 'development test' && \\
-    bundle config set --local deployment 'true'
+    bundle config set --local deployment 'true' || true
 ${sidekiqInstall}
 RUN mkdir -p /app/tmp /app/log /app/storage && \\
     chown -R 1001:0 /app/tmp /app/log /app/storage 2>/dev/null || true
