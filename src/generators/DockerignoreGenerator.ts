@@ -14,7 +14,6 @@ export class DockerignoreGenerator {
 			".git",
 			".gitignore",
 			".gitattributes",
-			".github",
 			".gitlab",
 			".svn",
 			".hg",
@@ -92,51 +91,13 @@ export class DockerignoreGenerator {
 		const lang = language || this.config.language;
 
 		if (lang.startsWith("js")) {
-			ignorePatterns.push(
-				"# Node.js",
-				"node_modules/",
-				".npm/",
-				".node-gyp/",
-				"dist/",
-				"build/",
-				// باگ 626: .next و .nuxt برای build لازم هستن
-				// حذف کردیم چون برای build لازم هستن
-				"out/",
-				"",
-			);
+			ignorePatterns.push("# Node.js", "node_modules/", ".npm/", ".node-gyp/", "dist/", "build/", "out/", ".next/cache/", ".nuxt/", ".output/", "");
 		} else if (lang.startsWith("java")) {
-			ignorePatterns.push(
-				"# Java",
-				"target/",
-				"*.class",
-				"*.jar",
-				"*.war",
-				"*.ear",
-				".mvn/",
-				// باگ 575: mvnw برای build لازمه
-				// حذف کردیم
-				".gradle/",
-				"build/",
-				"",
-			);
+			ignorePatterns.push("# Java", "target/", "*.class", "*.jar", "*.war", "*.ear", ".mvn/wrapper/maven-wrapper.jar", ".gradle/", "build/", "");
 		} else if (lang === "python") {
 			ignorePatterns.push("# Python", "__pycache__/", "*.py[cod]", "*$py.class", "*.so", ".Python", "env/", "venv/", "ENV/", ".pytest_cache/", ".mypy_cache/", "dist/", "build/", "*.egg-info/", "");
 		} else if (lang === "go") {
-			ignorePatterns.push(
-				"# Go",
-				"*.exe",
-				"*.exe~",
-				"*.dll",
-				"*.so",
-				"*.dylib",
-				"*.test",
-				"*.out",
-				// باگ 576: go.work برای workspace لازمه
-				// حذف کردیم
-				"bin/",
-				"dist/",
-				"",
-			);
+			ignorePatterns.push("# Go", "*.exe", "*.exe~", "*.dll", "*.so", "*.dylib", "*.test", "*.out", "bin/", "dist/", "");
 		} else if (lang === "rust") {
 			ignorePatterns.push("# Rust", "target/", "**/*.rs.bk", "");
 		} else if (lang === "dotnet") {
@@ -144,7 +105,7 @@ export class DockerignoreGenerator {
 		} else if (lang === "laravel") {
 			ignorePatterns.push("# PHP/Laravel", "vendor/", ".phpunit.result.cache", "node_modules/", "public/storage", "");
 		} else if (lang === "rails") {
-			ignorePatterns.push("# Ruby/Rails", "*.gem", ".bundle/", "vendor/bundle/", "log/*", "tmp/*", "node_modules/", "");
+			ignorePatterns.push("# Ruby/Rails", "*.gem", ".bundle/", "vendor/bundle/", "log/*", "tmp/*", "node_modules/", "storage/", "");
 		} else if (lang === "cpp" || lang === "c") {
 			ignorePatterns.push("# C/C++", "*.o", "*.obj", "*.exe", "*.out", "build/", "dist/", "cmake-build-*/", "");
 		}
