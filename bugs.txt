@@ -711,5 +711,7 @@ Part-4---------------------------------------------------------------------
 ✅ 699: DockerWizard - generateFiles() - اگه workspace read-only باشه fail میده.
 ✅ 700: عمومی - Performance - import همه config ها در startup کند هست.
 
+✅ 910: dockerfile
+
 
 همرو درست کن و فایل کامل رو بده من.
