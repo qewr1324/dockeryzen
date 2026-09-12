@@ -119,7 +119,8 @@ RUN --mount=type=cache,target=/root/.gradle/caches \\
 		} else {
 			let image: string;
 			if (version === "8") {
-				image = "maven:3.9-eclipse-temurin-8";
+				// image = "maven:3.9-eclipse-temurin-8";
+				image = useAlpine ? this.langConfig?.mavenAlpineImages?.[version] || `maven:3.9-eclipse-temurin-${version}-alpine` : this.langConfig?.mavenImages?.[version] || `maven:3.9-eclipse-temurin-${version}`;
 			} else {
 				image = `maven:3.9-eclipse-temurin-${version}${useAlpine ? "-alpine" : ""}`;
 			}

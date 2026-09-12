@@ -10,27 +10,75 @@
 			"frameworks": [
 				{
 					"value": "spring-boot",
-					"label": "Spring Boot",
+					"label": "Spring Boot 2.x",
 					"description": "Most popular Java framework",
-					"detail": "Best for: Enterprise apps, Microservices, REST APIs",
+					"detail": "JDK 8+ | Best for: Enterprise apps, Microservices",
 					"icon": "rocket",
-					"healthCheckPath": "/actuator/health"
+					"healthCheckPath": "/actuator/health",
+					"version": 2
+				},
+				{
+					"value": "spring-boot",
+					"label": "Spring Boot 3.x",
+					"description": "Most popular Java framework",
+					"detail": "JDK 17+ | Best for: New projects",
+					"icon": "rocket",
+					"healthCheckPath": "/actuator/health",
+					"version": 3
+				},
+				{
+					"value": "spring-boot",
+					"label": "Spring Boot 4.x",
+					"description": "Most popular Java framework",
+					"detail": "JDK 17+ | Cutting-edge",
+					"icon": "rocket",
+					"healthCheckPath": "/actuator/health",
+					"version": 4
 				},
 				{
 					"value": "quarkus",
-					"label": "Quarkus",
+					"label": "Quarkus 1.x",
 					"description": "Kubernetes-native Java framework",
-					"detail": "Best for: Cloud-native, Serverless, Fast startup",
+					"detail": "JDK 8+ | Legacy",
 					"icon": "rocket",
-					"healthCheckPath": "/health"
+					"healthCheckPath": "/health",
+					"version": 1
+				},
+				{
+					"value": "quarkus",
+					"label": "Quarkus 2.x",
+					"description": "Kubernetes-native Java framework",
+					"detail": "JDK 11+ | Best for: Production stability",
+					"icon": "rocket",
+					"healthCheckPath": "/q/health",
+					"version": 2
+				},
+				{
+					"value": "quarkus",
+					"label": "Quarkus 3.x",
+					"description": "Kubernetes-native Java framework",
+					"detail": "JDK 17+ | Best for: Cloud-native, Serverless",
+					"icon": "rocket",
+					"healthCheckPath": "/q/health",
+					"version": 3
 				},
 				{
 					"value": "micronaut",
-					"label": "Micronaut",
+					"label": "Micronaut 3.x",
 					"description": "Lightweight Java framework",
-					"detail": "Best for: Microservices, Low memory footprint",
+					"detail": "JDK 8+ | Best for: Production",
 					"icon": "rocket",
-					"healthCheckPath": "/health"
+					"healthCheckPath": "/health",
+					"version": 3
+				},
+				{
+					"value": "micronaut",
+					"label": "Micronaut 4.x",
+					"description": "Lightweight Java framework",
+					"detail": "JDK 17+ | Best for: New projects",
+					"icon": "rocket",
+					"healthCheckPath": "/health",
+					"version": 4
 				}
 			],
 			"buildTools": [
@@ -189,39 +237,11 @@
 				"25": "amazoncorretto:25"
 			},
 			"jdkAlpineImages": {
-				"8": "amazoncorretto:8-alpine",
+				"8": "amazoncorretto:8",
 				"11": "amazoncorretto:11-alpine",
 				"17": "amazoncorretto:17-alpine",
 				"21": "amazoncorretto:21-alpine",
 				"25": "amazoncorretto:25-alpine"
-			}
-		},
-		{
-			"value": "openjdk",
-			"label": "OpenJDK",
-			"description": "Official open-source JDK",
-			"detail": "Reference implementation | Best for: Open source projects",
-			"icon": "shield",
-			"jdkImages": {
-				"8": "openjdk:8",
-				"11": "openjdk:11",
-				"17": "openjdk:17",
-				"21": "openjdk:21",
-				"25": "openjdk:25"
-			},
-			"jdkAlpineImages": {
-				"8": "openjdk:8-alpine",
-				"11": "openjdk:11-alpine",
-				"17": "openjdk:17-alpine",
-				"21": "openjdk:21-alpine",
-				"25": "openjdk:25-alpine"
-			},
-			"jdkSlimImages": {
-				"8": "openjdk:8-slim",
-				"11": "openjdk:11-slim",
-				"17": "openjdk:17-slim",
-				"21": "openjdk:21-slim",
-				"25": "openjdk:25-slim"
 			}
 		},
 		{
@@ -247,31 +267,31 @@
 		}
 	],
 	"mavenImages": {
-		"8": "maven:3.9-jdk-8",
-		"11": "maven:3.9-jdk-11",
-		"17": "maven:3.9-jdk-17",
-		"21": "maven:3.9-jdk-21",
-		"25": "maven:3.9-jdk-25"
+		"8": "maven:3.9-eclipse-temurin-8",
+		"11": "maven:3.9-eclipse-temurin-11",
+		"17": "maven:3.9-eclipse-temurin-17",
+		"21": "maven:3.9-eclipse-temurin-21",
+		"25": "maven:3.9-eclipse-temurin-25"
 	},
 	"mavenAlpineImages": {
-		"8": "maven:3.9-jdk-8-alpine",
-		"11": "maven:3.9-jdk-11-alpine",
-		"17": "maven:3.9-jdk-17-alpine",
-		"21": "maven:3.9-jdk-21-alpine",
-		"25": "maven:3.9-jdk-25-alpine"
+		"8": "maven:3.9-eclipse-temurin-8-alpine",
+		"11": "maven:3.9-eclipse-temurin-11-alpine",
+		"17": "maven:3.9-eclipse-temurin-17-alpine",
+		"21": "maven:3.9-eclipse-temurin-21-alpine",
+		"25": "maven:3.9-eclipse-temurin-25-alpine"
 	},
 	"gradleImages": {
-		"8": "gradle:8-jdk8",
-		"11": "gradle:8-jdk11",
-		"17": "gradle:8-jdk17",
-		"21": "gradle:8-jdk21",
-		"25": "gradle:8-jdk25"
+		"8": "gradle:8.5-jdk8",
+		"11": "gradle:8.5-jdk11",
+		"17": "gradle:8.5-jdk17",
+		"21": "gradle:8.5-jdk21",
+		"25": "gradle:8.5-jdk21"
 	},
 	"gradleAlpineImages": {
-		"8": "gradle:8-jdk8-alpine",
-		"11": "gradle:8-jdk11-alpine",
-		"17": "gradle:8-jdk17-alpine",
-		"21": "gradle:8-jdk21-alpine",
-		"25": "gradle:8-jdk25-alpine"
+		"8": "gradle:8.5-jdk8-alpine",
+		"11": "gradle:8.5-jdk11-alpine",
+		"17": "gradle:8.5-jdk17-alpine",
+		"21": "gradle:8.5-jdk21-alpine",
+		"25": "gradle:8.5-jdk21-alpine"
 	}
 }

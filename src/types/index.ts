@@ -10,6 +10,7 @@ export interface ProjectConfig {
 	jdkVersion?: string;
 	jdkVendor?: string;
 	framework?: string;
+	frameworkVersion?: number; // ← NEW: 2 | 3 | 4 | undefined
 	server?: string;
 	nodeVersion?: string;
 	pythonVersion?: string;

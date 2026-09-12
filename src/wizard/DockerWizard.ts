@@ -742,6 +742,7 @@ export class DockerWizard {
 				description: f.description,
 				detail: f.detail,
 				value: f.value,
+				version: f.version, // ← NEW
 				healthCheckPath: f.healthCheckPath,
 			}));
 			const framework = await this.showQuickPickWithBack("Select Java Framework", frameworks);
@@ -750,6 +751,8 @@ export class DockerWizard {
 			if (framework) {
 				this.config.framework = framework.value;
 				this.config.healthCheckPath = framework.healthCheckPath;
+				// ✅ NEW: خوندن نسخه
+				this.config.frameworkVersion = framework.version;
 			}
 		} else if (this.config.language === "java-war" && typeConfig?.servers) {
 			const servers = typeConfig.servers.map((s: any) => ({
