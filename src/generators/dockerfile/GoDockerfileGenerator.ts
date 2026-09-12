@@ -19,7 +19,8 @@ export class GoDockerfileGenerator extends BaseDockerfileGenerator {
 
 		const runtimeBase = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
 		const cgoFlag = cgoEnabled ? "1" : "0";
-		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		const userSetup = this.buildUserSetup();
 
 		const cgoPackages = this.config.useAlpine && cgoEnabled ? "RUN apk add --no-cache gcc musl-dev" : "";
 		const cgoPackagesDebian = !this.config.useAlpine && cgoEnabled ? "RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev && rm -rf /var/lib/apt/lists/*" : "";
@@ -61,7 +62,7 @@ WORKDIR /app
 ${runtimePackages}
 ${healthCheckInstall}
 COPY --from=build /app/main .
-${isAlpineUser}
+${userSetup}
 USER appuser
 ${ociLabels}
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}

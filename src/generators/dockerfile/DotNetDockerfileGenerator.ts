@@ -19,7 +19,9 @@ export class DotNetDockerfileGenerator extends BaseDockerfileGenerator {
 		}
 
 		const safeProjectName = this.config.projectName.replace(/[^a-zA-Z0-9_]/g, "_");
-		const userSetup = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		// const userSetup = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		// const userSetup = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 appuser && chown -R appuser:appuser /app";
+		const userSetup = this.buildUserSetup();
 
 		const port = this.config.port;
 

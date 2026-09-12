@@ -18,7 +18,8 @@ export class CppDockerfileGenerator extends BaseDockerfileGenerator {
 		}
 
 		const runtimeImage = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
-		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		const userSetup = this.buildUserSetup();
 
 		const buildPackages = this.config.useAlpine ? "RUN apk add --no-cache cmake make g++ musl-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends cmake make g++ && rm -rf /var/lib/apt/lists/*";
 
@@ -62,7 +63,7 @@ WORKDIR /app
 ${runtimePackages}
 ${healthCheckInstall}
 COPY --from=build /app/app-binary ./app
-${isAlpineUser}
+${userSetup}
 USER appuser
 ${ociLabels}
 EXPOSE ${this.config.port}${debugExpose}${healthCheck}

@@ -18,6 +18,14 @@ export class LaravelDockerfileGenerator extends BaseDockerfileGenerator {
 			}
 		}
 
+		const laravelDirs = `RUN mkdir -p /var/www/html/storage/framework/views \\
+	/var/www/html/storage/framework/cache \\
+	/var/www/html/storage/framework/sessions \\
+	/var/www/html/storage/logs \\
+	/var/www/html/bootstrap/cache && \\
+	chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \\
+	chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache`;
+
 		const dbTypes = this.config.databases.map((d) => d.type);
 		const needsPdoMysql = dbTypes.some((t) => ["mysql", "mariadb"].includes(t));
 		const needsPdoPgsql = dbTypes.some((t) => ["postgresql", "timescaledb"].includes(t));
@@ -43,36 +51,38 @@ export class LaravelDockerfileGenerator extends BaseDockerfileGenerator {
 			? `
 # Create supervisor config for queue worker
 RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor && \\
-    printf '[supervisord]\\n\\
-nodaemon=true\\n\\
-user=root\\n\\
-logfile=/var/log/supervisor/supervisord.log\\n\\
-pidfile=/var/run/supervisord.pid\\n\\
-\\n\\
-[program:php-fpm]\\n\\
-command=php-fpm -F\\n\\
-autostart=true\\n\\
-autorestart=true\\n\\
-priority=5\\n\\
-stdout_logfile=/dev/stdout\\n\\
-stdout_logfile_maxbytes=0\\n\\
-stderr_logfile=/dev/stderr\\n\\
-stderr_logfile_maxbytes=0\\n\\
-\\n\\
-[program:queue-worker]\\n\\
-command=php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600\\n\\
-directory=/var/www/html\\n\\
-user=www-data\\n\\
-autostart=true\\n\\
-autorestart=true\\n\\
-stopasgroup=true\\n\\
-killasgroup=true\\n\\
-numprocs=1\\n\\
-redirect_stderr=true\\n\\
-stdout_logfile=/dev/stdout\\n\\
-stdout_logfile_maxbytes=0\\n\\
-stderr_logfile=/dev/stderr\\n\\
-stderr_logfile_maxbytes=0\\n' > /etc/supervisor/conf.d/supervisord.conf
+    cat > /etc/supervisor/conf.d/supervisord.conf <<'EOF'
+[supervisord]
+nodaemon=true
+user=root
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:php-fpm]
+command=php-fpm -F
+autostart=true
+autorestart=true
+priority=5
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:queue-worker]
+command=php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+directory=/var/www/html
+user=www-data
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+EOF
 `
 			: "";
 
@@ -108,13 +118,7 @@ RUN if [ -f composer.json ]; then \\
         php artisan package:discover --ansi 2>/dev/null || true; \\
     fi
 
-RUN mkdir -p /var/www/html/storage/framework/views \\
-    /var/www/html/storage/framework/cache \\
-    /var/www/html/storage/framework/sessions \\
-    /var/www/html/storage/logs \\
-    /var/www/html/bootstrap/cache && \\
-    chown -R www-data:www-data /var/www/html && \\
-    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+${laravelDirs}
 ${supervisorConfig}
 ${ociLabels}
 EXPOSE ${internalPort}${debugExpose}${healthCheck}

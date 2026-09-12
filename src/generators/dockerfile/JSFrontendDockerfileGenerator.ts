@@ -12,7 +12,8 @@ export class JSFrontendDockerfileGenerator extends BaseDockerfileGenerator {
 		const installCmd = this.getPackageInstallCommand();
 		const port = this.config.port;
 
-		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		const userSetup = this.buildUserSetup();
 
 		const lockFilesCopy = `COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* bun.lockb* .npmrc* ./`;
 
@@ -104,7 +105,7 @@ COPY --from=build /app/server ./server
 COPY --from=build /app/static ./static
 
 RUN npm cache clean --force 2>/dev/null || true
-${isAlpineUser}
+${userSetup}
 USER appuser
 ${ociLabels}
 EXPOSE ${port}${debugExpose}${healthCheck}
@@ -144,7 +145,7 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/public ./public
 COPY --from=build /app/next.config.* ./
 RUN npm cache clean --force 2>/dev/null || true
-${isAlpineUser}
+${userSetup}
 USER appuser
 ${ociLabels}
 EXPOSE ${port}${debugExpose}${healthCheck}

@@ -13,7 +13,8 @@ export class JSBackendDockerfileGenerator extends BaseDockerfileGenerator {
 		const usePm2 = this.config.enablePm2;
 		const framework = this.config.framework;
 
-		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		const userSetup = this.buildUserSetup();
 
 		const lockFilesCopy = `COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* bun.lockb* .npmrc* tsconfig.json* tsconfig.*.json* .swcrc* .babelrc* .env.example* ./`;
 
@@ -58,7 +59,7 @@ ${pm2Install}
 COPY . .
 ${buildStep}
 RUN npm cache clean --force 2>/dev/null || true
-${isAlpineUser}
+${userSetup}
 USER appuser
 
 ENV NODE_ENV=production \\

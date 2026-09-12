@@ -26,6 +26,12 @@ export abstract class BaseDockerfileGenerator {
 	protected getDebugExpose(): string {
 		if (!this.config.enableDebug) return "";
 		const lang = this.config.language;
+
+		// ✅ FIX: Laravel از Xdebug استفاده می‌کنه (پورت 9003)
+		if (lang === "laravel") {
+			return `\n# Debug port (Xdebug)\nEXPOSE 9003`;
+		}
+
 		if (lang === "go") {
 			return `\n# Debug port (delve)\nEXPOSE 2345`;
 		}
@@ -203,6 +209,16 @@ export abstract class BaseDockerfileGenerator {
 		return `# ═══════════════════════════════════════════════════════════════
 ${lines.join("\n")}
 # ═══════════════════════════════════════════════════════════════`;
+	}
+
+	/**
+	 * ساخت دستور ساخت user و chown برای همه‌ی generatorها.
+	 * - Alpine: adduser با home directory
+	 * - non-Alpine: useradd با home directory
+	 * - بدون -g root (امنیت بهتر)
+	 */
+	protected buildUserSetup(): string {
+		return this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -m -d /home/appuser appuser && chown -R appuser:appuser /app";
 	}
 
 	/**

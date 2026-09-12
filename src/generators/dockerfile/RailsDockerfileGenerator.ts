@@ -1,6 +1,10 @@
 import { BaseDockerfileGenerator } from "./BaseDockerfileGenerator.js";
 
 export class RailsDockerfileGenerator extends BaseDockerfileGenerator {
+	protected buildUserSetup(): string {
+		return this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser" : "RUN useradd -r -u 1001 -m -d /home/appuser appuser";
+	}
+
 	generate(): string {
 		const rubyVersion = this.config.rubyVersion || "3.3";
 		const debugExpose = this.getDebugExpose();
@@ -21,7 +25,8 @@ export class RailsDockerfileGenerator extends BaseDockerfileGenerator {
 
 		// ✅ FIX: userSetup — بدون chown (chown جداگانه انجام می‌شه)
 		// ✅ FIX: -g root حذف شد (امنیت بهتر)
-		const userSetup = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser" : "RUN useradd -r -u 1001 -m -d /home/appuser appuser";
+		// const userSetup = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser" : "RUN useradd -r -u 1001 -m -d /home/appuser appuser";
+		const userSetup = this.buildUserSetup();
 
 		const sidekiqInstall = this.config.enableSidekiq ? `\nRUN gem install sidekiq --no-document\n` : "";
 

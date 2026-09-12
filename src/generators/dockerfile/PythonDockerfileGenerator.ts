@@ -13,7 +13,8 @@ export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
 		const useGunicorn = this.config.enableGunicorn;
 		const port = this.config.port;
 
-		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		const userSetup = this.buildUserSetup();
 
 		const buildDeps = this.config.useAlpine ? "RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev zlib-dev jpeg-dev freetype-dev lcms2-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev default-libmysqlclient-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*";
 
@@ -84,7 +85,7 @@ ${runtimeDeps}
 COPY --from=build /install /usr/local
 COPY . .
 RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-${isAlpineUser}
+${userSetup}
 USER appuser
 ENV PYTHONUNBUFFERED=1 \\
     PYTHONDONTWRITEBYTECODE=1 \\
