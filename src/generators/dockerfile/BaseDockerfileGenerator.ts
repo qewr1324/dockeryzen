@@ -211,6 +211,9 @@ ${lines.join("\n")}
 	 * "nextjs" → "Nextjs"
 	 */
 	private toTitleCase(value: string): string {
+		// ✅ special case برای .NET
+		if (value === "dotnet") return ".NET";
+
 		return value
 			.split(/[-_]/)
 			.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())

@@ -36,11 +36,12 @@ COPY *.sln* ./
 COPY NuGet.config* nuget.config* ./
 
 RUN --mount=type=cache,target=/root/.nuget/packages \\
-    dotnet restore || true
+    dotnet restore
 
 COPY . .
 
 RUN --mount=type=cache,target=/root/.nuget/packages \\
+    mkdir -p out && \\
     dotnet publish -c Release -o out --no-restore || \\
     dotnet publish -c Release -o out
 
@@ -50,8 +51,7 @@ WORKDIR /app
 ${healthCheckInstall}
 COPY --from=build /app/out .
 
-RUN mkdir -p /app/logs /app/tmp && \\
-    chown -R 1001:0 /app/logs /app/tmp 2>/dev/null || true
+RUN mkdir -p /app/logs /app/tmp
 
 ${userSetup}
 USER appuser
@@ -66,6 +66,6 @@ ${ociLabels}
 
 EXPOSE ${port}${debugExpose}${healthCheck}
 
-ENTRYPOINT ["sh", "-c", "APP_DLL=$(find . -maxdepth 1 -name '*.dll' -not -name '*.resources.dll' | head -n 1) && exec dotnet \\"$APP_DLL\\""]`;
+ENTRYPOINT ["sh", "-c", "APP_DLL=$(find . -maxdepth 1 -name '*.dll' -not -name '*.resources.dll' | head -n 1); if [ -z \\"$APP_DLL\\" ]; then echo 'ERROR: No DLL found!' && exit 1; fi; exec dotnet \\"$APP_DLL\\""]`;
 	}
 }

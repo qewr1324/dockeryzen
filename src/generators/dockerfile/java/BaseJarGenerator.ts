@@ -189,8 +189,11 @@ RUN --mount=type=cache,target=/root/.m2 \\
 	// User Setup
 	// ───────────────────────────────────────────────────────────
 
+	// protected buildUserSetup(): string {
+	// 	return this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+	// }
 	protected buildUserSetup(): string {
-		return this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
+		return this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 appuser && chown -R appuser:appuser /app";
 	}
 
 	// ───────────────────────────────────────────────────────────

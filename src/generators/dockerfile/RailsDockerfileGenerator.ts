@@ -19,15 +19,18 @@ export class RailsDockerfileGenerator extends BaseDockerfileGenerator {
 			}
 		}
 
-		const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
+		// ✅ FIX: userSetup — بدون chown (chown جداگانه انجام می‌شه)
+		// ✅ FIX: -g root حذف شد (امنیت بهتر)
+		const userSetup = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser" : "RUN useradd -r -u 1001 -m -d /home/appuser appuser";
 
 		const sidekiqInstall = this.config.enableSidekiq ? `\nRUN gem install sidekiq --no-document\n` : "";
 
+		// ✅ FIX: mysql-dev → mariadb-dev, mysql-client → mariadb-client
 		const buildDeps = this.config.useAlpine
-			? "RUN apk add --no-cache build-base postgresql-dev mysql-dev nodejs npm tzdata git yaml-dev"
+			? "RUN apk add --no-cache build-base postgresql-dev mariadb-dev nodejs npm tzdata git yaml-dev"
 			: "RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev default-libmysqlclient-dev nodejs npm tzdata git && rm -rf /var/lib/apt/lists/*";
 
-		const runtimeDeps = this.config.useAlpine ? "RUN apk add --no-cache libpq mysql-client tzdata" : "RUN apt-get update && apt-get install -y --no-install-recommends libpq5 default-libmysqlclient-dev tzdata && rm -rf /var/lib/apt/lists/*";
+		const runtimeDeps = this.config.useAlpine ? "RUN apk add --no-cache libpq mariadb-client tzdata" : "RUN apt-get update && apt-get install -y --no-install-recommends libpq5 default-libmysqlclient-dev tzdata && rm -rf /var/lib/apt/lists/*";
 
 		const bundleConfig = `RUN bundle config set --local path 'vendor/bundle' && \\
     bundle config set --local without 'development test' && \\
@@ -60,13 +63,10 @@ WORKDIR /app
 ${healthCheckInstall}
 ${runtimeDeps}
 COPY --from=build /app /app
-RUN bundle config set --local path 'vendor/bundle' && \\
-    bundle config set --local without 'development test' && \\
-    bundle config set --local deployment 'true' || true
 ${sidekiqInstall}
+${userSetup}
 RUN mkdir -p /app/tmp /app/log /app/storage && \\
-    chown -R 1001:0 /app/tmp /app/log /app/storage 2>/dev/null || true
-${isAlpineUser}
+    chown -R appuser:appuser /app
 USER appuser
 ENV RAILS_ENV=production \\
     RAILS_SERVE_STATIC_FILES=true \\
