@@ -25,6 +25,8 @@ export class DotNetDockerfileGenerator extends BaseDockerfileGenerator {
 
 		return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 # Build stage
 FROM ${sdkImage} AS build
 WORKDIR /app

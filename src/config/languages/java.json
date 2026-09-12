@@ -30,7 +30,7 @@
 					"value": "spring-boot",
 					"label": "Spring Boot 4.x",
 					"description": "Most popular Java framework",
-					"detail": "JDK 17+ | Cutting-edge",
+					"detail": "JDK 21+ | Cutting-edge",
 					"icon": "rocket",
 					"healthCheckPath": "/actuator/health",
 					"version": 4

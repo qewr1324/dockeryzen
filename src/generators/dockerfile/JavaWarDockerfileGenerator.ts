@@ -12,7 +12,12 @@ export class JavaWarDockerfileGenerator extends BaseDockerfileGenerator {
 		const isJetty = server === "jetty";
 		const webappsPath = isJetty ? "/var/lib/jetty/webapps" : "/usr/local/tomcat/webapps";
 		const mkdirCmd = isJetty ? `RUN mkdir -p ${webappsPath}\n` : "";
-		const startCommand = isJetty ? 'CMD ["java", "-jar", "/usr/local/jetty/start.jar"]' : 'ENTRYPOINT ["catalina.sh", "run"]';
+
+		// Jetty 9.x: /opt/jetty/bin/jetty.sh
+		// Jetty 10.x/11.x/12.x: /usr/local/bin/jetty.sh یا /usr/local/jetty/bin/jetty.sh
+		const startCommand = isJetty
+			? `CMD ["sh", "-c", "START_JAR=$(find / -name 'start.jar' -path '*/jetty/*' 2>/dev/null | head -n 1); if [ -n \\"$START_JAR\\" ]; then exec java -jar \\"$START_JAR\\"; elif [ -f /usr/local/bin/jetty.sh ]; then exec /usr/local/bin/jetty.sh run; elif [ -f /opt/jetty/bin/jetty.sh ]; then exec /opt/jetty/bin/jetty.sh run; else echo 'Jetty start script not found!' && exit 1; fi"]`
+			: 'ENTRYPOINT ["catalina.sh", "run"]';
 
 		const workDirSection = isJetty ? "WORKDIR /var/lib/jetty\n" : "WORKDIR /usr/local/tomcat\n";
 
@@ -38,10 +43,13 @@ export class JavaWarDockerfileGenerator extends BaseDockerfileGenerator {
 		const buildStageOutputPath = this.config.buildTool === "gradle" ? "/app/build/libs" : "/app/target";
 		const warCopyCmd = `RUN WAR_FILE=$(find /tmp/wars -name "*.war" -not -name "*-sources.war" -not -name "*-javadoc.war" | head -n 1) && \\
     if [ -z "$WAR_FILE" ]; then echo "No WAR file found!" && exit 1; fi && \\
+    rm -rf ${webappsPath}/ROOT ${webappsPath}/ROOT.war && \\
     cp "$WAR_FILE" ${webappsPath}/ROOT.war && \\
     rm -rf /tmp/wars`;
 
 		return `# syntax=docker/dockerfile:1.4
+
+${this.getHeader()}
 
 # Build stage
 ${this.getJavaBuildStage()}
@@ -95,11 +103,13 @@ ${startCommand}`;
 	// ⬇️ عیناً کپی از DockerfileGenerator اصلی
 	private getJavaBuildStage(): string {
 		let version = this.config.jdkVersion || "17";
+		const buildTool = this.config.buildTool || "maven"; // ← default
+
 		if (version === "25" && this.config.buildTool === "gradle") version = "21";
 		if (version === "25" && this.config.buildTool === "maven") version = "21";
 		const useAlpine = this.config.useAlpine;
 
-		if (this.config.buildTool === "gradle") {
+		if (buildTool === "gradle") {
 			let gradleVersion = "8";
 			if (version === "8") gradleVersion = "7";
 			if (version === "11" || version === "17") gradleVersion = "8";

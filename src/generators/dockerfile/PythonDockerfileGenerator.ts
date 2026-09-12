@@ -59,6 +59,8 @@ export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
 
 		return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 # Build stage
 FROM ${image} AS build
 WORKDIR /app

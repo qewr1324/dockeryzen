@@ -20,6 +20,8 @@ export class JSFrontendDockerfileGenerator extends BaseDockerfileGenerator {
 			const projectName = this.config.projectName.replace(/[^a-zA-Z0-9-]/g, "-") || "app";
 			return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 # Build stage
 FROM ${image} AS build
 WORKDIR /app

@@ -47,6 +47,8 @@ export class CDockerfileGenerator extends BaseDockerfileGenerator {
 
 		return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 # Build stage
 FROM ${gccImage} AS build
 WORKDIR /app

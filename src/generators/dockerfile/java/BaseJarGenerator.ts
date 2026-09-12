@@ -49,11 +49,7 @@ RUN ${runtime.jarFindCommand}`
 
 		return `# syntax=docker/dockerfile:1.4
 
-# ═══════════════════════════════════════════════════════════════
-# Framework: ${fwName}
-# Build tool: ${this.config.buildTool || "maven"}
-# JDK: ${this.config.jdkVersion || "17"} (${this.config.jdkVendor || "eclipse-temurin"})
-# ═══════════════════════════════════════════════════════════════
+${this.getHeader()}
 
 # Build stage
 ${buildStage}
@@ -93,7 +89,8 @@ ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar ${runtime.entrypoint}"]`;
 			if (version === "8") gradleVersion = "7";
 			const image = `gradle:${gradleVersion}-jdk${version}${useAlpine ? "-alpine" : ""}`;
 			const extraArgs = this.fwConfig.mavenExtraArgs?.trim() || "";
-			const gradleExtra = extraArgs ? extraArgs.replace(/-D/g, "-D") : "";
+			// const gradleExtra = extraArgs ? extraArgs.replace(/-D/g, "-D") : "";
+			const gradleExtra = extraArgs ? ` ${extraArgs}` : "";
 			return `FROM ${image} AS build
 WORKDIR /app
 

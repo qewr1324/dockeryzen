@@ -41,24 +41,27 @@ export class QuarkusJarGenerator extends BaseJarGenerator {
 	 */
 	protected buildRuntimeStage(): {
 		jarCopySource: string;
-		jarCopyDestination: string; // ← اضافه شد
+		jarCopyDestination: string;
 		jarFindCommand: string;
 		entrypoint: string;
 	} {
+		const isGradle = this.config.buildTool === "gradle";
+		const basePath = this.fwConfig.buildOutputPath(isGradle);
+
 		if (this.isFastJar()) {
 			// ✅ fast-jar: کل پوشه‌ی quarkus-app
 			return {
-				jarCopySource: "/app/target/quarkus-app",
-				jarCopyDestination: "/app/quarkus-app", // ← اضافه شد
-				jarFindCommand: "", // نیازی به find نیست
+				jarCopySource: `${basePath}/quarkus-app`, // ← /app/target/quarkus-app یا /app/build/quarkus-app
+				jarCopyDestination: "/app/quarkus-app",
+				jarFindCommand: "",
 				entrypoint: "/app/quarkus-app/quarkus-run.jar",
 			};
 		}
 
 		// uber-jar: روش قدیمی
 		return {
-			jarCopySource: "/app/target",
-			jarCopyDestination: "/tmp/jars", // ← اضافه شد
+			jarCopySource: basePath,
+			jarCopyDestination: "/tmp/jars",
 			jarFindCommand: this.buildJarFindCommand(),
 			entrypoint: "app.jar",
 		};

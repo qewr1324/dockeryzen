@@ -80,6 +80,8 @@ stderr_logfile_maxbytes=0\\n' > /etc/supervisor/conf.d/supervisord.conf
 
 		return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 FROM ${phpImage}
 WORKDIR /var/www/html
 

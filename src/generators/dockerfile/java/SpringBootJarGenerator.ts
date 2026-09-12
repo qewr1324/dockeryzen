@@ -10,8 +10,15 @@ export class SpringBootJarGenerator extends BaseJarGenerator {
 	}
 
 	// ✅ NEW: Spring Boot 3.x+ نیاز به JDK 17
+	// protected getMinJdkForVersion(version: number): number {
+	// 	return version >= 3 ? 17 : 8;
+	// }
+
+	// در SpringBootJarGenerator
 	protected getMinJdkForVersion(version: number): number {
-		return version >= 3 ? 17 : 8;
+		if (version >= 4) return 21; // Spring Boot 4.x → JDK 21
+		if (version >= 3) return 17; // Spring Boot 3.x → JDK 17
+		return 8; // Spring Boot 1.x/2.x → JDK 8
 	}
 
 	// فقط health path رو override می‌کنیم (چون Base از /actuator/health استفاده می‌کنه

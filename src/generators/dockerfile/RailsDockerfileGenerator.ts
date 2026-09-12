@@ -38,6 +38,8 @@ export class RailsDockerfileGenerator extends BaseDockerfileGenerator {
 
 		return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 # Build stage
 FROM ${rubyImage} AS build
 WORKDIR /app

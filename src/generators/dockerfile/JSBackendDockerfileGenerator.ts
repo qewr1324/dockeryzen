@@ -46,6 +46,8 @@ export class JSBackendDockerfileGenerator extends BaseDockerfileGenerator {
 
 		return `# syntax=docker/dockerfile:1.4
 
+${this.getHeader()}
+
 FROM ${image}
 WORKDIR /app
 
