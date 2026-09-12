@@ -1,6 +1,10 @@
 import { BaseDockerfileGenerator } from "./BaseDockerfileGenerator.js";
 
 export class RustDockerfileGenerator extends BaseDockerfileGenerator {
+	protected getHealthCheckInstall(): string {
+		return "";
+	}
+
 	generate(): string {
 		const rustVersion = this.config.rustVersion || "latest";
 		let buildImage = `rust:${rustVersion}`;
@@ -16,7 +20,6 @@ export class RustDockerfileGenerator extends BaseDockerfileGenerator {
 		}
 
 		const runtimeImage = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
-		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
 		const userSetup = this.buildUserSetup();
 
 		const ociLabels = this.getOciLabels();
@@ -29,12 +32,7 @@ export class RustDockerfileGenerator extends BaseDockerfileGenerator {
 
 		const buildPackages = this.config.useAlpine ? "RUN apk add --no-cache musl-dev pkgconf openssl-dev openssl-libs-static" : "RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*";
 
-		let runtimePackages = "";
-		if (this.config.useAlpine) {
-			runtimePackages = "RUN apk --no-cache add ca-certificates libgcc openssl";
-		} else {
-			runtimePackages = "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libgcc-s1 && rm -rf /var/lib/apt/lists/*";
-		}
+		const runtimePackages = this.config.useAlpine ? "RUN apk --no-cache add ca-certificates libgcc openssl wget" : "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libgcc-s1 curl && rm -rf /var/lib/apt/lists/*";
 
 		return `# syntax=docker/dockerfile:1.4
 

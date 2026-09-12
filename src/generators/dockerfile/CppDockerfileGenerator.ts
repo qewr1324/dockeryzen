@@ -1,6 +1,10 @@
 import { BaseDockerfileGenerator } from "./BaseDockerfileGenerator.js";
 
 export class CppDockerfileGenerator extends BaseDockerfileGenerator {
+	protected getHealthCheckInstall(): string {
+		return "";
+	}
+
 	generate(): string {
 		const gccVersion = this.config.gccVersion || "13";
 		const debugExpose = this.getDebugExpose();
@@ -23,7 +27,8 @@ export class CppDockerfileGenerator extends BaseDockerfileGenerator {
 
 		const buildPackages = this.config.useAlpine ? "RUN apk add --no-cache cmake make g++ musl-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends cmake make g++ && rm -rf /var/lib/apt/lists/*";
 
-		const runtimePackages = this.config.useAlpine ? "RUN apk --no-cache add libstdc++ libgcc" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*";
+		// const runtimePackages = this.config.useAlpine ? "RUN apk --no-cache add libstdc++ libgcc" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*";
+		const runtimePackages = this.config.useAlpine ? "RUN apk --no-cache add libstdc++ libgcc curl ca-certificates netcat-openbsd" : "RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 curl ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*";
 
 		const buildStep = `RUN set -eux; \\
     if [ -f CMakeLists.txt ]; then \\

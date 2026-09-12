@@ -1,11 +1,14 @@
 import { BaseDockerfileGenerator } from "./BaseDockerfileGenerator.js";
 
 export class CDockerfileGenerator extends BaseDockerfileGenerator {
+	protected getHealthCheckInstall(): string {
+		return "";
+	}
+
 	generate(): string {
 		const gccVersion = this.config.gccVersion || "13";
 		const debugExpose = this.getDebugExpose();
 		const healthCheck = this.getHealthCheck();
-		const healthCheckInstall = this.getHealthCheckInstall();
 		const ociLabels = this.getOciLabels();
 
 		let gccImage = `gcc:${gccVersion}`;
@@ -18,12 +21,11 @@ export class CDockerfileGenerator extends BaseDockerfileGenerator {
 		}
 
 		const runtimeImage = this.config.useAlpine ? "alpine:latest" : "debian:bookworm-slim";
-		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
 		const userSetup = this.buildUserSetup();
 
 		const buildPackages = this.config.useAlpine ? "RUN apk add --no-cache cmake make gcc musl-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends cmake make gcc libc6-dev && rm -rf /var/lib/apt/lists/*";
 
-		const runtimePackages = this.config.useAlpine ? "RUN apk --no-cache add libgcc" : "RUN apt-get update && apt-get install -y --no-install-recommends libc6 && rm -rf /var/lib/apt/lists/*";
+		const runtimePackages = this.config.useAlpine ? "RUN apk --no-cache add libgcc curl ca-certificates netcat-openbsd" : "RUN apt-get update && apt-get install -y --no-install-recommends libc6 curl ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*";
 
 		const buildStep = `RUN set -eux; \\
     if [ -f CMakeLists.txt ]; then \\
@@ -61,7 +63,6 @@ ${buildStep}
 FROM ${runtimeImage}
 WORKDIR /app
 ${runtimePackages}
-${healthCheckInstall}
 COPY --from=build /app/app-binary ./app
 ${userSetup}
 USER appuser
