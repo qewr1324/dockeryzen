@@ -1,6 +1,24 @@
 import { BaseDockerfileGenerator } from "./BaseDockerfileGenerator.js";
 
 export class JSBackendDockerfileGenerator extends BaseDockerfileGenerator {
+	protected getHealthCheck(): string {
+		if (!this.config.enableHealthCheck) return "";
+		const port = this.config.port;
+		const healthPath = this.config.healthCheckPath || "/health";
+		const primaryCheck = `curl -f http://localhost:${port}${healthPath}`;
+		const fallbackCheck = `curl -f http://localhost:${port}/`;
+		return `\n# Health check\nHEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=5 \\\n  CMD ${primaryCheck} || ${fallbackCheck} || exit 1`;
+	}
+
+	protected getHealthCheckInstall(): string {
+		if (!this.config.enableHealthCheck) return "";
+		const useAlpine = this.config.useAlpine;
+		if (useAlpine) {
+			return `\n# Install health check tools\nRUN apk add --no-cache ca-certificates curl\n`;
+		}
+		return `\n# Install health check tools\nRUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*\n`;
+	}
+
 	generate(): string {
 		const nodeVersion = this.config.nodeVersion || "18";
 		const image = this.getNodeImage(nodeVersion);
@@ -14,7 +32,12 @@ export class JSBackendDockerfileGenerator extends BaseDockerfileGenerator {
 		const framework = this.config.framework;
 
 		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 -h /home/appuser appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root -m -d /home/appuser appuser && chown -R appuser:root /app";
-		const userSetup = this.buildUserSetup();
+		// const userSetup = this.buildUserSetup();
+		const userSetup = usePm2
+			? this.config.useAlpine
+				? "RUN adduser -D -u 1001 -h /home/appuser appuser && mkdir -p /home/appuser/.pm2 && chown -R appuser:appuser /app /home/appuser/.pm2"
+				: "RUN useradd -r -u 1001 -m -d /home/appuser appuser && mkdir -p /home/appuser/.pm2 && chown -R appuser:appuser /app /home/appuser/.pm2"
+			: this.buildUserSetup();
 
 		const lockFilesCopy = `COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* bun.lockb* .npmrc* tsconfig.json* tsconfig.*.json* .swcrc* .babelrc* .env.example* ./`;
 

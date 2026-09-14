@@ -20,6 +20,7 @@ export abstract class BaseDockerfileGenerator {
 		if (lang === "rails") return "1234";
 		if (lang === "rust") return "1234";
 		if (lang === "cpp" || lang === "c") return "1234";
+		if (this.config.debugPort) return this.config.debugPort.toString();
 		return "";
 	}
 

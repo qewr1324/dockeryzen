@@ -105,9 +105,8 @@ export class DockerWizard {
 						const savedState = await fs.readFile(statePath, "utf8");
 						const parsedState = JSON.parse(savedState);
 
-						// باگ 661: بررسی اینکه state مربوط به همین پروژه است
 						const expectedProjectName = path.basename(workspaceFolder.uri.fsPath);
-						if (parsedState.projectName && parsedState.projectName !== expectedProjectName && parsedState.projectName !== this.config.projectName) {
+						if (parsedState.projectName && parsedState.projectName !== expectedProjectName) {
 							console.warn("State file is from a different project, ignoring");
 							return;
 						}
@@ -361,6 +360,7 @@ export class DockerWizard {
 							isResolved = true;
 							this.config.language = selected.value;
 							this.languageConfigs.set(selected.value, selected.config);
+							this.config.debugPort = undefined;
 							cleanup();
 							resolve("next");
 						}
@@ -822,7 +822,13 @@ export class DockerWizard {
 			const frameworkPick = await this.showQuickPickWithBack("Select Framework", frameworks);
 			if (frameworkPick === "back") return "back";
 			if (frameworkPick === "cancel") return "cancel";
-			if (frameworkPick?.value) this.config.framework = frameworkPick.value;
+			if (frameworkPick?.value) {
+				this.config.framework = frameworkPick.value;
+
+				if (frameworkPick.value === "nextjs") {
+					vscode.window.showInformationMessage("⚠️ For Next.js, please add 'output: \"standalone\"' to your next.config.js for optimal Docker builds.");
+				}
+			}
 		}
 		return "next";
 	}

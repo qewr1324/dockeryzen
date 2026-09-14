@@ -39,6 +39,7 @@ export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
 		}
 
 		const projectModule = this.config.projectName.replace(/[^a-zA-Z0-9_]/g, "_") || "app";
+		const flaskDebugEnv = framework === "flask" && this.config.enableDebug ? ` \\\n    FLASK_DEBUG=1 \\\n    FLASK_ENV=development` : "";
 
 		let startCmd = 'CMD ["python", "app.py"]';
 		if (framework === "django") {
@@ -58,7 +59,7 @@ export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
 			if (useGunicorn) {
 				startCmd = `CMD ["sh", "-c", "if [ -f wsgi.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 wsgi:app; elif [ -f app.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 app:app; elif [ -f main.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 main:app; else exec flask run --host=0.0.0.0 --port=${port}; fi"]`;
 			} else {
-				startCmd = `CMD ["flask", "run", "--host=0.0.0.0", "--port=${port}"]`;
+				startCmd = `CMD ["sh", "-c", "if [ -f wsgi.py ]; then export FLASK_APP=wsgi:app; elif [ -f app.py ]; then export FLASK_APP=app:app; elif [ -f main.py ]; then export FLASK_APP=main:app; elif [ -f ${projectModule}/__init__.py ]; then export FLASK_APP=${projectModule}:app; else export FLASK_APP=app:app; fi; exec python -m flask run --host=0.0.0.0 --port=${port} --with-threads"]`;
 			}
 		} else if (framework === "fastapi") {
 			if (useGunicorn) {
@@ -100,7 +101,7 @@ USER appuser
 ENV PYTHONUNBUFFERED=1 \\
     PYTHONDONTWRITEBYTECODE=1 \\
     PORT=${port} \\
-    WORKERS=4
+    WORKERS=4${flaskDebugEnv}
 ${ociLabels}
 EXPOSE ${port}${debugExpose}${healthCheck}
 ${startCmd}`;
