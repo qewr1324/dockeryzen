@@ -6,14 +6,12 @@ export class EnvFileGenerator {
 	generate(): string {
 		const envVars: string[] = ["# ============================================", `# Environment Variables for ${this.config.projectName}`, "# Copy this file to .env and update values", "# ============================================", "", "# Application", `SERVER_PORT=${this.config.port}`];
 
-		// باگ 578 و 685: SPRING_PROFILES_ACTIVE فقط برای Java
 		if (this.config.language.startsWith("java")) {
 			envVars.push(`SPRING_PROFILES_ACTIVE=production`);
 		}
 		envVars.push("");
 
 		for (const db of this.config.databases) {
-			// باگ 579: برای external URL پورت اضافه نمیشه
 			if (!db.useExternalUrl) {
 				const prefix = this.getDbPrefix(db.type);
 				const defaultDbName = this.getDefaultDbName(db.type);
@@ -23,7 +21,7 @@ export class EnvFileGenerator {
 
 		const hasRedisAsDb = this.config.databases.some((d) => d.type === "redis");
 		if (this.config.enableRedis && !hasRedisAsDb) {
-			envVars.push("# Redis", "REDIS_HOST=localhost", "REDIS_PORT=6379", "REDIS_PASSWORD=", "");
+			envVars.push("# Redis", "REDIS_HOST=localhost", "REDIS_PORT=6379", "REDIS_PASSWORD=root", "");
 		}
 
 		for (const mq of this.config.messageQueues) {

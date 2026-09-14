@@ -1,6 +1,10 @@
 import { BaseDockerfileGenerator } from "./BaseDockerfileGenerator.js";
 
 export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
+	protected getHealthCheckInstall(): string {
+		return "";
+	}
+
 	generate(): string {
 		const pythonVersion = this.config.pythonVersion || "3.11";
 		const image = this.getPythonImage(pythonVersion);
@@ -13,12 +17,18 @@ export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
 		const useGunicorn = this.config.enableGunicorn;
 		const port = this.config.port;
 
-		// const isAlpineUser = this.config.useAlpine ? "RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app" : "RUN useradd -r -u 1001 -g root appuser && chown -R appuser:root /app";
 		const userSetup = this.buildUserSetup();
 
-		const buildDeps = this.config.useAlpine ? "RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev zlib-dev jpeg-dev freetype-dev lcms2-dev" : "RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev default-libmysqlclient-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*";
+		const buildDeps = this.config.useAlpine
+			? "RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev zlib-dev jpeg-dev freetype-dev lcms2-dev"
+			: "RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev default-libmysqlclient-dev libjpeg-dev liblcms2-dev && rm -rf /var/lib/apt/lists/*";
 
-		const runtimeDeps = this.config.useAlpine ? "RUN apk add --no-cache libffi openssl zlib jpeg freetype lcms2" : "RUN apt-get update && apt-get install -y --no-install-recommends libpq5 default-libmysqlclient-dev libjpeg62-turbo && rm -rf /var/lib/apt/lists/*";
+		const healthCheckPkgs = this.config.enableHealthCheck ? "curl ca-certificates " : "";
+
+		// const runtimeDeps = this.config.useAlpine ? "RUN apk add --no-cache libffi openssl zlib jpeg freetype lcms2" : "RUN apt-get update && apt-get install -y --no-install-recommends libpq5 default-libmysqlclient-dev libjpeg62-turbo liblcms2-2 && rm -rf /var/lib/apt/lists/*";
+		const runtimeDeps = this.config.useAlpine
+			? `RUN apk add --no-cache ${healthCheckPkgs}libffi openssl zlib jpeg freetype lcms2`
+			: `RUN apt-get update && apt-get install -y --no-install-recommends ${healthCheckPkgs}libpq5 default-libmysqlclient-dev libjpeg62-turbo liblcms2-2 && rm -rf /var/lib/apt/lists/*`;
 
 		let extraPackages = "";
 		if (useGunicorn || framework === "django" || framework === "flask") {
@@ -42,7 +52,7 @@ export class PythonDockerfileGenerator extends BaseDockerfileGenerator {
     if [ -f ${projectModule}/wsgi.py ]; then exec gunicorn --bind 0.0.0.0:${port} --workers ${"$"}{WORKERS} --timeout 120 ${projectModule}.wsgi:application; fi; \\
     echo 'No wsgi.py found!' && exit 1"]`;
 			} else {
-				startCmd = `CMD ["sh", "-c", "echo 'No wsgi.py found!' && exit 1"]`;
+				startCmd = `CMD ["sh", "-c", "if [ -f manage.py ]; then exec python manage.py runserver 0.0.0.0:${port}; elif [ -f ${projectModule}/manage.py ]; then exec python ${projectModule}/manage.py runserver 0.0.0.0:${port}; else echo 'No manage.py found!' && exit 1; fi"]`;
 			}
 		} else if (framework === "flask") {
 			if (useGunicorn) {
@@ -69,13 +79,13 @@ ${buildDeps}
 COPY requirements.txt* pyproject.toml* setup.py* ./
 RUN --mount=type=cache,target=/root/.cache/pip \\
     if [ -f requirements.txt ]; then \\
-        pip install --no-cache-dir --prefix=/install -r requirements.txt; \\
+        pip install --prefix=/install -r requirements.txt; \\
     elif [ -f pyproject.toml ]; then \\
-        pip install --no-cache-dir --prefix=/install .; \\
+        pip install --prefix=/install .; \\
     elif [ -f setup.py ]; then \\
-        pip install --no-cache-dir --prefix=/install .; \\
+        pip install --prefix=/install .; \\
     fi
-${extraPackages ? `RUN pip install --no-cache-dir --prefix=/install ${extraPackages}` : ""}
+${extraPackages ? `RUN pip install --prefix=/install ${extraPackages}` : ""}
 
 # Runtime stage
 FROM ${image}
@@ -96,7 +106,6 @@ EXPOSE ${port}${debugExpose}${healthCheck}
 ${startCmd}`;
 	}
 
-	// ⬇️ عیناً کپی از DockerfileGenerator اصلی
 	private getPythonImage(version: string): string {
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === version);

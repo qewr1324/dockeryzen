@@ -170,7 +170,7 @@
 ## 📁 Project Structure
 
 ```text
-dockeryzen/
+dockeryzen
 ├─ .bunfig.toml
 ├─ .npmrc
 ├─ LICENSE
@@ -178,20 +178,21 @@ dockeryzen/
 ├─ bugs.txt
 ├─ bun.lock
 ├─ eslint.config.js
+├─ feature.txt
 ├─ package.json
 ├─ pnpm-workspace.yaml
-├─ res/
+├─ res
 │  ├─ dockeryzen-icon-big.png
 │  ├─ facet-icon-big.svg
 │  ├─ review.gif
 │  └─ review.mp4
-├─ scripts/
+├─ scripts
 │  └─ clean-generated-meta.mjs
-├─ shared/
+├─ shared
 │  └─ versions.ts
-├─ src/
-│  ├─ config/
-│  │  ├─ databases/
+├─ src
+│  ├─ config
+│  │  ├─ databases
 │  │  │  ├─ graph.json
 │  │  │  ├─ key-value.json
 │  │  │  ├─ newsql.json
@@ -201,7 +202,7 @@ dockeryzen/
 │  │  │  ├─ time-series.json
 │  │  │  ├─ vector.json
 │  │  │  └─ wide-column.json
-│  │  ├─ languages/
+│  │  ├─ languages
 │  │  │  ├─ c.json
 │  │  │  ├─ cpp.json
 │  │  │  ├─ dotnet.json
@@ -215,7 +216,7 @@ dockeryzen/
 │  │  ├─ message-queues.json
 │  │  └─ services.json
 │  ├─ extension.ts
-│  ├─ generators/
+│  ├─ generators
 │  │  ├─ DockerComposeGenerator.ts
 │  │  ├─ DockerComposeOverrideGenerator.ts
 │  │  ├─ DockerfileGenerator.ts
@@ -224,19 +225,40 @@ dockeryzen/
 │  │  ├─ GitHubWorkflowGenerator.ts
 │  │  ├─ GitLabCIGenerator.ts
 │  │  ├─ NginxConfigGenerator.ts
-│  │  └─ PrometheusConfigGenerator.ts
-│  ├─ managers/
+│  │  ├─ PrometheusConfigGenerator.ts
+│  │  └─ dockerfile
+│  │     ├─ BaseDockerfileGenerator.ts
+│  │     ├─ CDockerfileGenerator.ts
+│  │     ├─ CppDockerfileGenerator.ts
+│  │     ├─ DotNetDockerfileGenerator.ts
+│  │     ├─ GenericDockerfileGenerator.ts
+│  │     ├─ GoDockerfileGenerator.ts
+│  │     ├─ JSBackendDockerfileGenerator.ts
+│  │     ├─ JSFrontendDockerfileGenerator.ts
+│  │     ├─ JavaJarDockerfileGenerator.ts
+│  │     ├─ JavaWarDockerfileGenerator.ts
+│  │     ├─ LaravelDockerfileGenerator.ts
+│  │     ├─ PythonDockerfileGenerator.ts
+│  │     ├─ RailsDockerfileGenerator.ts
+│  │     ├─ RustDockerfileGenerator.ts
+│  │     └─ java
+│  │        ├─ BaseJarGenerator.ts
+│  │        ├─ FrameworkTypes.ts
+│  │        ├─ MicronautJarGenerator.ts
+│  │        ├─ QuarkusJarGenerator.ts
+│  │        └─ SpringBootJarGenerator.ts
+│  ├─ managers
 │  │  ├─ DatabaseManager.ts
 │  │  ├─ MessageQueueManager.ts
 │  │  └─ ServiceManager.ts
-│  ├─ types/
+│  ├─ types
 │  │  └─ index.ts
-│  ├─ utils/
+│  ├─ utils
 │  │  └─ helpers.ts
-│  └─ wizard/
+│  └─ wizard
 │     └─ DockerWizard.ts
 ├─ taze.config.ts
-├─ test/
+├─ test
 │  └─ index.test.ts
 ├─ tsconfig.json
 └─ tsdown.config.ts

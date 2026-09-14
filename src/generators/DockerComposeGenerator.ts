@@ -16,7 +16,6 @@ export class DockerComposeGenerator {
 		services.push(mainService);
 		usedServiceNames.add(appServiceName);
 
-		// باگ 551: محدود کردن depends_on به حداکثر 10 سرویس
 		const dependsOn: string[] = [];
 		const maxDependsOn = 10;
 
@@ -348,7 +347,8 @@ ${secretsSection}`;
 			}
 			envVars = `
       - PYTHONUNBUFFERED=1
-      - PORT=${this.config.port}`;
+      - PORT=${this.config.port}
+      - DEBUG=${this.config.enableDebug ? "true" : "false"}`;
 		} else if (lang === "dotnet") {
 			if (this.config.enableDebug && debugPort) {
 				ports.push(`      - "${debugPort}:${debugPort}"`);
@@ -726,20 +726,19 @@ ${environmentSection}${devVolume}${initProcess}${readOnly}${loggingConfig}${heal
 
 	private generateRedisService(): string {
 		const serviceName = this.getServiceName("redis");
-		// باگ 623: Redis با password
 		return `  ${serviceName}:
     image: redis:8-alpine
     container_name: ${serviceName}-container
     restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-server --requirepass \${REDIS_PASSWORD}
+    command: redis-server --requirepass \${REDIS_PASSWORD:-root}
     environment:
-      - REDIS_PASSWORD=root
+      - REDIS_PASSWORD=\${REDIS_PASSWORD:-root}
     volumes:
       - ${serviceName}-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "\${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "\${REDIS_PASSWORD:-root}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
