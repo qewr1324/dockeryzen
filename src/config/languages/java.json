@@ -216,7 +216,7 @@
 				"25": "eclipse-temurin:25-jre"
 			},
 			"jreAlpineImages": {
-				"8": "eclipse-temurin:8-jre-alpine",
+				"8": "eclipse-temurin:8-jre",
 				"11": "eclipse-temurin:11-jre-alpine",
 				"17": "eclipse-temurin:17-jre-alpine",
 				"21": "eclipse-temurin:21-jre-alpine",
@@ -237,7 +237,21 @@
 				"25": "amazoncorretto:25"
 			},
 			"jdkAlpineImages": {
+				"8": "amazoncorretto:8-alpine",
+				"11": "amazoncorretto:11-alpine",
+				"17": "amazoncorretto:17-alpine",
+				"21": "amazoncorretto:21-alpine",
+				"25": "amazoncorretto:25-alpine"
+			},
+			"jreImages": {
 				"8": "amazoncorretto:8",
+				"11": "amazoncorretto:11",
+				"17": "amazoncorretto:17",
+				"21": "amazoncorretto:21",
+				"25": "amazoncorretto:25"
+			},
+			"jreAlpineImages": {
+				"8": "amazoncorretto:8-alpine",
 				"11": "amazoncorretto:11-alpine",
 				"17": "amazoncorretto:17-alpine",
 				"21": "amazoncorretto:21-alpine",
@@ -258,11 +272,25 @@
 				"25": "azul/zulu-openjdk:25"
 			},
 			"jdkAlpineImages": {
-				"8": "azul/zulu-openjdk:8-alpine",
-				"11": "azul/zulu-openjdk:11-alpine",
-				"17": "azul/zulu-openjdk:17-alpine",
-				"21": "azul/zulu-openjdk:21-alpine",
-				"25": "azul/zulu-openjdk:25-alpine"
+				"8": "azul/zulu-openjdk-alpine:8",
+				"11": "azul/zulu-openjdk-alpine:11",
+				"17": "azul/zulu-openjdk-alpine:17",
+				"21": "azul/zulu-openjdk-alpine:21",
+				"25": "azul/zulu-openjdk-alpine:25"
+			},
+			"jreImages": {
+				"8": "azul/zulu-openjdk:8-jre",
+				"11": "azul/zulu-openjdk:11-jre",
+				"17": "azul/zulu-openjdk:17-jre",
+				"21": "azul/zulu-openjdk:21-jre",
+				"25": "azul/zulu-openjdk:25-jre"
+			},
+			"jreAlpineImages": {
+				"8": "azul/zulu-openjdk-alpine:8-jre",
+				"11": "azul/zulu-openjdk-alpine:11-jre",
+				"17": "azul/zulu-openjdk-alpine:17-jre",
+				"21": "azul/zulu-openjdk-alpine:21-jre",
+				"25": "azul/zulu-openjdk-alpine:25-jre"
 			}
 		}
 	],
@@ -288,7 +316,7 @@
 		"25": "gradle:8.5-jdk21"
 	},
 	"gradleAlpineImages": {
-		"8": "gradle:8.5-jdk8-alpine",
+		"8": "gradle:8.5-jdk8",
 		"11": "gradle:8.5-jdk11-alpine",
 		"17": "gradle:8.5-jdk17-alpine",
 		"21": "gradle:8.5-jdk21-alpine",

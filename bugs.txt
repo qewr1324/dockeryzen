@@ -713,5 +713,194 @@ Part-4---------------------------------------------------------------------
 
 ✅ 910: dockerfile
 
+Part-5---------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "maven:3.9-eclipse-temurin-8-alpine"
+    "eclipse-temurin:8-jre-alpine"
+    "azul/zulu-openjdk:8-alpine"
+    "amazoncorretto:25"
+    "gradle:8.5-jdk8-alpine"
+    # ...
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ maven:3.9-eclipse-temurin-8-alpine
+✅ eclipse-temurin:8-jre-alpine
+❌ azul/zulu-openjdk:8-alpine
+✅ amazoncorretto:25
+❌ gradle:8.5-jdk8-alpine
+
+-----------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "azul/zulu-openjdk:8"
+    "azul/zulu-openjdk:8-jre"
+    "azul/zulu-openjdk:8-jre-alpine"
+    "azul/zulu-openjdk-alpine:8"
+    "azul/zulu-openjdk-alpine:8-jre"
+    "azul/zulu-openjdk:8-alpine"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ azul/zulu-openjdk:8
+✅ azul/zulu-openjdk:8-jre
+❌ azul/zulu-openjdk:8-jre-alpine
+✅ azul/zulu-openjdk-alpine:8
+✅ azul/zulu-openjdk-alpine:8-jre
+❌ azul/zulu-openjdk:8-alpine
+
+
+-----------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "gradle:8.5-jdk8"
+    "gradle:7-jdk8"
+    "gradle:8.0-jdk8"
+    "gradle:8.5-jdk8-alpine"
+    "gradle:8.10-jdk8"
+    "gradle:8.10-jdk8-alpine"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ gradle:8.5-jdk8
+✅ gradle:7-jdk8
+✅ gradle:8.0-jdk8
+❌ gradle:8.5-jdk8-alpine
+✅ gradle:8.10-jdk8
+❌ gradle:8.10-jdk8-alpine
+
+
+-----------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "amazoncorretto:8"
+    "amazoncorretto:8-alpine"
+    "amazoncorretto:11-alpine"
+    "amazoncorretto:17-alpine"
+    "amazoncorretto:21-alpine"
+    "amazoncorretto:25-alpine"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ amazoncorretto:8
+✅ amazoncorretto:8-alpine
+✅ amazoncorretto:11-alpine
+✅ amazoncorretto:17-alpine
+✅ amazoncorretto:21-alpine
+✅ amazoncorretto:25-alpine
+
+-----------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "azul/zulu-openjdk:8"
+    "azul/zulu-openjdk:11"
+    "azul/zulu-openjdk:17"
+    "azul/zulu-openjdk:21"
+    "azul/zulu-openjdk:25"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ azul/zulu-openjdk:8
+✅ azul/zulu-openjdk:11
+✅ azul/zulu-openjdk:17
+✅ azul/zulu-openjdk:21
+✅ azul/zulu-openjdk:25
+
+-----------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "azul/zulu-openjdk-alpine:8"
+    "azul/zulu-openjdk-alpine:11"
+    "azul/zulu-openjdk-alpine:17"
+    "azul/zulu-openjdk-alpine:21"
+    "azul/zulu-openjdk-alpine:25"
+    "azul/zulu-openjdk-alpine:8-jre"
+    "azul/zulu-openjdk-alpine:11-jre"
+    "azul/zulu-openjdk-alpine:17-jre"
+    "azul/zulu-openjdk-alpine:21-jre"
+    "azul/zulu-openjdk-alpine:25-jre"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ azul/zulu-openjdk-alpine:8
+✅ azul/zulu-openjdk-alpine:11
+✅ azul/zulu-openjdk-alpine:17
+✅ azul/zulu-openjdk-alpine:21
+✅ azul/zulu-openjdk-alpine:25
+✅ azul/zulu-openjdk-alpine:8-jre
+✅ azul/zulu-openjdk-alpine:11-jre
+✅ azul/zulu-openjdk-alpine:17-jre
+✅ azul/zulu-openjdk-alpine:21-jre
+✅ azul/zulu-openjdk-alpine:25-jre
+
+-----------------------------------------------------------------------
+
+#!/bin/bash
+images=(
+    "gradle:8.5-jdk8"
+    "gradle:8.10-jdk8"
+    "gradle:8.11-jdk8"
+    "gradle:7-jdk8"
+    "gradle:8-jdk8"
+    "gradle:8.5.0-jdk8"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ gradle:8.5-jdk8
+✅ gradle:8.10-jdk8
+✅ gradle:8.11-jdk8
+✅ gradle:7-jdk8
+✅ gradle:8-jdk8
+✅ gradle:8.5.0-jdk8
+
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+
+
 
 همرو درست کن و فایل کامل رو بده من.

@@ -85,11 +85,11 @@ ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar ${runtime.entrypoint}"]`;
 		if (version === "25") version = "21";
 
 		if (this.config.buildTool === "gradle") {
-			let gradleVersion = "8";
-			if (version === "8") gradleVersion = "7";
-			const image = `gradle:${gradleVersion}-jdk${version}${useAlpine ? "-alpine" : ""}`;
+			let gradleVersion = "8.5";
+			const useAlpineForGradle = useAlpine && version !== "8";
+			const image = `gradle:${gradleVersion}-jdk${version}${useAlpineForGradle ? "-alpine" : ""}`;
+
 			const extraArgs = this.fwConfig.mavenExtraArgs?.trim() || "";
-			// const gradleExtra = extraArgs ? extraArgs.replace(/-D/g, "-D") : "";
 			const gradleExtra = extraArgs ? ` ${extraArgs}` : "";
 			return `FROM ${image} AS build
 WORKDIR /app
@@ -134,19 +134,11 @@ RUN --mount=type=cache,target=/root/.m2 \\
 
 		const variant = this.config.useAlpine ? "-alpine" : "";
 
-		// ✅ FIX: openjdk deprecated شده — به eclipse-temurin fallback کن
 		if (vendor === "openjdk") {
 			console.warn(`[${this.constructor.name}] openjdk is deprecated. Falling back to eclipse-temurin.`);
 			return `eclipse-temurin:${version}-jre${variant}`;
 		}
 
-		// amazoncorretto:8-alpine وجود نداره
-		if (vendor === "amazoncorretto" && version === "8" && this.config.useAlpine) {
-			console.warn(`[${this.constructor.name}] amazoncorretto:8-alpine does not exist. Using non-alpine.`);
-			return `amazoncorretto:${version}`;
-		}
-
-		// اگه langConfig اطلاعات vendor داره، ازش استفاده کن
 		if (this.langConfig?.jdkVendors) {
 			const vc = this.langConfig.jdkVendors.find((v: any) => v.value === vendor);
 			if (vc) {
@@ -160,7 +152,7 @@ RUN --mount=type=cache,target=/root/.m2 \\
 		const map: Record<string, string> = {
 			"eclipse-temurin": `eclipse-temurin:${version}-jre${variant}`,
 			amazoncorretto: `amazoncorretto:${version}${variant}`,
-			"azul-zulu": `azul/zulu-openjdk:${version}${variant ? "-alpine" : ""}`,
+			"azul-zulu": variant ? `azul/zulu-openjdk-alpine:${version}-jre` : `azul/zulu-openjdk:${version}-jre`,
 		};
 
 		if (!map[vendor]) {
