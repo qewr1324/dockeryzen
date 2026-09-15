@@ -1321,4 +1321,38 @@ done
 ✅ debian:bookworm-slim
 ✅ alpine:latest
 
+#!/bin/bash
+images=(
+    "rust:1.76"
+    "rust:1.77"
+    "rust:1.78"
+    "rust:1.79"
+    "rust:1.80"
+    "rust:1.81"
+    "rust:1.82"
+    "rust:1.83"
+    "rust:1.84"
+    "rust:1.85"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ rust:1.76
+✅ rust:1.77
+✅ rust:1.78
+✅ rust:1.79
+✅ rust:1.80
+✅ rust:1.81
+✅ rust:1.82
+✅ rust:1.83
+✅ rust:1.84
+✅ rust:1.85
+
+-----------------------------------------------------------------------
+
 همرو درست کن و فایل کامل رو بده من.
