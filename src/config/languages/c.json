@@ -12,9 +12,7 @@
 			"description": "Stable",
 			"detail": "Stable release | Best for: Production stability",
 			"icon": "tag",
-			"image": "gcc:12",
-			"alpineImage": "gcc:12-alpine",
-			"slimImage": "gcc:12-slim"
+			"image": "gcc:12"
 		},
 		{
 			"value": "13",
@@ -22,9 +20,7 @@
 			"description": "Recommended",
 			"detail": "Latest stable | Best for: New projects",
 			"icon": "tag",
-			"image": "gcc:13",
-			"alpineImage": "gcc:13-alpine",
-			"slimImage": "gcc:13-slim"
+			"image": "gcc:13"
 		},
 		{
 			"value": "14",
@@ -32,9 +28,7 @@
 			"description": "Latest",
 			"detail": "Latest features | Best for: Experimental projects",
 			"icon": "tag",
-			"image": "gcc:14",
-			"alpineImage": "gcc:14-alpine",
-			"slimImage": "gcc:14-slim"
+			"image": "gcc:14"
 		}
 	]
 }

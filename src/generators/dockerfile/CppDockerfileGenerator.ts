@@ -15,9 +15,8 @@ export class CppDockerfileGenerator extends BaseDockerfileGenerator {
 		let gccImage = `gcc:${gccVersion}`;
 		if (this.langConfig?.versions) {
 			const versionConfig = this.langConfig.versions.find((v: any) => v.value === gccVersion);
-			if (versionConfig) {
-				if (this.config.useAlpine && versionConfig.alpineImage) gccImage = versionConfig.alpineImage;
-				else gccImage = versionConfig.image;
+			if (versionConfig?.image) {
+				gccImage = versionConfig.image;
 			}
 		}
 

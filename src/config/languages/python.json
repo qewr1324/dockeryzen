@@ -32,32 +32,34 @@
 		{
 			"value": "3.9",
 			"label": "Python 3.9",
-			"description": "Legacy",
-			"detail": "Older version | Best for: Legacy projects",
+			"description": "EOL",
+			"detail": "End of life (Oct 2025) | Best for: Legacy projects only",
 			"icon": "tag",
 			"images": {
 				"standard": "python:3.9",
 				"alpine": "python:3.9-alpine",
-				"slim": "python:3.9-slim"
+				"slim": "python:3.9-slim",
+				"bookworm": "python:3.9-bookworm"
 			}
 		},
 		{
 			"value": "3.10",
 			"label": "Python 3.10",
-			"description": "Stable",
-			"detail": "Stable release | Best for: Production stability",
+			"description": "Old stable",
+			"detail": "Old stable | Best for: Production stability",
 			"icon": "tag",
 			"images": {
 				"standard": "python:3.10",
 				"alpine": "python:3.10-alpine",
-				"slim": "python:3.10-slim"
+				"slim": "python:3.10-slim",
+				"bookworm": "python:3.10-bookworm"
 			}
 		},
 		{
 			"value": "3.11",
 			"label": "Python 3.11",
-			"description": "Recommended",
-			"detail": "Faster performance | Best for: New projects",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
 			"icon": "tag",
 			"images": {
 				"standard": "python:3.11",
@@ -69,25 +71,40 @@
 		{
 			"value": "3.12",
 			"label": "Python 3.12",
-			"description": "Latest",
-			"detail": "Latest features | Best for: Experimental projects",
+			"description": "Recommended",
+			"detail": "Recommended | Best for: New projects",
 			"icon": "tag",
 			"images": {
 				"standard": "python:3.12",
 				"alpine": "python:3.12-alpine",
-				"slim": "python:3.12-slim"
+				"slim": "python:3.12-slim",
+				"bookworm": "python:3.12-bookworm"
 			}
 		},
 		{
 			"value": "3.13",
 			"label": "Python 3.13",
-			"description": "Latest",
-			"detail": "Latest features | Best for: Experimental projects",
+			"description": "Latest LTS",
+			"detail": "Latest LTS | Best for: Cutting-edge features",
 			"icon": "tag",
 			"images": {
 				"standard": "python:3.13",
 				"alpine": "python:3.13-alpine",
-				"slim": "python:3.13-slim"
+				"slim": "python:3.13-slim",
+				"bookworm": "python:3.13-bookworm"
+			}
+		},
+		{
+			"value": "3.14",
+			"label": "Python 3.14",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"standard": "python:3.14",
+				"alpine": "python:3.14-alpine",
+				"slim": "python:3.14-slim",
+				"bookworm": "python:3.14-bookworm"
 			}
 		}
 	]

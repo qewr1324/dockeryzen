@@ -7,10 +7,23 @@
 	"icon": "globe",
 	"versions": [
 		{
+			"value": "8.1",
+			"label": "PHP 8.1",
+			"description": "Legacy",
+			"detail": "Legacy | Best for: Old projects",
+			"icon": "tag",
+			"images": {
+				"cli": "php:8.1-cli",
+				"fpm": "php:8.1-fpm",
+				"fpmAlpine": "php:8.1-fpm-alpine",
+				"apache": "php:8.1-apache"
+			}
+		},
+		{
 			"value": "8.2",
 			"label": "PHP 8.2",
-			"description": "Stable",
-			"detail": "Stable release | Best for: Production stability",
+			"description": "Old stable",
+			"detail": "Old stable | Best for: Production stability",
 			"icon": "tag",
 			"images": {
 				"cli": "php:8.2-cli",
@@ -22,8 +35,8 @@
 		{
 			"value": "8.3",
 			"label": "PHP 8.3",
-			"description": "Recommended",
-			"detail": "Latest stable | Best for: New projects",
+			"description": "Stable",
+			"detail": "Stable release | Best for: Production stability",
 			"icon": "tag",
 			"images": {
 				"cli": "php:8.3-cli",
@@ -35,14 +48,27 @@
 		{
 			"value": "8.4",
 			"label": "PHP 8.4",
-			"description": "Latest",
-			"detail": "Latest features | Best for: Experimental projects",
+			"description": "Recommended",
+			"detail": "Latest stable | Best for: New projects",
 			"icon": "tag",
 			"images": {
 				"cli": "php:8.4-cli",
 				"fpm": "php:8.4-fpm",
 				"fpmAlpine": "php:8.4-fpm-alpine",
 				"apache": "php:8.4-apache"
+			}
+		},
+		{
+			"value": "8.5",
+			"label": "PHP 8.5",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"cli": "php:8.5-cli",
+				"fpm": "php:8.5-fpm",
+				"fpmAlpine": "php:8.5-fpm-alpine",
+				"apache": "php:8.5-apache"
 			}
 		}
 	]

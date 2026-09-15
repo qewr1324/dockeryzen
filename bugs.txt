@@ -713,7 +713,7 @@ Part-4---------------------------------------------------------------------
 
 ✅ 910: dockerfile
 
-Part-5---------------------------------------------------------------------
+Part-5---------------------------------------------------------------------JAVA
 
 #!/bin/bash
 images=(
@@ -895,12 +895,430 @@ done
 ✅ gradle:8-jdk8
 ✅ gradle:8.5.0-jdk8
 
------------------------------------------------------------------------
------------------------------------------------------------------------
------------------------------------------------------------------------
------------------------------------------------------------------------
------------------------------------------------------------------------
+-----------------------------------------------------------------------C
+
+ #!/bin/bash
+images=(
+    "gcc:12"
+    "gcc:12-alpine"
+    "gcc:12-slim"
+    "gcc:13"
+    "gcc:13-alpine"
+    "gcc:13-slim"
+    "gcc:14"
+    "gcc:14-alpine"
+    "gcc:14-slim"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ gcc:12
+❌ gcc:12-alpine
+❌ gcc:12-slim
+✅ gcc:13
+❌ gcc:13-alpine
+❌ gcc:13-slim
+✅ gcc:14
+❌ gcc:14-alpine
+❌ gcc:14-slim
 
 
+-----------------------------------------------------------------------CPP
+
+#!/bin/bash
+images=(
+    "gcc:13-bookworm"
+    "gcc:13-bullseye"
+    "gcc:13-trixie"
+    "gcc:14-bookworm"
+    "gcc:12-bookworm"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+
+-----------------------------------------------------------------------C#
+
+#!/bin/bash
+images=(
+    "mcr.microsoft.com/dotnet/sdk:8.0"
+    "mcr.microsoft.com/dotnet/aspnet:8.0"
+    "mcr.microsoft.com/dotnet/aspnet:8.0-alpine"
+    "mcr.microsoft.com/dotnet/sdk:9.0"
+    "mcr.microsoft.com/dotnet/aspnet:9.0"
+    "mcr.microsoft.com/dotnet/aspnet:9.0-alpine"
+    "mcr.microsoft.com/dotnet/sdk:10.0"
+    "mcr.microsoft.com/dotnet/aspnet:10.0"
+    "mcr.microsoft.com/dotnet/aspnet:10.0-alpine"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ mcr.microsoft.com/dotnet/sdk:8.0
+✅ mcr.microsoft.com/dotnet/aspnet:8.0
+✅ mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+✅ mcr.microsoft.com/dotnet/sdk:9.0
+✅ mcr.microsoft.com/dotnet/aspnet:9.0
+✅ mcr.microsoft.com/dotnet/aspnet:9.0-alpine
+✅ mcr.microsoft.com/dotnet/sdk:10.0
+✅ mcr.microsoft.com/dotnet/aspnet:10.0
+✅ mcr.microsoft.com/dotnet/aspnet:10.0-alpine
+
+-----------------------------------------------------------------------Golang
+
+#!/bin/bash
+images=(
+    "golang:1.20"
+    "golang:1.20-alpine"
+    "golang:1.21"
+    "golang:1.21-alpine"
+    "golang:1.22"
+    "golang:1.22-alpine"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ golang:1.20
+✅ golang:1.20-alpine
+✅ golang:1.21
+✅ golang:1.21-alpine
+✅ golang:1.22
+✅ golang:1.22-alpine
+
+-----------------------------------------------------------------------NoeJS
+
+#!/bin/bash
+images=(
+    "node:18"
+    "node:18-alpine"
+    "node:18-slim"
+    "node:18-bookworm"
+    "node:20"
+    "node:20-alpine"
+    "node:20-slim"
+    "node:20-bookworm"
+    "node:22"
+    "node:22-alpine"
+    "node:22-slim"
+    "node:22-bookworm"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ node:18
+✅ node:18-alpine
+✅ node:18-slim
+✅ node:18-bookworm
+✅ node:20
+✅ node:20-alpine
+✅ node:20-slim
+✅ node:20-bookworm
+✅ node:22
+✅ node:22-alpine
+✅ node:22-slim
+✅ node:22-bookworm
+
+#!/bin/bash
+images=(
+    "node:24"
+    "node:24-alpine"
+    "node:24-slim"
+    "node:24-bookworm"
+    "node:23"
+    "node:23-alpine"
+    "node:23-slim"
+    "node:23-bookworm"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ node:24
+✅ node:24-alpine
+✅ node:24-slim
+✅ node:24-bookworm
+✅ node:23
+✅ node:23-alpine
+✅ node:23-slim
+✅ node:23-bookworm
+
+-----------------------------------------------------------------------PHP
+
+#!/bin/bash
+images=(
+    "php:8.2-cli"
+    "php:8.2-fpm"
+    "php:8.2-fpm-alpine"
+    "php:8.2-apache"
+    "php:8.3-cli"
+    "php:8.3-fpm"
+    "php:8.3-fpm-alpine"
+    "php:8.3-apache"
+    "php:8.4-cli"
+    "php:8.4-fpm"
+    "php:8.4-fpm-alpine"
+    "php:8.4-apache"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ php:8.2-cli
+❌ php:8.2-fpm
+✅ php:8.2-fpm-alpine
+✅ php:8.2-apache
+✅ php:8.3-cli
+✅ php:8.3-fpm
+❌ php:8.3-fpm-alpine
+✅ php:8.3-apache
+✅ php:8.4-cli
+✅ php:8.4-fpm
+✅ php:8.4-fpm-alpine
+✅ php:8.4-apache
+
+#!/bin/bash
+images=(
+    "php:8.5-cli"
+    "php:8.5-fpm"
+    "php:8.5-fpm-alpine"
+    "php:8.5-apache"
+    "php:8.1-cli"
+    "php:8.1-fpm"
+    "php:8.1-fpm-alpine"
+    "php:8.1-apache"
+)
+for img in "${images[@]}"; do
+    if docker manifest inspect "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ php:8.5-cli
+✅ php:8.5-fpm
+✅ php:8.5-fpm-alpine
+✅ php:8.5-apache
+❌ php:8.1-cli
+✅ php:8.1-fpm
+✅ php:8.1-fpm-alpine
+✅ php:8.1-apache
+
+#!/bin/bash
+images=(
+    "php:8.2-fpm"
+    "php:8.3-fpm-alpine"
+    "php:8.1-cli"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ php:8.2-fpm
+✅ php:8.3-fpm-alpine
+✅ php:8.1-cli
+
+-----------------------------------------------------------------------Python
+
+#!/bin/bash
+images=(
+    "python:3.9"
+    "python:3.9-alpine"
+    "python:3.9-slim"
+    "python:3.10"
+    "python:3.10-alpine"
+    "python:3.10-slim"
+    "python:3.11"
+    "python:3.11-alpine"
+    "python:3.11-slim"
+    "python:3.11-bookworm"
+    "python:3.12"
+    "python:3.12-alpine"
+    "python:3.12-slim"
+    "python:3.13"
+    "python:3.13-alpine"
+    "python:3.13-slim"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+donefi  echo "❌ $img"
+✅ python:3.9
+✅ python:3.9-alpine
+✅ python:3.9-slim
+✅ python:3.10
+✅ python:3.10-alpine
+✅ python:3.10-slim
+✅ python:3.11
+✅ python:3.11-alpine
+✅ python:3.11-slim
+✅ python:3.11-bookworm
+✅ python:3.12
+✅ python:3.12-alpine
+✅ python:3.12-slim
+✅ python:3.13
+✅ python:3.13-alpine
+✅ python:3.13-slim
+
+#!/bin/bash
+images=(
+    "python:3.14"
+    "python:3.14-alpine"
+    "python:3.14-slim"
+    "python:3.14-bookworm"
+    "python:3.13-bookworm"
+    "python:3.12-bookworm"
+    "python:3.10-bookworm"
+    "python:3.9-bookworm"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ python:3.14
+✅ python:3.14-alpine
+✅ python:3.14-slim
+✅ python:3.14-bookworm
+✅ python:3.13-bookworm
+✅ python:3.12-bookworm
+✅ python:3.10-bookworm
+✅ python:3.9-bookworm
+
+-----------------------------------------------------------------------Ruby
+
+#!/bin/bash
+images=(
+    "ruby:3.2"
+    "ruby:3.2-alpine"
+    "ruby:3.2-slim"
+    "ruby:3.2-bookworm"
+    "ruby:3.3"
+    "ruby:3.3-alpine"
+    "ruby:3.3-slim"
+    "ruby:3.3-bookworm"
+    "ruby:3.4"
+    "ruby:3.4-alpine"
+    "ruby:3.4-slim"
+    "ruby:3.4-bookworm"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ ruby:3.2
+✅ ruby:3.2-alpine
+✅ ruby:3.2-slim
+✅ ruby:3.2-bookworm
+✅ ruby:3.3
+✅ ruby:3.3-alpine
+✅ ruby:3.3-slim
+✅ ruby:3.3-bookworm
+✅ ruby:3.4
+✅ ruby:3.4-alpine
+✅ ruby:3.4-slim
+✅ ruby:3.4-bookworm
+
+#!/bin/bash
+images=(
+    "ruby:3.5"
+    "ruby:3.5-alpine"
+    "ruby:3.5-slim"
+    "ruby:3.5-bookworm"
+    "ruby:3.1"
+    "ruby:3.1-alpine"
+    "ruby:3.1-slim"
+    "ruby:3.1-bookworm"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+❌ ruby:3.5
+❌ ruby:3.5-alpine
+❌ ruby:3.5-slim
+❌ ruby:3.5-bookworm
+✅ ruby:3.1
+✅ ruby:3.1-alpine
+✅ ruby:3.1-slim
+✅ ruby:3.1-bookworm
+
+-----------------------------------------------------------------------Rust
+
+#!/bin/bash
+images=(
+    "rust:1.74"
+    "rust:1.74-alpine"
+    "rust:1.74-slim"
+    "rust:1.75"
+    "rust:1.75-alpine"
+    "rust:1.75-slim"
+    "rust:latest"
+    "rust:alpine"
+    "rust:slim"
+    "debian:bookworm-slim"
+    "alpine:latest"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ rust:1.74
+✅ rust:1.74-alpine
+✅ rust:1.74-slim
+✅ rust:1.75
+✅ rust:1.75-alpine
+✅ rust:1.75-slim
+✅ rust:latest
+✅ rust:alpine
+✅ rust:slim
+✅ debian:bookworm-slim
+✅ alpine:latest
 
 همرو درست کن و فایل کامل رو بده من.
