@@ -139,6 +139,79 @@
 
 ---
 
+## Overview
+
+<div align="center">
+
+## **Select your Own Language**
+
+</div>
+
+<div align="center">
+    <img src="./res/0-Language.png" alt="Dockeryzen Icon" />
+</div>
+
+<div align="center">
+
+## **Select Option For Language**
+
+</div>
+
+<div align="center">
+    <img src="./res/1-Option.png" alt="Dockeryzen Icon" />
+</div>
+
+<div align="center">
+
+## **Select your Own Language Version**
+
+</div>
+
+<div align="center">
+    <img src="./res/2-Language-Version.png" alt="Dockeryzen Icon" />
+</div>
+
+<div align="center">
+
+## **Select your App Database**
+
+</div>
+
+<div align="center">
+    <img src="./res/3-Database.png" alt="Dockeryzen Icon" />
+</div>
+
+<div align="center">
+
+## **Select your Different Message Queue**
+
+</div>
+
+<div align="center">
+    <img src="./res/4-Message-Queue.png" alt="Dockeryzen Icon" />
+</div>
+
+<div align="center">
+
+## **Select your App Service**
+
+</div>
+
+<div align="center">
+    <img src="./res/5-Service.png" alt="Dockeryzen Icon" />
+</div>
+
+<div align="center">
+
+## **Setup your CI/DC & Monitoring**
+
+</div>
+
+<div align="center">
+    <img src="./res/6-Ci-CD-Monitoring.png" alt="Dockeryzen Icon" />
+</div>
+---
+
 ## 📖 What is Dockeryzen?
 
 > Dockeryzen is a powerful `VSCode extension` that eliminates the boilerplate of setting up Docker for your projects. It provides an interactive wizard to generate production-ready `Dockerfile`, `docker-compose.yml`, and other essential configuration files for a wide variety of programming languages, databases, and services.
@@ -151,9 +224,9 @@
 - 📨 **Message Queues & Services** — Add message queues like Kafka, RabbitMQ and other services like Nginx or Grafana.
 - ⚙️ **Smart Defaults** Automatically detects your project's language and suggests optimal configurations.
 - 🔧 **Production-Ready Output**
-    - Optimized multi-stage `Dockerfiles` with security and performance in mind.
-    - Comprehensive `docker-compose.yml` with healthchecks, networks, and volumes.
-    - Pre-configured `.dockerignore`, `.env.example`, and CI/CD pipelines (GitHub Actions & GitLab CI).
+  - Optimized multi-stage `Dockerfiles` with security and performance in mind.
+  - Comprehensive `docker-compose.yml` with healthchecks, networks, and volumes.
+  - Pre-configured `.dockerignore`, `.env.example`, and CI/CD pipelines (GitHub Actions & GitLab CI).
 - 🧩 **Modular architecture** — Optionally enable remote debugging for your application.
 - ❤️ **Health Checks** — Add health check endpoints to your services for better monitoring.
 - 💾 **State Persistence** — our configuration state is saved automatically, so you can resume where you left off.
