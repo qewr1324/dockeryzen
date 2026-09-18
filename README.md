@@ -21,19 +21,6 @@
 </div> -->
 
 <!-- <div align="center">
-  <div style="background: linear-gradient(135deg, #4A90E2 0%, #7B68EE 100%); padding: 30px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
-    <img src="./media/facet-icon.svg" width="64" height="64" style="margin-bottom: 16px;" alt="icon" />
-    <h2 style="color: white; margin: 8px 0;">🍃 Code Facet Generator</h2>
-    <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 8px 0;">
-      <strong>Dynamic facet-based code generator for multiple languages and frameworks.</strong>
-    </p>
-    <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 4px 0;">
-      ⚡ 327+ templates • 32 categories • 150+ tools
-    </p>
-  </div>
-</div> -->
-
-<!-- <div align="center">
 
 <table>
 <tr>
@@ -139,11 +126,15 @@
 
 ---
 
-## Overview
+<div align="center" style="background: linear-gradient(135deg, #4A90E2 0%, #7B68EE 100%); padding: 30px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+
+#  Dockeryzen Overview
+
+</div>
 
 <div align="center">
 
-## **Select your Own Language**
+## ✏️ **Select your Own Language**
 
 </div>
 
@@ -153,7 +144,7 @@
 
 <div align="center">
 
-## **Select Option For Language**
+## ✏️ **Select Option For Language**
 
 </div>
 
@@ -163,7 +154,7 @@
 
 <div align="center">
 
-## **Select your Own Language Version**
+## ✏️ **Select your Own Language Version**
 
 </div>
 
@@ -173,7 +164,7 @@
 
 <div align="center">
 
-## **Select your App Database**
+## ✏️ **Select your App Database**
 
 </div>
 
@@ -183,7 +174,7 @@
 
 <div align="center">
 
-## **Select your Different Message Queue**
+## ✏️ **Select your Different Message Queue**
 
 </div>
 
@@ -193,7 +184,7 @@
 
 <div align="center">
 
-## **Select your App Service**
+## ✏️ **Select your App Service**
 
 </div>
 
@@ -203,7 +194,7 @@
 
 <div align="center">
 
-## **Setup your CI/DC & Monitoring**
+## ✏️ **Setup your CI/DC & Monitoring**
 
 </div>
 
@@ -255,6 +246,13 @@ dockeryzen
 ├─ package.json
 ├─ pnpm-workspace.yaml
 ├─ res
+│  ├─ 0-Language.png
+│  ├─ 1-Option.png
+│  ├─ 2-Language-Version.png
+│  ├─ 3-Database.png
+│  ├─ 4-Message-Queue.png
+│  ├─ 5-Service.png
+│  ├─ 6-Ci-CD-Monitoring.png
 │  ├─ dockeryzen-icon-big.png
 │  ├─ facet-icon-big.svg
 │  ├─ review.gif
@@ -501,3 +499,5 @@ npm run build
 [![Bale Group](https://img.shields.io/badge/Bale-Group-28A745?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz48L3N2Zz4=)](https://ble.ir/your-group) -->
 
 <p align="center">Made with ❤️ for developers who value their time.</p>
+<p align="center">Made with DeepSeek</p>
+
