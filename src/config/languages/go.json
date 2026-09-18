@@ -7,31 +7,30 @@
 	"icon": "rocket",
 	"versions": [
 		{
-			"value": "1.20",
-			"label": "Go 1.20",
-			"description": "Stable",
-			"detail": "Stable release | Best for: Production stability",
-			"icon": "tag",
-			"image": "golang:1.20",
-			"alpineImage": "golang:1.20-alpine"
-		},
-		{
-			"value": "1.21",
-			"label": "Go 1.21",
-			"description": "Recommended",
-			"detail": "Latest stable | Best for: New projects",
-			"icon": "tag",
-			"image": "golang:1.21",
-			"alpineImage": "golang:1.21-alpine"
-		},
-		{
 			"value": "1.22",
 			"label": "Go 1.22",
-			"description": "Latest",
-			"detail": "Latest features | Best for: Experimental projects",
+			"description": "Old stable",
+			"detail": "Old stable | Best for: Production stability",
 			"icon": "tag",
 			"image": "golang:1.22",
 			"alpineImage": "golang:1.22-alpine"
+		},
+		{
+			"value": "1.23",
+			"label": "Go 1.23",
+			"description": "Stable",
+			"detail": "Stable release | Best for: New projects",
+			"icon": "tag",
+			"image": "golang:1.23"
+		},
+		{
+			"value": "1.24",
+			"label": "Go 1.24",
+			"description": "Latest",
+			"detail": "Latest features | Best for: Experimental projects",
+			"icon": "tag",
+			"image": "golang:1.24",
+			"alpineImage": "golang:1.24-alpine"
 		}
 	]
 }

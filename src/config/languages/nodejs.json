@@ -66,8 +66,8 @@
 		{
 			"value": "18",
 			"label": "Node.js 18",
-			"description": "LTS",
-			"detail": "Long-term support | Best for: Production stability",
+			"description": "Legacy LTS",
+			"detail": "Legacy LTS | Best for: Old projects",
 			"icon": "tag",
 			"images": {
 				"standard": "node:18",
@@ -80,7 +80,7 @@
 			"value": "20",
 			"label": "Node.js 20",
 			"description": "LTS",
-			"detail": "Latest LTS | Best for: New projects (Recommended)",
+			"detail": "Long-term support | Best for: Production stability",
 			"icon": "tag",
 			"images": {
 				"standard": "node:20",
@@ -92,14 +92,40 @@
 		{
 			"value": "22",
 			"label": "Node.js 22",
-			"description": "Current",
-			"detail": "Latest features | Best for: Experimental projects",
+			"description": "LTS",
+			"detail": "Latest LTS | Best for: New projects (Recommended)",
 			"icon": "tag",
 			"images": {
 				"standard": "node:22",
 				"alpine": "node:22-alpine",
 				"slim": "node:22-slim",
 				"bookworm": "node:22-bookworm"
+			}
+		},
+		{
+			"value": "23",
+			"label": "Node.js 23",
+			"description": "Current",
+			"detail": "Current release | Best for: Experimental projects",
+			"icon": "tag",
+			"images": {
+				"standard": "node:23",
+				"alpine": "node:23-alpine",
+				"slim": "node:23-slim",
+				"bookworm": "node:23-bookworm"
+			}
+		},
+		{
+			"value": "24",
+			"label": "Node.js 24",
+			"description": "Latest LTS",
+			"detail": "Cutting-edge LTS | Best for: Cutting-edge features",
+			"icon": "tag",
+			"images": {
+				"standard": "node:24",
+				"alpine": "node:24-alpine",
+				"slim": "node:24-slim",
+				"bookworm": "node:24-bookworm"
 			}
 		}
 	]

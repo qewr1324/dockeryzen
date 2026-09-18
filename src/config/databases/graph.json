@@ -10,8 +10,9 @@
 			"icon": "database",
 			"versions": [
 				{ "value": "2026.05.0", "label": "Neo4j 2026.05", "image": "neo4j:2026.05.0" },
-				{ "value": "2026.03.1", "label": "Neo4j 2026.03", "image": "neo4j:2026.03.1-enterprise-trixie" },
-				{ "value": "5.26", "label": "Neo4j 5.26", "image": "neo4j:5.26" }
+				{ "value": "5.26.0-community", "label": "Neo4j 5.26 (Community)", "image": "neo4j:5.26.0-community" },
+				{ "value": "5.26", "label": "Neo4j 5.26", "image": "neo4j:5.26" },
+				{ "value": "latest", "label": "Neo4j Latest", "image": "neo4j:latest" }
 			]
 		},
 		{
@@ -21,8 +22,8 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "3.12", "label": "ArangoDB 3.12", "image": "arangodb:3.12" },
-				{ "value": "3.11", "label": "ArangoDB 3.11", "image": "arangodb:3.11" },
+				{ "value": "3.12.5", "label": "ArangoDB 3.12.5", "image": "arangodb:3.12.5" },
+				{ "value": "3.12.0", "label": "ArangoDB 3.12.0", "image": "arangodb:3.12.0" },
 				{ "value": "3.10", "label": "ArangoDB 3.10", "image": "arangodb:3.10" }
 			]
 		},
@@ -33,7 +34,7 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "1.1", "label": "JanusGraph 1.1", "image": "janusgraph/janusgraph:1.1" },
+				{ "value": "1.1.0", "label": "JanusGraph 1.1.0", "image": "janusgraph/janusgraph:1.1.0" },
 				{ "value": "1.0", "label": "JanusGraph 1.0", "image": "janusgraph/janusgraph:1.0" },
 				{ "value": "0.6", "label": "JanusGraph 0.6", "image": "janusgraph/janusgraph:0.6" }
 			]
@@ -45,9 +46,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "v23.1", "label": "Dgraph 23.1", "image": "dgraph/dgraph:v23.1" },
-				{ "value": "v23.0", "label": "Dgraph 23.0", "image": "dgraph/dgraph:v23.0" },
-				{ "value": "v21.03", "label": "Dgraph 21.03", "image": "dgraph/dgraph:v21.03" }
+				{ "value": "v24.1.0", "label": "Dgraph 24.1.0", "image": "dgraph/dgraph:v24.1.0" },
+				{ "value": "v24.0.0", "label": "Dgraph 24.0.0", "image": "dgraph/dgraph:v24.0.0" },
+				{ "value": "v23.1.0", "label": "Dgraph 23.1.0", "image": "dgraph/dgraph:v23.1.0" }
 			]
 		}
 	]

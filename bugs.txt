@@ -1353,6 +1353,1052 @@ done
 ✅ rust:1.84
 ✅ rust:1.85
 
+-----------------------------------------------------------------------Service
+
+#!/bin/bash
+images=(
+    "nginx:1.27"
+    "nginx:1.27-alpine"
+    "nginx:1.26"
+    "nginx:1.26-alpine"
+    "nginx:1.25"
+    "nginx:1.25-alpine"
+    "grafana/grafana:11.6"
+    "grafana/grafana:11.5"
+    "grafana/grafana:11.4"
+    "prom/prometheus:v3.2"
+    "prom/prometheus:v2.55"
+    "prom/prometheus:v2.54"
+    "quay.io/keycloak/keycloak:26.1"
+    "quay.io/keycloak/keycloak:26.0"
+    "quay.io/keycloak/keycloak:25.0"
+    "minio/minio:RELEASE.2025-02-28T09-55-16Z"
+    "minio/minio:RELEASE.2024-12-18T13-15-44Z"
+    "minio/minio:RELEASE.2024-11-07T00-52-20Z"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+donefi  echo "❌ $img"mg" > /dev/null 2>&1
+✅ nginx:1.27
+✅ nginx:1.27-alpine
+✅ nginx:1.26
+✅ nginx:1.26-alpine
+✅ nginx:1.25
+✅ nginx:1.25-alpine
+✅ grafana/grafana:11.6
+✅ grafana/grafana:11.5
+❌ grafana/grafana:11.4
+❌ prom/prometheus:v3.2
+❌ prom/prometheus:v2.55
+❌ prom/prometheus:v2.54
+❌ quay.io/keycloak/keycloak:26.1
+❌ quay.io/keycloak/keycloak:26.0
+✅ quay.io/keycloak/keycloak:25.0
+❌ minio/minio:RELEASE.2025-02-28T09-55-16Z
+✅ minio/minio:RELEASE.2024-12-18T13-15-44Z
+❌ minio/minio:RELEASE.2024-11-07T00-52-20Z
+
+#!/bin/bash
+images=(
+    "nginx:1.28"
+    "nginx:1.28-alpine"
+    "nginx:1.29"
+    "nginx:1.29-alpine"
+    "grafana/grafana:11.7"
+    "grafana/grafana:11.8"
+    "grafana/grafana:12.0"
+    "grafana/grafana:12.1"
+    "prom/prometheus:v3.3"
+    "prom/prometheus:v3.4"
+    "prom/prometheus:v3.5"
+    "quay.io/keycloak/keycloak:26.2"
+    "quay.io/keycloak/keycloak:26.3"
+    "minio/minio:latest"
+    "minio/minio:RELEASE.2025-04-22T22-12-26Z"
+    "minio/minio:RELEASE.2025-06-13T11-33-47Z"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+donefi  echo "❌ $img"
+✅ nginx:1.28
+✅ nginx:1.28-alpine
+✅ nginx:1.29
+✅ nginx:1.29-alpine
+❌ grafana/grafana:11.7
+❌ grafana/grafana:11.8
+✅ grafana/grafana:12.0
+✅ grafana/grafana:12.1
+❌ prom/prometheus:v3.3
+❌ prom/prometheus:v3.4
+❌ prom/prometheus:v3.5
+✅ quay.io/keycloak/keycloak:26.2
+❌ quay.io/keycloak/keycloak:26.3
+✅ minio/minio:latest
+✅ minio/minio:RELEASE.2025-04-22T22-12-26Z
+❌ minio/minio:RELEASE.2025-06-13T11-33-47Z
+
+#!/bin/bash
+images=(
+    "minio/minio:latest"
+    "minio/minio:RELEASE.2024-12-18T13-15-44Z"
+    "minio/minio:RELEASE.2025-04-22T22-12-26Z"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ minio/minio:latest
+✅ minio/minio:RELEASE.2024-12-18T13-15-44Z
+✅ minio/minio:RELEASE.2025-04-22T22-12-26Z
+
+#!/bin/bash
+images=(
+    "grafana/grafana:latest"
+    "grafana/grafana:11.5.0"
+    "grafana/grafana:11.5.1"
+    "grafana/grafana:11.6.0"
+    "grafana/grafana:11.6.1"
+    "grafana/grafana:12.0.0"
+    "grafana/grafana:12.1.0"
+    "grafana/grafana:12.1.1"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ grafana/grafana:latest
+✅ grafana/grafana:11.5.0
+✅ grafana/grafana:11.5.1
+✅ grafana/grafana:11.6.0
+✅ grafana/grafana:11.6.1
+✅ grafana/grafana:12.0.0
+✅ grafana/grafana:12.1.0
+✅ grafana/grafana:12.1.1
+
+#!/bin/bash
+images=(
+    "prom/prometheus:latest"
+    "prom/prometheus:v2.53.0"
+    "prom/prometheus:v2.53.1"
+    "prom/prometheus:v3.0.0"
+    "prom/prometheus:v3.0.1"
+    "prom/prometheus:v3.1.0"
+    "prom/prometheus:v2.51.0"
+    "prom/prometheus:v2.52.0"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ prom/prometheus:latest
+✅ prom/prometheus:v2.53.0
+✅ prom/prometheus:v2.53.1
+✅ prom/prometheus:v3.0.0
+✅ prom/prometheus:v3.0.1
+✅ prom/prometheus:v3.1.0
+✅ prom/prometheus:v2.51.0
+✅ prom/prometheus:v2.52.0
+
+#!/bin/bash
+images=(
+    "quay.io/keycloak/keycloak:latest"
+    "quay.io/keycloak/keycloak:24.0"
+    "quay.io/keycloak/keycloak:24.0.5"
+    "quay.io/keycloak/keycloak:25.0.6"
+    "quay.io/keycloak/keycloak:26.0.0"
+    "quay.io/keycloak/keycloak:26.0.8"
+    "quay.io/keycloak/keycloak:26.1.0"
+    "quay.io/keycloak/keycloak:26.1.5"
+    "quay.io/keycloak/keycloak:26.2.0"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ quay.io/keycloak/keycloak:latest
+❌ quay.io/keycloak/keycloak:24.0
+❌ quay.io/keycloak/keycloak:24.0.5
+❌ quay.io/keycloak/keycloak:25.0.6
+❌ quay.io/keycloak/keycloak:26.0.0
+❌ quay.io/keycloak/keycloak:26.0.8
+❌ quay.io/keycloak/keycloak:26.1.0
+❌ quay.io/keycloak/keycloak:26.1.5
+✅ quay.io/keycloak/keycloak:26.2.0
+
+-----------------------------------------------------------------------MessageQueue
+
+#!/bin/bash
+images=(che/kafka:4.3.0"
+    "apache/kafka:4.3.0"
+    "apache/kafka:4.2.0"
+    "apache/kafka:3.9.0"
+    "wlsc/kafka:4.3.1"fka-server-standalone:4.1.1"
+    "ueisele/apache-kafka-server-standalone:4.1.1"
+    "rabbitmq:4.1"alpine"
+    "rabbitmq:4.1-alpine"
+    "rabbitmq:4.0"alpine"
+    "rabbitmq:4.0-alpine"
+    "rabbitmq:3.13"alpine"
+    "rabbitmq:3.13-alpine"ic:6.1"
+    "apache/activemq-classic:6.1"
+    "apache/activemq-classic:6.0""
+    "apache/activemq-artemis:2.37"
+)or img in "${images[@]}"; do
+for img in "${images[@]}"; dodev/null 2>&1; then
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"mg" > /dev/null 2>&1
+        docker rmi "$img" > /dev/null 2>&1
+    elseecho "❌ $img"
+        echo "❌ $img"
+    fi
+done
+✅ apache/kafka:4.3.0
+✅ apache/kafka:4.2.0
+✅ apache/kafka:3.9.0
+✅ wlsc/kafka:4.3.1
+✅ ueisele/apache-kafka-server-standalone:4.1.1
+✅ rabbitmq:4.1
+✅ rabbitmq:4.1-alpine
+✅ rabbitmq:4.0
+✅ rabbitmq:4.0-alpine
+✅ rabbitmq:3.13
+✅ rabbitmq:3.13-alpine
+❌ apache/activemq-classic:6.1
+❌ apache/activemq-classic:6.0
+❌ apache/activemq-artemis:2.37
+
+#!/bin/bash
+images=(che/kafka:4.4.0"
+    "apache/kafka:4.4.0"
+    "apache/kafka:4.5.0"
+    "apache/kafka:3.8.0"
+    "apache/kafka:3.7.0""
+    "apache/kafka:latest"
+    "rabbitmq:4.2"alpine"
+    "rabbitmq:4.2-alpine"
+    "rabbitmq:4.1.1""
+    "rabbitmq:latest"classic:6.2"
+    "apache/activemq-classic:6.2"st"
+    "apache/activemq-classic:latest"
+    "apache/activemq-artemis:2.38"
+    "apache/activemq-artemis:2.39"t"
+    "apache/activemq-artemis:latest"
+)or img in "${images[@]}"; do
+for img in "${images[@]}"; dodev/null 2>&1; then
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"mg" > /dev/null 2>&1
+        docker rmi "$img" > /dev/null 2>&1
+    elseecho "❌ $img"
+        echo "❌ $img"
+    fi
+done
+❌ apache/kafka:4.4.0
+❌ apache/kafka:4.5.0
+✅ apache/kafka:3.8.0
+✅ apache/kafka:3.7.0
+✅ apache/kafka:latest
+✅ rabbitmq:4.2
+✅ rabbitmq:4.2-alpine
+✅ rabbitmq:4.1.1
+✅ rabbitmq:latest
+❌ apache/activemq-classic:6.2
+✅ apache/activemq-classic:latest
+❌ apache/activemq-artemis:2.38
+❌ apache/activemq-artemis:2.39
+✅ apache/activemq-artemis:latest
+
+#!/bin/bash
+images=(
+    "apache/activemq-classic:5.18.6"
+    "apache/activemq-classic:5.18.5"
+    "apache/activemq-classic:5.17.6"
+    "apache/activemq-classic:6.1.0"
+    "apache/activemq-classic:6.1.1"
+    "apache/activemq-classic:6.1.2"
+    "apache/activemq-artemis:2.36.0"
+    "apache/activemq-artemis:2.37.0"
+    "apache/activemq-artemis:2.38.0"
+    "apache/activemq-artemis:2.39.0"
+    "apache/activemq-artemis:2.40.0"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ apache/activemq-classic:5.18.6
+✅ apache/activemq-classic:5.18.5
+✅ apache/activemq-classic:5.17.6
+✅ apache/activemq-classic:6.1.0
+✅ apache/activemq-classic:6.1.1
+✅ apache/activemq-classic:6.1.2
+✅ apache/activemq-artemis:2.36.0
+✅ apache/activemq-artemis:2.37.0
+✅ apache/activemq-artemis:2.38.0
+✅ apache/activemq-artemis:2.39.0
+✅ apache/activemq-artemis:2.40.0
+
+-----------------------------------------------------------------------DATABASE-SQL
+
+#!/bin/bash
+images=(
+    "postgres:18"
+    "postgres:18-alpine"
+    "postgres:17"
+    "postgres:17-alpine"
+    "mysql:9.3"
+    "mysql:9.4"
+    "mysql:latest"
+    "mariadb:11.9"
+    "mariadb:12.0"
+    "mariadb:latest"
+    "mcr.microsoft.com/mssql/server:2025-latest"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+        docker rmi "$img" > /dev/null 2>&1
+    else
+        echo "❌ $img"
+    fi
+done
+✅ postgres:18
+✅ postgres:18-alpine
+✅ postgres:17
+✅ postgres:17-alpine
+❌ mysql:9.3
+✅ mysql:9.4
+✅ mysql:latest
+❌ mariadb:11.9
+❌ mariadb:12.0
+✅ mariadb:latest
+❌ mcr.microsoft.com/mssql/server:2025-latest
+
+#!/bin/bash
+images=(
+    "postgres:17.10"
+    "postgres:17.10-alpine"
+    "postgres:16.14"
+    "postgres:16.14-alpine"
+    "postgres:15.18"
+    "postgres:15.18-alpine"
+    "postgres:14.23"
+    "postgres:14.23-alpine"
+    "postgres:19beta2"
+    "postgres:19beta2-alpine"
+    "mysql:9.2"
+    "mysql:8.4"
+    "mysql:8.0"
+    "mariadb:11.8"
+    "mariadb:11.4"
+    "mariadb:10.11"
+    "mcr.microsoft.com/mssql/server:2022-latest"
+    "mcr.microsoft.com/mssql/server:2019-latest"
+    "container-registry.oracle.com/database/enterprise:latest"
+    "ibmcom/db2:latest"
+)
+for img in "${images[@]}"; do
+donefi  echo "❌ $img"mg" > /dev/null 2>&1; then
+✅ postgres:17.10
+✅ postgres:17.10-alpine
+✅ postgres:16.14
+✅ postgres:16.14-alpine
+✅ postgres:15.18
+✅ postgres:15.18-alpine
+✅ postgres:14.23
+✅ postgres:14.23-alpine
+✅ postgres:19beta2
+✅ postgres:19beta2-alpine
+✅ mysql:9.2
+✅ mysql:8.4
+✅ mysql:8.0
+✅ mariadb:11.8
+✅ mariadb:11.4
+✅ mariadb:10.11
+❌ mcr.microsoft.com/mssql/server:2022-latest
+❌ mcr.microsoft.com/mssql/server:2019-latest
+❌ container-registry.oracle.com/database/enterprise:latest
+❌ ibmcom/db2:latest
+
+#!/bin/bash
+images=(
+    "icr.io/db2_community/db2:latest"
+    "icr.io/db2_community/db2:11.5.9.0"
+    "icr.io/db2_community/db2:12.1.0.0"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+❌ icr.io/db2_community/db2:latest
+❌ icr.io/db2_community/db2:11.5.9.0
+❌ icr.io/db2_community/db2:12.1.0.0
+
+#!/bin/bash
+images=(
+    "gvenzl/oracle-xe:21-slim"
+    "gvenzl/oracle-xe:21-slim-faststart"
+    "container-registry.oracle.com/database/express:latest"
+    "container-registry.oracle.com/database/free:latest"
+)
+for img in "${images[@]}"; do
+    if docker pull "$img" > /dev/null 2>&1; then
+        echo "✅ $img"
+    else
+        echo "❌ $img"
+    fi
+done
+✅ gvenzl/oracle-xe:21-slim
+✅ gvenzl/oracle-xe:21-slim-faststart
+❌ container-registry.oracle.com/database/express:latest
+❌ container-registry.oracle.com/database/free:latest
+
+#!/bin/bash
+check() {        #!/bin/bash
+check() {opeo inspect "docker://$1" > /dev/null 2>&1; then
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    elseecho "❌ $1"
+        echo "❌ $1"
+    fi
+}
+# MSSQL
+# MSSQLmcr.microsoft.com/mssql/server:2022-latest"
+check "mcr.microsoft.com/mssql/server:2022-latest"
+check "mcr.microsoft.com/mssql/server:2019-latest"
+check "mcr.microsoft.com/mssql/server:2025-latest"
+# Oracle
+# Oracleontainer-registry.oracle.com/database/enterprise:latest"
+check "container-registry.oracle.com/database/enterprise:latest"
+check "gvenzl/oracle-xe:21-slim"faststart"
+check "gvenzl/oracle-xe:21-slim-faststart"
+check "gvenzl/oracle-free:23-slim"
+# IBM Db2
+# IBM Db2mcom/db2:latest"
+check "ibmcom/db2:latest"ty/db2:latest"
+check "icr.io/db2_community/db2:latest"0"
+check "icr.io/db2_community/db2:11.5.9.0"
+check "icr.io/db2_community/db2:12.1.0.0"
+✅ mcr.microsoft.com/mssql/server:2022-latest
+✅ mcr.microsoft.com/mssql/server:2019-latest
+✅ mcr.microsoft.com/mssql/server:2025-latest
+❌ container-registry.oracle.com/database/enterprise:latest
+✅ gvenzl/oracle-xe:21-slim
+✅ gvenzl/oracle-xe:21-slim-faststart
+✅ gvenzl/oracle-free:23-slim
+✅ ibmcom/db2:latest
+❌ icr.io/db2_community/db2:latest
+❌ icr.io/db2_community/db2:11.5.9.0
+❌ icr.io/db2_community/db2:12.1.0.0
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# IBM Db2 alternatives
+check "ibmcom/db2:11.5.9.0"
+check "ibmcom/db2:11.5.8.0"
+check "ibmcom/db2:11.5.7.0"
+check "icr.io/db2_community/db2:11.5.9.0"
+check "docker.io/ibmcom/db2:latest"
+❌ ibmcom/db2:11.5.9.0
+✅ ibmcom/db2:11.5.8.0
+✅ ibmcom/db2:11.5.7.0
+❌ icr.io/db2_community/db2:11.5.9.0
+✅ docker.io/ibmcom/db2:latest
+
+-----------------------------------------------------------------------DATABASE-NoSQL
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# MongoDB
+check "mongo:8.0"
+check "mongo:7.0"
+check "mongo:6.0"
+check "mongo:8.2"
+check "mongo:latest"
+
+# CouchDB
+check "couchdb:3.4"
+check "couchdb:3.3"
+check "couchdb:3.2"
+check "couchdb:latest"
+
+# Couchbase
+check "couchbase/server:7.6"
+check "ravendb/ravendb:latest".5.4""
+✅ mongo:8.0
+✅ mongo:7.0
+✅ mongo:6.0
+✅ mongo:8.2
+✅ mongo:latest
+✅ couchdb:3.4
+✅ couchdb:3.3
+✅ couchdb:3.2
+✅ couchdb:latest
+❌ couchbase/server:7.6
+❌ couchbase/server:7.2
+❌ couchbase/server:7.0
+✅ couchbase/server:7.6.2
+✅ couchbase/server:7.6.5
+✅ couchbase/server:latest
+✅ amazon/dynamodb-local:latest
+✅ amazon/dynamodb-local:2.5.4
+❌ ravendb/ravendb:6.2
+❌ ravendb/ravendb:6.0
+❌ ravendb/ravendb:5.4
+❌ ravendb/ravendb:6.2.5
+✅ ravendb/ravendb:latest
+
+-----------------------------------------------------------------------DATABSE-Search-Engine
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# Elasticsearch
+check "elasticsearch:9.5.0"
+check "elasticsearch:9.4.0"
+check "elasticsearch:8.19.0"
+check "elasticsearch:8.18.0"
+check "elasticsearch:9.0.0"
+check "elasticsearch:9.1.0"
+check "elasticsearch:9.2.0"
+check "elasticsearch:latest"
+
+# Solr
+check "solr:9.9"
+check "solr:9.8"
+check "solr:8.11"
+check "solr:9.10"
+check "typesense/typesense:latest""
+❌ elasticsearch:9.5.0
+✅ elasticsearch:9.4.0
+✅ elasticsearch:8.19.0
+✅ elasticsearch:8.18.0
+❌ elasticsearch:9.0.0
+✅ elasticsearch:9.1.0
+✅ elasticsearch:9.2.0
+❌ elasticsearch:latest
+✅ solr:9.9
+✅ solr:9.8
+✅ solr:8.11
+✅ solr:9.10
+✅ solr:9.7
+✅ solr:latest
+✅ getmeili/meilisearch:v1.15
+✅ getmeili/meilisearch:v1.14
+✅ getmeili/meilisearch:v1.13
+✅ getmeili/meilisearch:v1.16
+✅ getmeili/meilisearch:latest
+✅ typesense/typesense:28.0
+✅ typesense/typesense:27.1
+✅ typesense/typesense:26.0
+✅ typesense/typesense:29.0
+❌ typesense/typesense:latest
+
+-----------------------------------------------------------------------DATABSE-NewSQL
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# CockroachDB
+check "cockroachdb/cockroach:v24.3"
+check "cockroachdb/cockroach:v24.2"
+check "cockroachdb/cockroach:v24.1"
+check "cockroachdb/cockroach:v24.3.0"
+check "cockroachdb/cockroach:v24.3.5"
+check "cockroachdb/cockroach:v25.1"
+check "cockroachdb/cockroach:v25.2"
+check "cockroachdb/cockroach:latest"
+
+# TiDB
+check "pingcap/tidb:v8.5"
+check "pingcap/tidb:v8.4"
+check "pingcap/tidb:v8.3"
+check "pingcap/tidb:v8.5.0"
+check "yugabytedb/yugabyte:latest"0.0"
+❌ cockroachdb/cockroach:v24.3
+❌ cockroachdb/cockroach:v24.2
+❌ cockroachdb/cockroach:v24.1
+✅ cockroachdb/cockroach:v24.3.0
+✅ cockroachdb/cockroach:v24.3.5
+❌ cockroachdb/cockroach:v25.1
+❌ cockroachdb/cockroach:v25.2
+✅ cockroachdb/cockroach:latest
+❌ pingcap/tidb:v8.5
+❌ pingcap/tidb:v8.4
+❌ pingcap/tidb:v8.3
+✅ pingcap/tidb:v8.5.0
+✅ pingcap/tidb:v8.5.1
+❌ pingcap/tidb:v9.0.0
+✅ pingcap/tidb:latest
+❌ yugabytedb/yugabyte:2024.2.0.0
+❌ yugabytedb/yugabyte:2024.1.5.0
+❌ yugabytedb/yugabyte:2.20.5.0
+❌ yugabytedb/yugabyte:2025.1.0.0
+✅ yugabytedb/yugabyte:latest
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+check "yugabytedb/yugabyte:2024.2.0.0-b100"
+check "yugabytedb/yugabyte:2024.1.5.0-b100"
+check "yugabytedb/yugabyte:2.20.5.0-b100"
+check "yugabytedb/yugabyte:2.20.5.0-b50"
+check "yugabytedb/yugabyte:2024.2.0.0-b50"
+check "yugabytedb/yugabyte:2025.1.0.0-b50"
+check "yugabytedb/yugabyte:2.20.5.0-b10"
+❌ yugabytedb/yugabyte:2024.2.0.0-b100
+❌ yugabytedb/yugabyte:2024.1.5.0-b100
+❌ yugabytedb/yugabyte:2.20.5.0-b100
+❌ yugabytedb/yugabyte:2.20.5.0-b50
+❌ yugabytedb/yugabyte:2024.2.0.0-b50
+❌ yugabytedb/yugabyte:2025.1.0.0-b50
+❌ yugabytedb/yugabyte:2.20.5.0-b10
+
+-----------------------------------------------------------------------DATABSE-Key-Value
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# Redis
+check "redis:8.8"
+check "redis:8.8-alpine"
+check "redis:8.6"
+check "redis:8.6-alpine"
+check "redis:7.4"
+check "redis:7.4-alpine"
+check "redis:7.2"
+check "redis:7.2-alpine"
+check "redis:6.2"
+check "redis:6.2-alpine"
+check "redis:latest"
+check "redis:alpine"
+
+# Memcached
+check "aerospike/aerospike-server:latest""""
+✅ redis:8.8
+✅ redis:8.8-alpine
+✅ redis:8.6
+✅ redis:8.6-alpine
+✅ redis:7.4
+❌ redis:7.4-alpine
+✅ redis:7.2
+✅ redis:7.2-alpine
+✅ redis:6.2
+✅ redis:6.2-alpine
+✅ redis:latest
+✅ redis:alpine
+✅ memcached:1.6
+✅ memcached:1.6-alpine
+✅ memcached:1.5
+✅ memcached:1.5-alpine
+✅ memcached:1.4
+✅ memcached:1.4-alpine
+✅ memcached:latest
+✅ memcached:alpine
+❌ bitnami/etcd:3.5
+❌ bitnami/etcd:3.4
+❌ gcr.io/etcd-development/etcd:v3.5.15
+❌ gcr.io/etcd-development/etcd:v3.5.17
+❌ gcr.io/etcd-development/etcd:v3.6.0
+❌ quay.io/coreos/etcd:v3.5.15
+❌ quay.io/coreos/etcd:latest
+✅ aerospike/aerospike-server:8.0
+✅ aerospike/aerospike-server:7.0
+✅ aerospike/aerospike-server:6.4
+✅ aerospike/aerospike-server:8.0.0.2
+✅ aerospike/aerospike-server:latest
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# etcd alternatives
+check "quay.io/coreos/etcd:v3.5.15"
+check "quay.io/coreos/etcd:v3.5.0"
+check "quay.io/coreos/etcd:v3.4.0"
+check "gcr.io/etcd-development/etcd:v3.5.15"
+check "gcr.io/etcd-development/etcd:v3.5.0"
+check "gcr.io/etcd-development/etcd:v3.4.0"
+check "docker.io/bitnami/etcd:3.5"
+check "docker.io/bitnami/etcd:latest"
+check "docker.io/etcd:latest"
+check "registry.k8s.io/etcd:3.5.15-0"
+check "registry.k8s.io/etcd:3.5.0-0"
+❌ quay.io/coreos/etcd:v3.5.15
+✅ quay.io/coreos/etcd:v3.5.0
+✅ quay.io/coreos/etcd:v3.4.0
+❌ gcr.io/etcd-development/etcd:v3.5.15
+❌ gcr.io/etcd-development/etcd:v3.5.0
+❌ gcr.io/etcd-development/etcd:v3.4.0
+❌ docker.io/bitnami/etcd:3.5
+❌ docker.io/bitnami/etcd:latest
+❌ docker.io/etcd:latest
+❌ registry.k8s.io/etcd:3.5.15-0
+❌ registry.k8s.io/etcd:3.5.0-0
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+check "quay.io/coreos/etcd:v3.5.1"
+check "quay.io/coreos/etcd:v3.5.5"
+check "quay.io/coreos/etcd:v3.5.9"
+check "quay.io/coreos/etcd:v3.5.12"
+check "quay.io/coreos/etcd:v3.5.13"
+check "quay.io/coreos/etcd:v3.5.14"
+check "quay.io/coreos/etcd:v3.6.0"
+check "quay.io/coreos/etcd:v3.6.1"
+check "quay.io/coreos/etcd:latest"
+✅ quay.io/coreos/etcd:v3.5.1
+✅ quay.io/coreos/etcd:v3.5.5
+✅ quay.io/coreos/etcd:v3.5.9
+✅ quay.io/coreos/etcd:v3.5.12
+✅ quay.io/coreos/etcd:v3.5.13
+✅ quay.io/coreos/etcd:v3.5.14
+✅ quay.io/coreos/etcd:v3.6.0
+✅ quay.io/coreos/etcd:v3.6.1
+❌ quay.io/coreos/etcd:latest
+
+-----------------------------------------------------------------------DATABSE-Graph
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# Neo4j
+check "neo4j:2026.05.0"
+check "neo4j:2026.03.1-enterprise-trixie"
+check "neo4j:5.26"
+check "neo4j:5.26.0"
+check "neo4j:5.25"
+check "neo4j:5.24"
+check "neo4j:latest"
+check "neo4j:5.26-community"
+check "neo4j:5.26.0-community"
+
+# ArangoDB
+check "arangodb:3.12"
+check "arangodb:3.11"
+check "arangodb:3.10"
+check "dgraph/dgraph:latest":latest"
+✅ neo4j:2026.05.0
+✅ neo4j:2026.03.1-enterprise-trixie
+✅ neo4j:5.26
+✅ neo4j:5.26.0
+✅ neo4j:5.25
+✅ neo4j:5.24
+✅ neo4j:latest
+✅ neo4j:5.26-community
+✅ neo4j:5.26.0-community
+✅ arangodb:3.12
+❌ arangodb:3.11
+✅ arangodb:3.10
+✅ arangodb:3.12.0
+✅ arangodb:3.12.5
+✅ arangodb:latest
+✅ janusgraph/janusgraph:1.1
+✅ janusgraph/janusgraph:1.0
+✅ janusgraph/janusgraph:0.6
+✅ janusgraph/janusgraph:1.1.0
+✅ janusgraph/janusgraph:latest
+❌ dgraph/dgraph:v23.1
+❌ dgraph/dgraph:v23.0
+❌ dgraph/dgraph:v21.03
+❌ dgraph/dgraph:v24.0
+✅ dgraph/dgraph:latest
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+check "dgraph/dgraph:v24.1.0"
+check "dgraph/dgraph:v24.0.0"
+check "dgraph/dgraph:v23.1.0"
+check "dgraph/dgraph:v23.0.0"
+check "dgraph/dgraph:v21.03.2"
+check "dgraph/dgraph:v21.03.0"
+check "dgraph/standalone:latest"
+check "dgraph/standalone:v24.1.0"
+✅ dgraph/dgraph:v24.1.0
+✅ dgraph/dgraph:v24.0.0
+✅ dgraph/dgraph:v23.1.0
+✅ dgraph/dgraph:v23.0.0
+❌ dgraph/dgraph:v21.03.2
+✅ dgraph/dgraph:v21.03.0
+✅ dgraph/standalone:latest
+✅ dgraph/standalone:v24.1
+
+-----------------------------------------------------------------------DATABSE-Wide-Column
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# Cassandra
+check "cassandra:5.0"
+check "cassandra:4.1"
+check "cassandra:4.0"
+check "cassandra:5.0.0"
+check "cassandra:5.0.3"
+check "cassandra:latest"
+
+# ScyllaDB
+check "scylladb/scylla:5.4"
+check "scylladb/scylla:5.2"
+check "scylladb/scylla:5.0"
+check "scylladb/scylla:6.0"
+check "scylladb/scylla:6.1"
+check "scylladb/scylla:6.2"
+check "google/cloud-sdk:latest"Bs"
+✅ cassandra:5.0
+✅ cassandra:4.1
+✅ cassandra:4.0
+✅ cassandra:5.0.0
+✅ cassandra:5.0.3
+✅ cassandra:latest
+✅ scylladb/scylla:5.4
+✅ scylladb/scylla:5.2
+❌ scylladb/scylla:5.0
+✅ scylladb/scylla:6.0
+✅ scylladb/scylla:6.1
+✅ scylladb/scylla:6.2
+✅ scylladb/scylla:latest
+❌ apache/hbase:2.6
+❌ apache/hbase:2.5
+❌ apache/hbase:2.4
+❌ apache/hbase:2.6.0
+❌ apache/hbase:2.6.1
+❌ apache/hbase:latest
+✅ google/cloud-sdk:emulators
+❌ google/cloud-sdk:latestB
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# HBase alternatives
+check "harisekhon/hbase:latest"
+check "dajobe/hbase:latest"
+check "bigdataeu/hbase:latest"
+check "bitnami/hbase:latest"
+check "bitnami/hbase:2.6"
+check "bitnami/hbase:2.5"
+check "bitnami/hbase:2.4"
+✅ harisekhon/hbase:latest
+✅ dajobe/hbase:latest
+❌ bigdataeu/hbase:latest
+❌ bitnami/hbase:latest
+❌ bitnami/hbase:2.6
+❌ bitnami/hbase:2.5
+❌ bitnami/hbase:2.4
+
+-----------------------------------------------------------------------DATABSE-Vector
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# Weaviate
+check "semitechnologies/weaviate:1.28"
+check "semitechnologies/weaviate:1.27"
+check "semitechnologies/weaviate:1.26"
+check "semitechnologies/weaviate:1.28.0"
+check "semitechnologies/weaviate:1.29.0"
+check "semitechnologies/weaviate:1.30.0"
+check "semitechnologies/weaviate:latest"
+check "cr.weaviate.io/semitechnologies/weaviate:1.28.0"
+
+# Qdrant
+check "qdrant/qdrant:v1.12"
+check "qdrant/qdrant:v1.11"
+check "qdrant/qdrant:v1.10"
+check "qdrant/qdrant:v1.12.0"
+check "chromadb/chroma:0.6.3"B
+❌ semitechnologies/weaviate:1.28
+❌ semitechnologies/weaviate:1.27
+❌ semitechnologies/weaviate:1.26
+✅ semitechnologies/weaviate:1.28.0
+✅ semitechnologies/weaviate:1.29.0
+✅ semitechnologies/weaviate:1.30.0
+✅ semitechnologies/weaviate:latest
+❌ cr.weaviate.io/semitechnologies/weaviate:1.28.0
+❌ qdrant/qdrant:v1.12
+❌ qdrant/qdrant:v1.11
+❌ qdrant/qdrant:v1.10
+✅ qdrant/qdrant:v1.12.0
+✅ qdrant/qdrant:v1.13.0
+✅ qdrant/qdrant:v1.14.0
+✅ qdrant/qdrant:latest
+❌ milvusdb/milvus:v2.5
+❌ milvusdb/milvus:v2.4
+❌ milvusdb/milvus:v2.3
+✅ milvusdb/milvus:v2.5.0
+✅ milvusdb/milvus:v2.5.5
+✅ milvusdb/milvus:v2.6.0
+✅ milvusdb/milvus:latest
+✅ chromadb/chroma:latest
+❌ chromadb/chroma:0.4
+❌ chromadb/chroma:0.3
+✅ chromadb/chroma:0.5.0
+✅ chromadb/chroma:0.6.0
+❌ chromadb/chroma:0.6.3B
+
+-----------------------------------------------------------------------DATABSE-Time-Series
+
+#!/bin/bash
+check() {
+    if skopeo inspect "docker://$1" > /dev/null 2>&1; then
+        echo "✅ $1"
+    else
+        echo "❌ $1"
+    fi
+}
+
+# InfluxDB
+check "influxdb:2.7"
+check "influxdb:2.7-alpine"
+check "influxdb:2.6"
+check "influxdb:2.6-alpine"
+check "influxdb:1.8"
+check "influxdb:1.8-alpine"
+check "influxdb:2.7.5"
+check "influxdb:2.7.11"
+check "influxdb:3.0"
+check "influxdb:latest"
+
+# TimescaleDB
+check "timescale/timescaledb:2.18-pg17"
+check "timescale/timescaledb:2.17-pg16"
+check "petergrace/opentsdb-docker:latest"
+✅ influxdb:2.7
+✅ influxdb:2.7-alpine
+✅ influxdb:2.6
+✅ influxdb:2.6-alpine
+✅ influxdb:1.8
+✅ influxdb:1.8-alpine
+✅ influxdb:2.7.5
+✅ influxdb:2.7.11
+❌ influxdb:3.0
+✅ influxdb:latest
+❌ timescale/timescaledb:2.18-pg17
+❌ timescale/timescaledb:2.17-pg16
+❌ timescale/timescaledb:2.16-pg15
+❌ timescale/timescaledb:2.19-pg17
+❌ timescale/timescaledb:2.20-pg17
+✅ timescale/timescaledb:latest-pg17
+✅ timescale/timescaledb:latest-pg16
+❌ prom/prometheus:v3.2
+❌ prom/prometheus:v2.55
+❌ prom/prometheus:v2.54
+✅ prom/prometheus:v3.0.0
+✅ prom/prometheus:v3.1.0
+✅ prom/prometheus:v3.3.0
+✅ prom/prometheus:v3.4.0
+✅ prom/prometheus:latest
+✅ petergrace/opentsdb-docker:latest
+
+
+
 -----------------------------------------------------------------------
+
 
 همرو درست کن و فایل کامل رو بده من.

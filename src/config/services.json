@@ -8,9 +8,9 @@
 			"icon": "globe",
 			"defaultPort": 80,
 			"versions": [
-				{ "value": "1.27", "label": "Nginx 1.27", "image": "nginx:1.27", "alpineImage": "nginx:1.27-alpine" },
-				{ "value": "1.26", "label": "Nginx 1.26", "image": "nginx:1.26", "alpineImage": "nginx:1.26-alpine" },
-				{ "value": "1.25", "label": "Nginx 1.25", "image": "nginx:1.25", "alpineImage": "nginx:1.25-alpine" }
+				{ "value": "1.29", "label": "Nginx 1.29 (Mainline)", "image": "nginx:1.29", "alpineImage": "nginx:1.29-alpine" },
+				{ "value": "1.28", "label": "Nginx 1.28 (Stable)", "image": "nginx:1.28", "alpineImage": "nginx:1.28-alpine" },
+				{ "value": "1.27", "label": "Nginx 1.27", "image": "nginx:1.27", "alpineImage": "nginx:1.27-alpine" }
 			]
 		},
 		{
@@ -21,9 +21,9 @@
 			"icon": "graph",
 			"defaultPort": 3000,
 			"versions": [
-				{ "value": "11.6", "label": "Grafana 11.6", "image": "grafana/grafana:11.6" },
-				{ "value": "11.5", "label": "Grafana 11.5", "image": "grafana/grafana:11.5" },
-				{ "value": "11.4", "label": "Grafana 11.4", "image": "grafana/grafana:11.4" }
+				{ "value": "12.1.0", "label": "Grafana 12.1.0", "image": "grafana/grafana:12.1.0" },
+				{ "value": "12.0.0", "label": "Grafana 12.0.0", "image": "grafana/grafana:12.0.0" },
+				{ "value": "11.6.1", "label": "Grafana 11.6.1", "image": "grafana/grafana:11.6.1" }
 			]
 		},
 		{
@@ -34,9 +34,9 @@
 			"icon": "pulse",
 			"defaultPort": 9090,
 			"versions": [
-				{ "value": "v3.2", "label": "Prometheus 3.2", "image": "prom/prometheus:v3.2" },
-				{ "value": "v2.55", "label": "Prometheus 2.55", "image": "prom/prometheus:v2.55" },
-				{ "value": "v2.54", "label": "Prometheus 2.54", "image": "prom/prometheus:v2.54" }
+				{ "value": "v3.1.0", "label": "Prometheus 3.1.0", "image": "prom/prometheus:v3.1.0" },
+				{ "value": "v3.0.1", "label": "Prometheus 3.0.1", "image": "prom/prometheus:v3.0.1" },
+				{ "value": "v2.53.1", "label": "Prometheus 2.53.1", "image": "prom/prometheus:v2.53.1" }
 			]
 		},
 		{
@@ -47,8 +47,8 @@
 			"icon": "key",
 			"defaultPort": 8080,
 			"versions": [
-				{ "value": "26.1", "label": "Keycloak 26.1", "image": "quay.io/keycloak/keycloak:26.1" },
-				{ "value": "26.0", "label": "Keycloak 26.0", "image": "quay.io/keycloak/keycloak:26.0" },
+				{ "value": "26.2", "label": "Keycloak 26.2", "image": "quay.io/keycloak/keycloak:26.2" },
+				{ "value": "26.2.0", "label": "Keycloak 26.2.0", "image": "quay.io/keycloak/keycloak:26.2.0" },
 				{ "value": "25.0", "label": "Keycloak 25.0", "image": "quay.io/keycloak/keycloak:25.0" }
 			]
 		},
@@ -60,9 +60,9 @@
 			"icon": "database",
 			"defaultPort": 9000,
 			"versions": [
-				{ "value": "RELEASE.2025-02-28T09-55-16Z", "label": "MinIO 2025-02-28", "image": "minio/minio:RELEASE.2025-02-28T09-55-16Z" },
-				{ "value": "RELEASE.2024-12-18T13-15-44Z", "label": "MinIO 2024-12-18", "image": "minio/minio:RELEASE.2024-12-18T13-15-44Z" },
-				{ "value": "RELEASE.2024-11-07T00-52-20Z", "label": "MinIO 2024-11-07", "image": "minio/minio:RELEASE.2024-11-07T00-52-20Z" }
+				{ "value": "latest", "label": "MinIO Latest", "image": "minio/minio:latest" },
+				{ "value": "RELEASE.2025-04-22T22-12-26Z", "label": "MinIO 2025-04-22", "image": "minio/minio:RELEASE.2025-04-22T22-12-26Z" },
+				{ "value": "RELEASE.2024-12-18T13-15-44Z", "label": "MinIO 2024-12-18", "image": "minio/minio:RELEASE.2024-12-18T13-15-44Z" }
 			]
 		}
 	]

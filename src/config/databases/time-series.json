@@ -8,9 +8,9 @@
 			"defaultUser": "admin",
 			"icon": "database",
 			"versions": [
-				{ "value": "2.7", "label": "InfluxDB 2.7", "image": "influxdb:2.7", "alpineImage": "influxdb:2.7-alpine" },
-				{ "value": "2.6", "label": "InfluxDB 2.6", "image": "influxdb:2.6", "alpineImage": "influxdb:2.6-alpine" },
-				{ "value": "1.8", "label": "InfluxDB 1.8", "image": "influxdb:1.8", "alpineImage": "influxdb:1.8-alpine" }
+				{ "value": "2.7.11", "label": "InfluxDB 2.7.11", "image": "influxdb:2.7.11", "alpineImage": "influxdb:2.7-alpine" },
+				{ "value": "2.7.5", "label": "InfluxDB 2.7.5", "image": "influxdb:2.7.5", "alpineImage": "influxdb:2.7-alpine" },
+				{ "value": "1.8", "label": "InfluxDB 1.8 (LTS)", "image": "influxdb:1.8", "alpineImage": "influxdb:1.8-alpine" }
 			]
 		},
 		{
@@ -21,9 +21,9 @@
 			"defaultDatabase": "postgres",
 			"icon": "database",
 			"versions": [
-				{ "value": "2.18-pg17", "label": "TimescaleDB 2.18 (PG17)", "image": "timescale/timescaledb:2.18-pg17" },
-				{ "value": "2.17-pg16", "label": "TimescaleDB 2.17 (PG16)", "image": "timescale/timescaledb:2.17-pg16" },
-				{ "value": "2.16-pg15", "label": "TimescaleDB 2.16 (PG15)", "image": "timescale/timescaledb:2.16-pg15" }
+				{ "value": "2.20.0-pg17", "label": "TimescaleDB 2.20.0 (PG17)", "image": "timescale/timescaledb:2.20.0-pg17" },
+				{ "value": "2.19.0-pg17", "label": "TimescaleDB 2.19.0 (PG17)", "image": "timescale/timescaledb:2.19.0-pg17" },
+				{ "value": "2.18.0-pg17", "label": "TimescaleDB 2.18.0 (PG17)", "image": "timescale/timescaledb:2.18.0-pg17" }
 			]
 		},
 		{
@@ -33,9 +33,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "v3.2", "label": "Prometheus 3.2", "image": "prom/prometheus:v3.2" },
-				{ "value": "v2.55", "label": "Prometheus 2.55", "image": "prom/prometheus:v2.55" },
-				{ "value": "v2.54", "label": "Prometheus 2.54", "image": "prom/prometheus:v2.54" }
+				{ "value": "v3.4.0", "label": "Prometheus 3.4.0", "image": "prom/prometheus:v3.4.0" },
+				{ "value": "v3.3.0", "label": "Prometheus 3.3.0", "image": "prom/prometheus:v3.3.0" },
+				{ "value": "v3.1.0", "label": "Prometheus 3.1.0", "image": "prom/prometheus:v3.1.0" }
 			]
 		},
 		{
@@ -44,7 +44,9 @@
 			"defaultPort": 4242,
 			"defaultUser": "root",
 			"icon": "database",
-			"versions": [{ "value": "latest", "label": "OpenTSDB Latest", "image": "petergrace/opentsdb-docker:latest" }]
+			"versions": [
+				{ "value": "latest", "label": "OpenTSDB Latest", "image": "petergrace/opentsdb-docker:latest" }
+			]
 		}
 	]
 }

@@ -55,7 +55,7 @@
 				"standard": "ruby:3.4",
 				"alpine": "ruby:3.4-alpine",
 				"slim": "ruby:3.4-slim",
-				"bookworm": "ruby:3.4-bookworm"
+				"bookworm": "ruby:3.4-alpine"
 			}
 		}
 	]

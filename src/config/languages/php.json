@@ -15,7 +15,6 @@
 			"images": {
 				"cli": "php:8.1-cli",
 				"fpm": "php:8.1-fpm",
-				"fpmAlpine": "php:8.1-fpm-alpine",
 				"apache": "php:8.1-apache"
 			}
 		},

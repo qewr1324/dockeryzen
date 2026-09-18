@@ -9,9 +9,9 @@
 			"defaultDatabase": "defaultdb",
 			"icon": "database",
 			"versions": [
-				{ "value": "v24.3", "label": "CockroachDB 24.3", "image": "cockroachdb/cockroach:v24.3" },
-				{ "value": "v24.2", "label": "CockroachDB 24.2", "image": "cockroachdb/cockroach:v24.2" },
-				{ "value": "v24.1", "label": "CockroachDB 24.1", "image": "cockroachdb/cockroach:v24.1" }
+				{ "value": "v24.3.5", "label": "CockroachDB 24.3.5", "image": "cockroachdb/cockroach:v24.3.5" },
+				{ "value": "v24.3.0", "label": "CockroachDB 24.3.0", "image": "cockroachdb/cockroach:v24.3.0" },
+				{ "value": "latest", "label": "CockroachDB Latest", "image": "cockroachdb/cockroach:latest" }
 			]
 		},
 		{
@@ -21,9 +21,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "v8.5", "label": "TiDB 8.5", "image": "pingcap/tidb:v8.5" },
-				{ "value": "v8.4", "label": "TiDB 8.4", "image": "pingcap/tidb:v8.4" },
-				{ "value": "v8.3", "label": "TiDB 8.3", "image": "pingcap/tidb:v8.3" }
+				{ "value": "v8.5.1", "label": "TiDB 8.5.1", "image": "pingcap/tidb:v8.5.1" },
+				{ "value": "v8.5.0", "label": "TiDB 8.5.0", "image": "pingcap/tidb:v8.5.0" },
+				{ "value": "latest", "label": "TiDB Latest", "image": "pingcap/tidb:latest" }
 			]
 		},
 		{
@@ -34,9 +34,7 @@
 			"defaultDatabase": "yugabyte",
 			"icon": "database",
 			"versions": [
-				{ "value": "2024.2.0.0", "label": "YugabyteDB 2024.2", "image": "yugabytedb/yugabyte:2024.2.0.0" },
-				{ "value": "2024.1.5.0", "label": "YugabyteDB 2024.1", "image": "yugabytedb/yugabyte:2024.1.5.0" },
-				{ "value": "2.20.5.0", "label": "YugabyteDB 2.20", "image": "yugabytedb/yugabyte:2.20.5.0" }
+				{ "value": "latest", "label": "YugabyteDB Latest", "image": "yugabytedb/yugabyte:latest" }
 			]
 		}
 	]

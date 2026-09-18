@@ -10,7 +10,6 @@
 			"versions": [
 				{ "value": "8.8", "label": "Redis 8.8", "image": "redis:8.8", "alpineImage": "redis:8.8-alpine" },
 				{ "value": "8.6", "label": "Redis 8.6", "image": "redis:8.6", "alpineImage": "redis:8.6-alpine" },
-				{ "value": "7.4", "label": "Redis 7.4", "image": "redis:7.4", "alpineImage": "redis:7.4-alpine" },
 				{ "value": "7.2", "label": "Redis 7.2", "image": "redis:7.2", "alpineImage": "redis:7.2-alpine" },
 				{ "value": "6.2", "label": "Redis 6.2", "image": "redis:6.2", "alpineImage": "redis:6.2-alpine" }
 			]
@@ -34,9 +33,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "3.5", "label": "etcd 3.5", "image": "bitnami/etcd:3.5" },
-				{ "value": "3.5.15", "label": "etcd 3.5.15", "image": "gcr.io/etcd-development/etcd:v3.5.15" },
-				{ "value": "3.4", "label": "etcd 3.4", "image": "bitnami/etcd:3.4" }
+				{ "value": "v3.6.1", "label": "etcd 3.6.1", "image": "quay.io/coreos/etcd:v3.6.1" },
+				{ "value": "v3.5.14", "label": "etcd 3.5.14", "image": "quay.io/coreos/etcd:v3.5.14" },
+				{ "value": "v3.5.9", "label": "etcd 3.5.9", "image": "quay.io/coreos/etcd:v3.5.9" }
 			]
 		},
 		{

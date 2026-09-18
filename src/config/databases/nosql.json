@@ -8,9 +8,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
+				{ "value": "8.2", "label": "MongoDB 8.2", "image": "mongo:8.2" },
 				{ "value": "8.0", "label": "MongoDB 8.0", "image": "mongo:8.0" },
-				{ "value": "7.0", "label": "MongoDB 7.0", "image": "mongo:7.0" },
-				{ "value": "6.0", "label": "MongoDB 6.0", "image": "mongo:6.0" }
+				{ "value": "7.0", "label": "MongoDB 7.0", "image": "mongo:7.0" }
 			]
 		},
 		{
@@ -32,9 +32,9 @@
 			"defaultUser": "admin",
 			"icon": "database",
 			"versions": [
-				{ "value": "7.6", "label": "Couchbase 7.6", "image": "couchbase/server:7.6" },
-				{ "value": "7.2", "label": "Couchbase 7.2", "image": "couchbase/server:7.2" },
-				{ "value": "7.0", "label": "Couchbase 7.0", "image": "couchbase/server:7.0" }
+				{ "value": "7.6.5", "label": "Couchbase 7.6.5", "image": "couchbase/server:7.6.5" },
+				{ "value": "7.6.2", "label": "Couchbase 7.6.2", "image": "couchbase/server:7.6.2" },
+				{ "value": "latest", "label": "Couchbase Latest", "image": "couchbase/server:latest" }
 			]
 		},
 		{
@@ -43,7 +43,10 @@
 			"defaultPort": 8000,
 			"defaultUser": "root",
 			"icon": "database",
-			"versions": [{ "value": "latest", "label": "DynamoDB Local", "image": "amazon/dynamodb-local:latest" }]
+			"versions": [
+				{ "value": "latest", "label": "DynamoDB Local Latest", "image": "amazon/dynamodb-local:latest" },
+				{ "value": "2.5.4", "label": "DynamoDB Local 2.5.4", "image": "amazon/dynamodb-local:2.5.4" }
+			]
 		},
 		{
 			"label": "RavenDB",
@@ -52,9 +55,7 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "6.2", "label": "RavenDB 6.2", "image": "ravendb/ravendb:6.2" },
-				{ "value": "6.0", "label": "RavenDB 6.0", "image": "ravendb/ravendb:6.0" },
-				{ "value": "5.4", "label": "RavenDB 5.4", "image": "ravendb/ravendb:5.4" }
+				{ "value": "latest", "label": "RavenDB Latest", "image": "ravendb/ravendb:latest" }
 			]
 		}
 	]

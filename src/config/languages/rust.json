@@ -14,9 +14,7 @@
 			"icon": "tag",
 			"buildImage": "rust:1.80",
 			"buildAlpineImage": "rust:1.80-alpine",
-			"buildSlimImage": "rust:1.80-slim",
-			"runtimeImage": "debian:bookworm-slim",
-			"runtimeAlpineImage": "alpine:latest"
+			"buildSlimImage": "rust:1.80-slim"
 		},
 		{
 			"value": "1.82",
@@ -26,9 +24,7 @@
 			"icon": "tag",
 			"buildImage": "rust:1.82",
 			"buildAlpineImage": "rust:1.82-alpine",
-			"buildSlimImage": "rust:1.82-slim",
-			"runtimeImage": "debian:bookworm-slim",
-			"runtimeAlpineImage": "alpine:latest"
+			"buildSlimImage": "rust:1.82-slim"
 		},
 		{
 			"value": "1.84",
@@ -38,9 +34,7 @@
 			"icon": "tag",
 			"buildImage": "rust:1.84",
 			"buildAlpineImage": "rust:1.84-alpine",
-			"buildSlimImage": "rust:1.84-slim",
-			"runtimeImage": "debian:bookworm-slim",
-			"runtimeAlpineImage": "alpine:latest"
+			"buildSlimImage": "rust:1.84-slim"
 		},
 		{
 			"value": "1.85",
@@ -50,9 +44,7 @@
 			"icon": "tag",
 			"buildImage": "rust:1.85",
 			"buildAlpineImage": "rust:1.85-alpine",
-			"buildSlimImage": "rust:1.85-slim",
-			"runtimeImage": "debian:bookworm-slim",
-			"runtimeAlpineImage": "alpine:latest"
+			"buildSlimImage": "rust:1.85-slim"
 		},
 		{
 			"value": "latest",
@@ -62,9 +54,7 @@
 			"icon": "tag",
 			"buildImage": "rust:latest",
 			"buildAlpineImage": "rust:alpine",
-			"buildSlimImage": "rust:slim",
-			"runtimeImage": "debian:bookworm-slim",
-			"runtimeAlpineImage": "alpine:latest"
+			"buildSlimImage": "rust:slim"
 		}
 	]
 }

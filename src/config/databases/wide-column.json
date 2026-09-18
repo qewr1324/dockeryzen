@@ -8,9 +8,9 @@
 			"defaultUser": "cassandra",
 			"icon": "database",
 			"versions": [
+				{ "value": "5.0.3", "label": "Cassandra 5.0.3", "image": "cassandra:5.0.3" },
 				{ "value": "5.0", "label": "Cassandra 5.0", "image": "cassandra:5.0" },
-				{ "value": "4.1", "label": "Cassandra 4.1", "image": "cassandra:4.1" },
-				{ "value": "4.0", "label": "Cassandra 4.0", "image": "cassandra:4.0" }
+				{ "value": "4.1", "label": "Cassandra 4.1", "image": "cassandra:4.1" }
 			]
 		},
 		{
@@ -20,9 +20,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "5.4", "label": "ScyllaDB 5.4", "image": "scylladb/scylla:5.4" },
-				{ "value": "5.2", "label": "ScyllaDB 5.2", "image": "scylladb/scylla:5.2" },
-				{ "value": "5.0", "label": "ScyllaDB 5.0", "image": "scylladb/scylla:5.0" }
+				{ "value": "6.2", "label": "ScyllaDB 6.2", "image": "scylladb/scylla:6.2" },
+				{ "value": "6.1", "label": "ScyllaDB 6.1", "image": "scylladb/scylla:6.1" },
+				{ "value": "5.4", "label": "ScyllaDB 5.4", "image": "scylladb/scylla:5.4" }
 			]
 		},
 		{
@@ -32,9 +32,7 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "2.6", "label": "HBase 2.6", "image": "apache/hbase:2.6" },
-				{ "value": "2.5", "label": "HBase 2.5", "image": "apache/hbase:2.5" },
-				{ "value": "2.4", "label": "HBase 2.4", "image": "apache/hbase:2.4" }
+				{ "value": "latest", "label": "HBase Latest (harisekhon)", "image": "harisekhon/hbase:latest" }
 			]
 		},
 		{
@@ -43,7 +41,9 @@
 			"defaultPort": 8080,
 			"defaultUser": "root",
 			"icon": "database",
-			"versions": [{ "value": "emulators", "label": "Bigtable Emulator", "image": "google/cloud-sdk:emulators" }]
+			"versions": [
+				{ "value": "emulators", "label": "Bigtable Emulator", "image": "google/cloud-sdk:emulators" }
+			]
 		}
 	]
 }

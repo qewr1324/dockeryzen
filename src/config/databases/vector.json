@@ -8,9 +8,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "1.28", "label": "Weaviate 1.28", "image": "semitechnologies/weaviate:1.28" },
-				{ "value": "1.27", "label": "Weaviate 1.27", "image": "semitechnologies/weaviate:1.27" },
-				{ "value": "1.26", "label": "Weaviate 1.26", "image": "semitechnologies/weaviate:1.26" }
+				{ "value": "1.30.0", "label": "Weaviate 1.30.0", "image": "semitechnologies/weaviate:1.30.0" },
+				{ "value": "1.29.0", "label": "Weaviate 1.29.0", "image": "semitechnologies/weaviate:1.29.0" },
+				{ "value": "1.28.0", "label": "Weaviate 1.28.0", "image": "semitechnologies/weaviate:1.28.0" }
 			]
 		},
 		{
@@ -20,9 +20,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "v1.12", "label": "Qdrant 1.12", "image": "qdrant/qdrant:v1.12" },
-				{ "value": "v1.11", "label": "Qdrant 1.11", "image": "qdrant/qdrant:v1.11" },
-				{ "value": "v1.10", "label": "Qdrant 1.10", "image": "qdrant/qdrant:v1.10" }
+				{ "value": "v1.14.0", "label": "Qdrant 1.14.0", "image": "qdrant/qdrant:v1.14.0" },
+				{ "value": "v1.13.0", "label": "Qdrant 1.13.0", "image": "qdrant/qdrant:v1.13.0" },
+				{ "value": "v1.12.0", "label": "Qdrant 1.12.0", "image": "qdrant/qdrant:v1.12.0" }
 			]
 		},
 		{
@@ -32,9 +32,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "v2.5", "label": "Milvus 2.5", "image": "milvusdb/milvus:v2.5" },
-				{ "value": "v2.4", "label": "Milvus 2.4", "image": "milvusdb/milvus:v2.4" },
-				{ "value": "v2.3", "label": "Milvus 2.3", "image": "milvusdb/milvus:v2.3" }
+				{ "value": "v2.6.0", "label": "Milvus 2.6.0", "image": "milvusdb/milvus:v2.6.0" },
+				{ "value": "v2.5.5", "label": "Milvus 2.5.5", "image": "milvusdb/milvus:v2.5.5" },
+				{ "value": "v2.5.0", "label": "Milvus 2.5.0", "image": "milvusdb/milvus:v2.5.0" }
 			]
 		},
 		{
@@ -44,9 +44,9 @@
 			"defaultUser": "root",
 			"icon": "database",
 			"versions": [
-				{ "value": "latest", "label": "Chroma Latest", "image": "chromadb/chroma:latest" },
-				{ "value": "0.4", "label": "Chroma 0.4", "image": "chromadb/chroma:0.4" },
-				{ "value": "0.3", "label": "Chroma 0.3", "image": "chromadb/chroma:0.3" }
+				{ "value": "0.6.0", "label": "Chroma 0.6.0", "image": "chromadb/chroma:0.6.0" },
+				{ "value": "0.5.0", "label": "Chroma 0.5.0", "image": "chromadb/chroma:0.5.0" },
+				{ "value": "latest", "label": "Chroma Latest", "image": "chromadb/chroma:latest" }
 			]
 		}
 	]
