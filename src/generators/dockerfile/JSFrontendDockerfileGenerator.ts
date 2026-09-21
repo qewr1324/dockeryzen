@@ -65,16 +65,13 @@ FROM nginx:alpine
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/dist /tmp/dist
 RUN set -e; \\
-    # اگر دایرکتوری browser داره
     if [ -d /tmp/dist/${projectName}/browser ]; then \\
         cp -r /tmp/dist/${projectName}/browser/* /usr/share/nginx/html/; \\
     elif [ -d /tmp/dist/${projectName} ]; then \\
         cp -r /tmp/dist/${projectName}/* /usr/share/nginx/html/; \\
-    # fallback: اولین زیرپوشه با browser
     elif [ -n "$(find /tmp/dist -maxdepth 2 -type d -name browser | head -n 1)" ]; then \\
         BROWSER_DIR=$(find /tmp/dist -maxdepth 2 -type d -name browser | head -n 1); \\
         cp -r "$BROWSER_DIR"/* /usr/share/nginx/html/; \\
-    # fallback: اولین زیرپوشه
     elif [ -n "$(find /tmp/dist -maxdepth 1 -mindepth 1 -type d | head -n 1)" ]; then \\
         FIRST_DIR=$(find /tmp/dist -maxdepth 1 -mindepth 1 -type d | head -n 1); \\
         cp -r "$FIRST_DIR"/* /usr/share/nginx/html/; \\

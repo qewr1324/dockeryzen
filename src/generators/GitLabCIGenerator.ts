@@ -22,7 +22,6 @@ stages:
 variables:
   DOCKER_IMAGE: $CI_REGISTRY_IMAGE
 
-# باگ 642: cache اضافه شد
 cache:
   paths:
     - target/
@@ -53,7 +52,6 @@ integration-test:
     DOCKER_TLS_CERTDIR: ""
   script:
     - docker build -t $DOCKER_IMAGE:test .
-    # باگ 658: نصب docker compose
     - apk add --no-cache docker-compose || true
     - docker compose up -d
     - sleep 30
@@ -85,7 +83,6 @@ security-scan:
   stage: scan
   image: aquasec/trivy:latest
   script:
-    # باگ 590: اسکن image که push شده
     - trivy image --severity HIGH,CRITICAL --exit-code 1 $DOCKER_IMAGE:$CI_COMMIT_SHA
     - trivy image --severity HIGH,CRITICAL --format json --output trivy-results.json $DOCKER_IMAGE:$CI_COMMIT_SHA
   artifacts:
@@ -107,7 +104,6 @@ deploy:
   stage: deploy
   image: bitnami/kubectl:latest
   script:
-    # باگ 630: بررسی وجود kubectl
     - if command -v kubectl &> /dev/null; then
         kubectl set image deployment/${projectName} app=$DOCKER_IMAGE:$CI_COMMIT_SHA
         kubectl rollout status deployment/${projectName}
@@ -118,7 +114,6 @@ deploy:
     name: production
   only:
     - main
-  # باگ 678: deploy خودکار
   when: on_success`;
 	}
 
