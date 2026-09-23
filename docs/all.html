@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dockeryzen — Docker Made Easy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0a0e1a;
+            color: #e6edf3
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 20% 10%, rgba(102, 126, 234, .18), transparent 45%),
+                radial-gradient(circle at 85% 90%, rgba(118, 75, 162, .22), transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(56, 189, 248, .06), transparent 60%),
+                #0a0e1a;
+        }
+
+        /* layout */
+        .app {
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0
+        }
+
+        /* sidebar */
+        .sidebar {
+            background: rgba(15, 20, 35, .75);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, .07);
+            padding: 28px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .brand .logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: grid;
+            place-items: center;
+            font-size: 22px;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, .4);
+        }
+
+        .brand h1 {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -.02em
+        }
+
+        .brand p {
+            font-size: 11px;
+            color: #8b98b8;
+            margin-top: 2px
+        }
+
+        .nav-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .14em;
+            color: #5f6a86;
+            text-transform: uppercase;
+            margin-bottom: 10px
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        .nav button {
+            all: unset;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #aab4cf;
+            transition: .2s;
+            border: 1px solid transparent;
+        }
+
+        .nav button:hover {
+            background: rgba(255, 255, 255, .04);
+            color: #fff
+        }
+
+        .nav button.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, .22), rgba(118, 75, 162, .22));
+            color: #fff;
+            border-color: rgba(102, 126, 234, .35);
+            box-shadow: 0 4px 18px rgba(102, 126, 234, .18);
+        }
+
+        .nav button .ico {
+            font-size: 16px;
+            width: 20px;
+            text-align: center
+        }
+
+        .nav button .badge {
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, .08);
+            padding: 2px 7px;
+            border-radius: 6px;
+            color: #8b98b8;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            font-size: 11px;
+            color: #5f6a86;
+            line-height: 1.6;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .sidebar-footer a {
+            color: #667eea;
+            text-decoration: none
+        }
+
+        /* main */
+        .main {
+            padding: 44px 56px;
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+            overflow: hidden
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px
+        }
+
+        .top .crumbs {
+            font-size: 12px;
+            color: #8b98b8;
+            letter-spacing: .05em
+        }
+
+        .top .crumbs b {
+            color: #e6edf3
+        }
+
+        .top .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, .35);
+            transition: .2s;
+        }
+
+        .top .cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, .5)
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 36px;
+            align-items: center
+        }
+
+        .hero h2 {
+            font-size: 44px;
+            font-weight: 900;
+            letter-spacing: -.03em;
+            line-height: 1.05;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 70%, #c4b5fd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero p {
+            margin-top: 14px;
+            font-size: 15px;
+            color: #aab4cf;
+            line-height: 1.7;
+            max-width: 520px
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 20px
+        }
+
+        .chip {
+            font-size: 11.5px;
+            font-weight: 600;
+            padding: 7px 13px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid rgba(255, 255, 255, .08);
+            color: #c8d0e8;
+        }
+
+        .chip b {
+            color: #fff
+        }
+
+        .preview {
+            background: rgba(15, 20, 35, .7);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+        }
+
+        .preview .bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px
+        }
+
+        .preview .bar span {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%
+        }
+
+        .preview .bar span:nth-child(1) {
+            background: #ff5f57
+        }
+
+        .preview .bar span:nth-child(2) {
+            background: #febc2e
+        }
+
+        .preview .bar span:nth-child(3) {
+            background: #28c840
+        }
+
+        .preview pre {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 12.5px;
+            line-height: 1.75;
+            color: #c8d0e8;
+            white-space: pre-wrap;
+        }
+
+        .preview pre .k {
+            color: #c792ea
+        }
+
+        .preview pre .s {
+            color: #a5e075
+        }
+
+        .preview pre .c {
+            color: #5f6a86
+        }
+
+        /* interactive section */
+        .interactive {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 26px;
+            align-items: stretch;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px
+        }
+
+        .tabs button {
+            all: unset;
+            cursor: pointer;
+            padding: 9px 16px;
+            border-radius: 9px;
+            font-size: 12.5px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .07);
+            color: #aab4cf;
+            transition: .2s;
+        }
+
+        .tabs button:hover {
+            background: rgba(255, 255, 255, .08);
+            color: #fff
+        }
+
+        .tabs button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 6px 18px rgba(102, 126, 234, .4);
+        }
+
+        .info-card {
+            background: rgba(15, 20, 35, .6);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 14px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 0;
+        }
+
+        .info-card h3 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -.02em
+        }
+
+        .info-card .desc {
+            font-size: 13.5px;
+            color: #aab4cf;
+            line-height: 1.7
+        }
+
+        .info-card .list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px
+        }
+
+        .info-card .list div {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12.5px;
+            color: #c8d0e8;
+        }
+
+        .info-card .list div::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            box-shadow: 0 0 8px rgba(102, 126, 234, .7);
+        }
+
+        .visual {
+            background: rgba(15, 20, 35, .6);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .visual::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(102, 126, 234, .14), transparent 70%);
+            pointer-events: none;
+        }
+
+        .visual .big-ico {
+            font-size: 64px;
+            filter: drop-shadow(0 8px 24px rgba(102, 126, 234, .5));
+            animation: float 3.5s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-10px)
+            }
+        }
+
+        .visual .label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #c8d0e8;
+            letter-spacing: .03em;
+            text-align: center;
+        }
+
+        .visual .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 6px;
+        }
+
+        .visual .stats div {
+            text-align: center
+        }
+
+        .visual .stats b {
+            display: block;
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a5b4fc, #c4b5fd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .visual .stats span {
+            font-size: 10.5px;
+            color: #8b98b8;
+            letter-spacing: .08em;
+            text-transform: uppercase
+        }
+
+        .fade {
+            animation: fade .35s ease
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0;
+                transform: translateY(6px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* responsive */
+        @media (max-width:1000px) {
+            .app {
+                grid-template-columns: 1fr
+            }
+
+            .sidebar {
+                display: none
+            }
+
+            .main {
+                padding: 24px
+            }
+
+            .hero h2 {
+                font-size: 32px
+            }
+
+            .interactive {
+                grid-template-columns: 1fr
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo">🐋</div>
+                <div>
+                    <h1>Dockeryzen</h1>
+                    <p>Docker made simple</p>
+                </div>
+            </div>
+
+            <div>
+                <div class="nav-title">Explore</div>
+                <nav class="nav" id="nav">
+                    <button class="active" data-key="overview"><span class="ico">✨</span> Overview</button>
+                    <button data-key="languages"><span class="ico">🚀</span> Languages <span
+                            class="badge">13</span></button>
+                    <button data-key="databases"><span class="ico">🗄️</span> Databases <span
+                            class="badge">30+</span></button>
+                    <button data-key="queues"><span class="ico">📨</span> Message Queues</button>
+                    <button data-key="services"><span class="ico">🛠️</span> Services</button>
+                    <button data-key="cicd"><span class="ico">⚙️</span> CI / CD</button>
+                </nav>
+            </div>
+
+            <div class="sidebar-footer">
+                Made with ❤️ for developers<br>
+                <a href="https://github.com/qewr1324/dockeryzen">github.com/qewr1324/dockeryzen</a>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main">
+
+            <div class="top">
+                <div class="crumbs">Dockeryzen / <b id="crumb">Overview</b></div>
+                <a class="cta" href="https://marketplace.visualstudio.com/items?itemName=qewr1324.dockeryzen">
+                    ⬇ Install from Marketplace
+                </a>
+            </div>
+
+            <section class="hero">
+                <div>
+                    <h2>Generate complete Docker setups in minutes.</h2>
+                    <p>An interactive VS Code wizard that produces production-ready <b>Dockerfile</b>,
+                        <b>docker-compose.yml</b>, CI/CD pipelines and more — for 13+ languages and 150+ tools.
+                    </p>
+                    <div class="chips">
+                        <span class="chip">⚡ <b>327+</b> Templates</span>
+                        <span class="chip">📦 <b>32</b> Categories</span>
+                        <span class="chip">🛠️ <b>150+</b> Tools</span>
+                    </div>
+                </div>
+
+                <div class="preview">
+                    <div class="bar"><span></span><span></span><span></span></div>
+                    <pre id="code"><span class="c"># Dockerfile — generated by Dockeryzen</span>
+<span class="k">FROM</span> <span class="s">node:20-alpine</span>
+<span class="k">WORKDIR</span> <span class="s">/app</span>
+<span class="k">COPY</span> <span class="s">package*.json ./</span>
+<span class="k">RUN</span> <span class="s">npm ci --omit=dev</span>
+<span class="k">COPY</span> <span class="s">. .</span>
+<span class="k">EXPOSE</span> <span class="s">3000</span>
+<span class="k">CMD</span> <span class="s">["node", "server.js"]</span></pre>
+                </div>
+            </section>
+
+            <section class="interactive">
+                <div class="info-card fade" id="infoCard">
+                    <h3 id="infoTitle">Overview</h3>
+                    <div class="desc" id="infoDesc">Dockeryzen eliminates Docker boilerplate. Pick your stack, and it
+                        generates optimized multi-stage Dockerfiles, compose files, healthchecks, .dockerignore, .env
+                        samples and CI/CD workflows.</div>
+                    <div class="list" id="infoList">
+                        <div>Interactive step-by-step wizard</div>
+                        <div>Production-ready multi-stage builds</div>
+                        <div>Smart language auto-detection</div>
+                        <div>Auto-generated CI/CD pipelines</div>
+                    </div>
+                </div>
+
+                <div class="visual fade" id="visual">
+                    <div class="big-ico" id="visualIco">🐋</div>
+                    <div class="label" id="visualLabel">Dockeryzen</div>
+                    <div class="stats">
+                        <div><b id="stat1">13+</b><span>Languages</span></div>
+                        <div><b id="stat2">30+</b><span>Databases</span></div>
+                        <div><b id="stat3">150+</b><span>Tools</span></div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        const DATA = {
+            overview: {
+                crumb: "Overview",
+                title: "Overview",
+                desc: "Dockeryzen eliminates Docker boilerplate. Pick your stack, and it generates optimized multi-stage Dockerfiles, compose files, healthchecks, .dockerignore, .env samples and CI/CD workflows.",
+                list: [
+                    "Interactive step-by-step wizard",
+                    "Production-ready multi-stage builds",
+                    "Smart language auto-detection",
+                    "Auto-generated CI/CD pipelines"
+                ],
+                ico: "🐋", label: "Dockeryzen",
+                stats: ["13+", "30+", "150+"],
+                code: `<span class="c"># Dockerfile — generated by Dockeryzen</span>
+<span class="k">FROM</span> <span class="s">node:20-alpine</span>
+<span class="k">WORKDIR</span> <span class="s">/app</span>
+<span class="k">COPY</span> <span class="s">package*.json ./</span>
+<span class="k">RUN</span> <span class="s">npm ci --omit=dev</span>
+<span class="k">COPY</span> <span class="s">. .</span>
+<span class="k">EXPOSE</span> <span class="s">3000</span>
+<span class="k">CMD</span> <span class="s">["node", "server.js"]</span>`
+            },
+
+            languages: {
+                crumb: "Languages",
+                title: "13+ Languages & Frameworks",
+                desc: "Full Docker support for every major language, with framework-aware templates for the most popular stacks.",
+                list: [
+                    "☕ Java — Spring Boot, Quarkus, Micronaut",
+                    "💛 JavaScript / TypeScript — Node, Nest, Next",
+                    "🐍 Python — Django, Flask, FastAPI",
+                    "✨ Go — Gin, Fiber, Echo",
+                    "🦀 Rust — Actix, Axum, Rocket",
+                    "🔥 C# / .NET — ASP.NET Core, Blazor",
+                    "🧩 PHP — Laravel, Symfony",
+                    "💎 Ruby — Rails, Sinatra",
+                    "⚙️ C / C++ — CMake, Make"
+                ],
+                ico: "🚀", label: "Multi-language support",
+                stats: ["13+", "9", "25+"],
+                code: `<span class="c"># docker-compose.yml — Java + Postgres</span>
+<span class="k">services</span>:
+  <span class="k">api</span>:
+    <span class="k">build</span>: <span class="s">.</span>
+    <span class="k">ports</span>: [<span class="s">"8080:8080"</span>]
+    <span class="k">depends_on</span>: [<span class="s">db</span>]
+  <span class="k">db</span>:
+    <span class="k">image</span>: <span class="s">postgres:16-alpine</span>
+    <span class="k">environment</span>:
+      <span class="k">POSTGRES_PASSWORD</span>: <span class="s">secret</span>`
+            },
+
+            databases: {
+                crumb: "Databases",
+                title: "30+ Databases Ready to Go",
+                desc: "From classic SQL to vector databases for AI workloads — add any database to your compose file with healthchecks and volumes already configured.",
+                list: [
+                    "SQL — PostgreSQL, MySQL, MariaDB, Oracle, MSSQL, Db2",
+                    "NoSQL — MongoDB, CouchDB, Couchbase, DynamoDB",
+                    "Key-Value — Redis, Memcached, etcd, Aerospike",
+                    "Wide-Column — Cassandra, ScyllaDB, HBase",
+                    "Graph — Neo4j, ArangoDB, JanusGraph, Dgraph",
+                    "NewSQL — CockroachDB, TiDB, YugabyteDB",
+                    "Time-Series — InfluxDB, TimescaleDB, Prometheus",
+                    "Search — Elasticsearch, Solr, Meilisearch, Typesense",
+                    "Vector — Weaviate, Qdrant, Milvus, Chroma"
+                ],
+                ico: "🗄️", label: "Persistent storage made easy",
+                stats: ["30+", "9", "100%"],
+                code: `<span class="c"># docker-compose.yml — Postgres + Redis</span>
+<span class="k">services</span>:
+  <span class="k">db</span>:
+    <span class="k">image</span>: <span class="s">postgres:16-alpine</span>
+    <span class="k">volumes</span>: [<span class="s">pgdata:/var/lib/postgresql/data</span>]
+    <span class="k">healthcheck</span>:
+      <span class="k">test</span>: [<span class="s">"CMD-SHELL"</span>, <span class="s">"pg_isready"</span>]
+  <span class="k">cache</span>:
+    <span class="k">image</span>: <span class="s">redis:7-alpine</span>
+<span class="k">volumes</span>:
+  <span class="k">pgdata</span>:`
+            },
+
+            queues: {
+                crumb: "Message Queues",
+                title: "Message Queues & Brokers",
+                desc: "Add industry-standard message brokers with pre-configured ports, volumes and management UIs.",
+                list: [
+                    "Kafka + Zookeeper",
+                    "RabbitMQ with Management UI",
+                    "ActiveMQ Classic",
+                    "ActiveMQ Artemis",
+                    "NATS & NATS Streaming",
+                    "Redis Pub/Sub"
+                ],
+                ico: "📨", label: "Async messaging, ready to use",
+                stats: ["6+", "2", "24/7"],
+                code: `<span class="c"># docker-compose.yml — RabbitMQ</span>
+<span class="k">services</span>:
+  <span class="k">rabbitmq</span>:
+    <span class="k">image</span>: <span class="s">rabbitmq:3-management-alpine</span>
+    <span class="k">ports</span>:
+      - <span class="s">"5672:5672"</span>
+      - <span class="s">"15672:15672"</span>
+    <span class="k">environment</span>:
+      <span class="k">RABBITMQ_DEFAULT_USER</span>: <span class="s">admin</span>`
+            },
+
+            services: {
+                crumb: "Services",
+                title: "Extra Services & Tooling",
+                desc: "Round out your stack with reverse proxies, monitoring, auth, and object storage — all pre-wired to your app.",
+                list: [
+                    "Nginx — reverse proxy with TLS",
+                    "Grafana + Prometheus — monitoring",
+                    "Keycloak — authentication",
+                    "MinIO — S3-compatible storage",
+                    "Traefik — modern edge router",
+                    "Adminer / pgAdmin — DB UIs"
+                ],
+                ico: "🛠️", label: "Everything around your app",
+                stats: ["10+", "∞", "1-click"],
+                code: `<span class="c"># docker-compose.yml — Nginx + Grafana</span>
+<span class="k">services</span>:
+  <span class="k">nginx</span>:
+    <span class="k">image</span>: <span class="s">nginx:alpine</span>
+    <span class="k">ports</span>: [<span class="s">"80:80"</span>]
+    <span class="k">volumes</span>: [<span class="s">./nginx.conf:/etc/nginx/nginx.conf</span>]
+  <span class="k">grafana</span>:
+    <span class="k">image</span>: <span class="s">grafana/grafana:latest</span>
+    <span class="k">ports</span>: [<span class="s">"3000:3000"</span>]`
+            },
+
+            cicd: {
+                crumb: "CI / CD",
+                title: "CI / CD & Monitoring",
+                desc: "Auto-generate pipelines for GitHub Actions and GitLab CI, plus monitoring configs for Prometheus and Grafana.",
+                list: [
+                    "GitHub Actions workflows",
+                    "GitLab CI pipelines",
+                    "Docker build & push steps",
+                    "Prometheus scrape config",
+                    "Grafana dashboards",
+                    "Healthcheck endpoints"
+                ],
+                ico: "⚙️", label: "Ship with confidence",
+                stats: ["2", "5+", "0 cfg"],
+                code: `<span class="c"># .github/workflows/docker.yml</span>
+<span class="k">name</span>: <span class="s">Build & Push</span>
+<span class="k">on</span>: [<span class="s">push</span>]
+<span class="k">jobs</span>:
+  <span class="k">build</span>:
+    <span class="k">runs-on</span>: <span class="s">ubuntu-latest</span>
+    <span class="k">steps</span>:
+      - <span class="k">uses</span>: <span class="s">actions/checkout@v4</span>
+      - <span class="k">run</span>: <span class="s">docker build -t app .</span>`
+            }
+        };
+
+        const nav = document.getElementById('nav');
+        const crumb = document.getElementById('crumb');
+        const infoCard = document.getElementById('infoCard');
+        const infoTitle = document.getElementById('infoTitle');
+        const infoDesc = document.getElementById('infoDesc');
+        const infoList = document.getElementById('infoList');
+        const visual = document.getElementById('visual');
+        const visualIco = document.getElementById('visualIco');
+        const visualLabel = document.getElementById('visualLabel');
+        const stat1 = document.getElementById('stat1');
+        const stat2 = document.getElementById('stat2');
+        const stat3 = document.getElementById('stat3');
+        const code = document.getElementById('code');
+
+        function render(key) {
+            const d = DATA[key];
+            if (!d) return;
+
+            // nav active
+            nav.querySelectorAll('button').forEach(b => {
+                b.classList.toggle('active', b.dataset.key === key);
+            });
+
+            // crumb
+            crumb.textContent = d.crumb;
+
+            // info
+            infoCard.classList.remove('fade');
+            visual.classList.remove('fade');
+            void infoCard.offsetWidth;
+
+            infoTitle.textContent = d.title;
+            infoDesc.textContent = d.desc;
+            infoList.innerHTML = d.list.map(t => `<div>${t}</div>`).join('');
+
+            visualIco.textContent = d.ico;
+            visualLabel.textContent = d.label;
+            stat1.textContent = d.stats[0];
+            stat2.textContent = d.stats[1];
+            stat3.textContent = d.stats[2];
+
+            code.innerHTML = d.code;
+
+            infoCard.classList.add('fade');
+            visual.classList.add('fade');
+        }
+
+        nav.addEventListener('click', e => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            render(btn.dataset.key);
+        });
+
+        // prevent any scroll on body
+        document.addEventListener('wheel', e => {
+            // allow internal scroll only if needed (none here)
+            e.preventDefault();
+        }, { passive: false });
+
+        // init
+        render('overview');
+    </script>
+</body>
+
+</html>
