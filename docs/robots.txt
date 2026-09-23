@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://qewr1324.github.io/dockeryzen/sitemap.xml

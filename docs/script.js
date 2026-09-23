@@ -154,15 +154,12 @@ function render(key) {
 	const d = DATA[key];
 	if (!d) return;
 
-	// nav active
 	nav.querySelectorAll("button").forEach((b) => {
 		b.classList.toggle("active", b.dataset.key === key);
 	});
 
-	// crumb
 	crumb.textContent = d.crumb;
 
-	// info
 	infoCard.classList.remove("fade");
 	visual.classList.remove("fade");
 	void infoCard.offsetWidth;
@@ -189,7 +186,6 @@ nav.addEventListener("click", (e) => {
 	render(btn.dataset.key);
 });
 
-// prevent any scroll on body
 document.addEventListener(
 	"wheel",
 	(e) => {
@@ -198,5 +194,4 @@ document.addEventListener(
 	{ passive: false },
 );
 
-// init
 render("overview");

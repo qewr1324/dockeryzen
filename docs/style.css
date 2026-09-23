@@ -21,7 +21,6 @@ body {
         #0a0e1a;
 }
 
-/* layout */
 .app {
     height: 100vh;
     display: grid;
@@ -29,7 +28,6 @@ body {
     gap: 0
 }
 
-/* sidebar */
 .sidebar {
     background: rgba(15, 20, 35, .75);
     backdrop-filter: blur(20px);
@@ -141,7 +139,6 @@ body {
     text-decoration: none
 }
 
-/* main */
 .main {
     padding: 44px 56px;
     display: flex;
@@ -286,7 +283,6 @@ body {
     color: #5f6a86
 }
 
-/* interactive section */
 .interactive {
     display: grid;
     grid-template-columns: 1fr 1.2fr;
@@ -467,7 +463,6 @@ body {
     }
 }
 
-/* responsive */
 @media (max-width:1000px) {
     .app {
         grid-template-columns: 1fr
@@ -487,5 +482,12 @@ body {
 
     .interactive {
         grid-template-columns: 1fr
+    }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    * {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important
     }
 }
