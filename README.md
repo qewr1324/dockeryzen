@@ -342,17 +342,17 @@ dockeryzen
 <details>
 <summary><b>Dockeryzen can generate configurations for a wide array of technologies. Here are some of the key languages and frameworks supported:</b></summary>
 
-| Category         | Languages / Frameworks   |
-| ---------------- | ------------------------ |
-| ☕ Java          | `pom.xml`                |
-| 💛 JavaScript/TS | `build.gradle`           |
-| 🐍 Python        | `persistence.xml`        |
-| ✨ Go            | `hibernate.cfg.xml`      |
-| 🦀 Rust          | `application.yml`        |
-| 🔷 C# / .NET     | `application.properties` |
-| 🧩 PHP           | `application.yml`        |
-| 💎 Ruby          | `mybatis-config.xml`     |
-| ⚙️ C/C++         | `web.xml`                |
+| Language         | Frameworks                        |
+| ---------------- | --------------------------------- |
+| ☕ Java          | Spring Boot, Quarkus, Micronaut   |
+| 💛 JavaScript/TS | Node.js, Express, NestJS, Next.js |
+| 🐍 Python        | Django, Flask, FastAPI            |
+| ✨ Go            | Gin, Fiber, Echo                  |
+| 🦀 Rust          | Actix, Axum, Rocket               |
+| 🔥 C# / .NET     | ASP.NET Core, Blazor              |
+| 🧩 PHP           | Laravel, Symfony                  |
+| 💎 Ruby          | Rails, Sinatra                    |
+| ⚙️ C/C++         | CMake, Make                       |
 
 </details>
 
@@ -406,15 +406,13 @@ dockeryzen
 
 4. The extension will automatically generate all required configuration files in your workspace.
 
-### Example: Generating a `pom.xml`
+### Example: Generating a Java Spring Boot Dockerfile
+- Click: Java → Spring Boot → Maven → JDK 17
+- Generated: ./Dockerfile + ./docker-compose.yml
 
-- Click: Java → Maven → 4.0
-- Generated: ./pom.xml
-
-### Example: Generating an `application.yml`
-
-- Click: Java → Spring Boot → 3.2
-- Generated: ./src/main/resources/application.yml
+### Example: Generating a Python FastAPI Dockerfile
+- Click: Python → FastAPI → Python 3.12
+- Generated: ./Dockerfile + ./docker-compose.yml
 
 ---
 
